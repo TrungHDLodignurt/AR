@@ -52,18 +52,7 @@ internal fun onFrame(
     // Always the screen centre: the reticle lives there, and users aim far more precisely with
     // a centred crosshair than with a fingertip.
     val centre = Offset(viewSize.width / 2f, viewSize.height / 2f)
-    val aimRay = projector.unprojectRay(centre.x, centre.y, viewSize.width, viewSize.height)
-    state.live = resolveSurface(
-        frame = frame,
-        xPx = centre.x,
-        yPx = centre.y,
-        allowDepthFallback = state.depthSupported,
-        aimRay = aimRay,
-        onRay = { world ->
-            val back = projector.project(world, viewSize.width, viewSize.height)
-            back != null && (back - centre).getDistance() <= MaxOffRayPx
-        },
-    )
+    state.live = resolveAt(frame, projector, viewSize, centre, state.depthSupported)
 
     state.noteLiveSample(
         sample = state.live,
@@ -72,10 +61,45 @@ internal fun onFrame(
         },
     )
 
+    // Same resolution the reticle gets, but at the finger's position while an existing point
+    // is being dragged. Sticky in MeasureState: a momentary miss keeps the last good hit
+    // rather than making the dragged point vanish for a frame.
+    state.dragTouchPosition?.let { touch ->
+        state.noteDragSample(resolveAt(frame, projector, viewSize, touch, state.depthSupported))
+    }
+
     // Anchors drift as ARCore refines its map; re-read them, but only publish past 1 mm.
     state.refreshWorldPoints()
 
     state.overlay = buildOverlay(state, projector, viewSize)
+}
+
+/**
+ * Resolves the surface at an arbitrary screen point, the same way the reticle is resolved.
+ *
+ * Used both for the reticle (always screen centre) and, while an existing point is being
+ * dragged, for the finger's current position — the two are the same problem (what is under
+ * this pixel, resolved analytically for a plane hit) at a different screen location.
+ */
+private fun resolveAt(
+    frame: Frame,
+    projector: PoseProjector,
+    viewSize: IntSize,
+    screen: Offset,
+    allowDepthFallback: Boolean,
+): SurfaceSample? {
+    val aimRay = projector.unprojectRay(screen.x, screen.y, viewSize.width, viewSize.height)
+    return resolveSurface(
+        frame = frame,
+        xPx = screen.x,
+        yPx = screen.y,
+        allowDepthFallback = allowDepthFallback,
+        aimRay = aimRay,
+        onRay = { world ->
+            val back = projector.project(world, viewSize.width, viewSize.height)
+            back != null && (back - screen).getDistance() <= MaxOffRayPx
+        },
+    )
 }
 
 /** Projects the current measurement into screen space and formats every label. */
@@ -86,7 +110,16 @@ internal fun buildOverlay(
 ): OverlayFrame {
     val width = viewSize.width
     val height = viewSize.height
-    val world = state.worldPoints
+    val draggingIndex = state.draggingIndex
+
+    // A preview list, not the anchors themselves: while dragging, the point being edited shows
+    // where the finger currently resolves to, so its segments' labels update live. The anchor
+    // backing [MeasureState.worldPoints] is untouched until the drag is committed, so cancelling
+    // (or a sample that never resolves) leaves the original point exactly where it was.
+    val world = state.worldPoints.toMutableList()
+    if (draggingIndex != null) {
+        state.dragSample?.position?.let { world[draggingIndex] = it }
+    }
     val projected = world.map { projector.project(it, width, height) }
 
     val committed = buildList {
@@ -106,8 +139,9 @@ internal fun buildOverlay(
         }
     }
 
-    // The rubber band: last committed point -> the reticle, which is always screen centre.
-    val live = buildLiveSegment(state, projector, width, height)
+    // The rubber band only makes sense when the reticle — not an existing point — is what is
+    // moving; suppress it while dragging so the two interactions never draw on top of each other.
+    val live = if (draggingIndex == null) buildLiveSegment(state, projector, width, height) else null
 
     return OverlayFrame(
         points = projected.filterNotNull(),
@@ -115,7 +149,8 @@ internal fun buildOverlay(
         live = live,
         // Only a reading steady enough to commit earns the solid reticle: the dot is a promise
         // that tapping now produces a point worth trusting.
-        reticleOnSurface = state.live != null && state.liveStable,
+        reticleOnSurface = draggingIndex == null && state.live != null && state.liveStable,
+        draggingPoint = draggingIndex?.let { projected.getOrNull(it) },
     )
 }
 

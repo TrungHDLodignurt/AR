@@ -14,6 +14,7 @@
     <string name="hint_tap_to_start">Tap + to add a point</string>
     <string name="hint_no_surface">No surface there — aim at a detected surface</string>
     <string name="hint_reading_unsteady">Can\'t lock this surface — too shiny or plain to measure</string>
+    <string name="hint_dragging_point">Move over a surface, then release to reposition</string>
 
     <string name="tracking_bad_state">AR session error — try restarting</string>
     <string name="tracking_insufficient_light">Not enough light — try a brighter area</string>

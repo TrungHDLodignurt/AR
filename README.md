@@ -96,6 +96,16 @@ published to Compose only past a **1 mm dead-band** — otherwise the number fli
 rate for jitter nobody can see. 1 mm is far below the accuracy floor, so nothing observable is
 discarded.
 
+### Editing a placed point
+
+Press and drag any committed dot to move it: it re-resolves against the surface under the
+finger every frame (the same accuracy-ordered hit test the reticle uses), the touched
+segment's label updates live, and the anchor is only replaced on release — cancel the drag
+and the point never moved. The reference app hides the exact same information behind its
+own fingertip with a live magnified crop of the camera feed rendered by a GPU shader; this
+app lifts a second copy of the dot above the touch point instead, which answers the same
+question ("where will this land") without a per-frame texture read-back.
+
 ## Deliberately not implemented
 
 Shutter capture (button is rendered inert rather than lying about being wired), edge snapping
