@@ -32,6 +32,7 @@ import com.google.ar.core.ArCoreApk
 import com.google.ar.core.exceptions.UnavailableException
 import vn.quancua.artapemeasure.level.LevelScreen
 import vn.quancua.artapemeasure.measure.MeasureScreen
+import vn.quancua.artapemeasure.photomeasure.PhotoMeasureScreen
 import vn.quancua.artapemeasure.ui.AppTab
 import vn.quancua.artapemeasure.ui.AppTabBar
 
@@ -103,6 +104,10 @@ private fun AppRoot(arAvailability: ArAvailability, cameraGranted: Boolean) {
                     !cameraGranted -> CameraDenied()
                     else -> MeasureScreen()
                 }
+                // No ARCore/camera-ar gating here on purpose: this tab measures from a still
+                // photo via a reference object (see photomeasure/PhotoMeasureScreen.kt), so it
+                // works on every device this app installs onto, including AR-unsupported ones.
+                AppTab.PhotoMeasure -> PhotoMeasureScreen()
                 AppTab.Level -> LevelScreen()
             }
         }

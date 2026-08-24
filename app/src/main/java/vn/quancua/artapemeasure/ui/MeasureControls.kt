@@ -145,5 +145,6 @@ fun AppTabBar(
 
 enum class AppTab(val label: String, val glyph: String) {
     Measure("Measure", "▬"),
+    PhotoMeasure("Photo", "▨"),
     Level("Level", "◎"),
 }

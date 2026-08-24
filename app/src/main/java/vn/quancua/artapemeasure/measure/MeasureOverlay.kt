@@ -3,24 +3,19 @@ package vn.quancua.artapemeasure.measure
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import vn.quancua.artapemeasure.ui.drawLabelPill
 
 private val LineColor = Color.White
-private val PillBackground = Color.White
 private val PillText = Color(0xFF1C1C1E)
 
 /**
@@ -77,37 +72,6 @@ private fun DrawScope.drawSegment(segment: Segment2D, dashed: Boolean) {
         } else {
             null
         },
-    )
-}
-
-/**
- * A rounded white pill with the distance, centred on the segment midpoint.
- *
- * Screen-space rather than a 3D label, so it keeps one size at any distance — the behaviour
- * the reference app has, and the reason a number stays readable across a room.
- */
-private fun DrawScope.drawLabelPill(
-    textMeasurer: TextMeasurer,
-    label: String,
-    center: Offset,
-    style: TextStyle,
-) {
-    val layout = textMeasurer.measure(AnnotatedString(label), style)
-    val paddingX = 8.dp.toPx()
-    val paddingY = 4.dp.toPx()
-    val pillWidth = layout.size.width + paddingX * 2
-    val pillHeight = layout.size.height + paddingY * 2
-    val topLeft = Offset(center.x - pillWidth / 2f, center.y - pillHeight / 2f)
-
-    drawRoundRect(
-        color = PillBackground,
-        topLeft = topLeft,
-        size = Size(pillWidth, pillHeight),
-        cornerRadius = CornerRadius(pillHeight / 2f),
-    )
-    drawText(
-        textLayoutResult = layout,
-        topLeft = Offset(topLeft.x + paddingX, topLeft.y + paddingY),
     )
 }
 
