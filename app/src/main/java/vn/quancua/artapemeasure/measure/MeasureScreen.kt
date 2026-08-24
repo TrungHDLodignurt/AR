@@ -3,8 +3,11 @@ package vn.quancua.artapemeasure.measure
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -96,7 +99,13 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
 
         HintBanner(
             text = hintFor(state),
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 72.dp),
+            // Same statusBars inset as MeasureTopBar above, so the 72dp clearance below it
+            // stays correct regardless of status bar height instead of the banner drifting
+            // under (or too far below) the top bar on different devices.
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(top = 72.dp),
         )
 
 

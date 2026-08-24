@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,6 +57,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // targetSdk 36 already forces edge-to-edge on API 35+; calling this explicitly makes
+        // that behaviour consistent all the way down to minSdk 24 instead of differing by OS
+        // version. The chrome that needs to stay clear of the status/nav bars (MeasureTopBar,
+        // AppTabBar) pads for that itself via WindowInsets — see ui/MeasureControls.kt.
+        enableEdgeToEdge()
 
         cameraGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED

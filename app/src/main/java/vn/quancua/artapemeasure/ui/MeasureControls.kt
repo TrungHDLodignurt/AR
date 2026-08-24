@@ -7,9 +7,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -35,7 +39,13 @@ fun MeasureTopBar(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        // App targets SDK 36, where edge-to-edge is enforced (see MainActivity.enableEdgeToEdge)
+        // — content draws behind the status bar unless it pads for it itself. Inset padding
+        // goes first so the 16/12dp visual padding stacks on top of it, not underneath.
+        modifier = modifier
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         ChromePill(enabled = canUndo, onClick = onUndo) {
@@ -121,7 +131,11 @@ fun AppTabBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            // background before the inset padding, so the dark bar still reaches the physical
+            // bottom edge (behind the gesture/nav bar) — only the tab labels get pushed up
+            // clear of it by windowInsetsPadding.
             .background(Color(0xF21C1C1E))
+            .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(top = 8.dp, bottom = 14.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
