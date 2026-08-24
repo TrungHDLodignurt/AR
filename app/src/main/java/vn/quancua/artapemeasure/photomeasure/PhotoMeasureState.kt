@@ -5,6 +5,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import vn.quancua.artapemeasure.measure.LengthUnit
 
 /** The measuring line's two endpoints, in display-space pixels — both user-draggable. */
@@ -42,6 +44,10 @@ class PhotoMeasureState {
 
     var unit by mutableStateOf(LengthUnit.Metric)
 
+    /** True while [revealQuadAt] is running the Canny+Hough auto-fit — a few hundred ms of real work. */
+    var isDetectingQuad by mutableStateOf(false)
+        private set
+
     val isCalibrated: Boolean get() = homography != null
 
     /** The live line's real-world length, or null before calibration/placement. */
@@ -61,14 +67,47 @@ class PhotoMeasureState {
     }
 
     /**
-     * Drops the quad centred on [tapPoint] — nothing is shown until the user taps roughly where
-     * the reference object is in the photo, matching ARuler's own flow ("Nhấp vào ... để đánh
-     * dấu nó"): a quad that just appears pre-placed on every fresh photo would sit somewhere
+     * Drops a quad near [tapPoint] — nothing is shown until the user taps roughly where the
+     * reference object is in the photo, matching ARuler's own flow ("Nhấp vào ... để đánh dấu
+     * nó"): a quad that just appears pre-placed on every fresh photo would sit somewhere
      * arbitrary far more often than not, since the reference object could be anywhere in frame.
      * No-op once a quad already exists — this only ever creates the *first* one.
+     *
+     * First tries [autoFitQuad] (Canny edge detection + Hough line transform) around the tap —
+     * the classical-CV, no-ML answer to ARuler's FastSAM-based auto-fit: it can't segment an
+     * arbitrary object, but a reference object is always a plain rectangle, and that's exactly
+     * what Canny+Hough are good at outlining. Falls back to a plain centred box on anything it
+     * can't find 4 confident edges for (glare, low contrast, background clutter) — the user can
+     * always drag the corners from there, same as before this existed.
      */
-    fun revealQuadAt(tapPoint: Offset, canvasWidthPx: Float, canvasHeightPx: Float) {
+    suspend fun revealQuadAt(tapPoint: Offset, canvasWidthPx: Float, canvasHeightPx: Float) {
         if (quad.isNotEmpty()) return
+        val bitmap = photo
+
+        if (bitmap != null) {
+            val fit = aspectFit(bitmap.width.toFloat(), bitmap.height.toFloat(), canvasWidthPx, canvasHeightPx)
+            val tapInBitmap = Vec2(
+                (tapPoint.x - fit.offsetX) / fit.width * bitmap.width,
+                (tapPoint.y - fit.offsetY) / fit.height * bitmap.height,
+            )
+            isDetectingQuad = true
+            val detected = try {
+                withContext(Dispatchers.Default) { autoFitQuad(bitmap, tapInBitmap) }
+            } finally {
+                isDetectingQuad = false
+            }
+            if (detected != null && quad.isEmpty()) {
+                quad = detected.map { corner ->
+                    Offset(
+                        fit.offsetX + corner.x / bitmap.width * fit.width,
+                        fit.offsetY + corner.y / bitmap.height * fit.height,
+                    )
+                }
+                return
+            }
+        }
+
+        if (quad.isNotEmpty()) return // a drag or a second tap could have raced ahead while detecting
         val halfWidth = canvasWidthPx * 0.22f
         val halfHeight = canvasHeightPx * 0.14f
         quad = listOf(

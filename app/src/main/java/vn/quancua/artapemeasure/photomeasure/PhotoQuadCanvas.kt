@@ -1,14 +1,19 @@
 package vn.quancua.artapemeasure.photomeasure
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -24,6 +29,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import vn.quancua.artapemeasure.measure.formatLength
 import vn.quancua.artapemeasure.ui.drawLabelPill
 
@@ -49,6 +55,7 @@ fun PhotoQuadCanvas(
 ) {
     val textMeasurer = rememberTextMeasurer()
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    val coroutineScope = rememberCoroutineScope()
 
     Box(modifier = modifier.fillMaxSize().onSizeChanged { canvasSize = it }) {
         when {
@@ -56,10 +63,26 @@ fun PhotoQuadCanvas(
                 Canvas(
                     modifier = Modifier.fillMaxSize().pointerInput(canvasSize) {
                         detectTapGestures { point ->
-                            state.revealQuadAt(point, canvasSize.width.toFloat(), canvasSize.height.toFloat())
+                            // revealQuadAt runs Canny+Hough auto-fit off the main thread and is
+                            // a suspend fun for exactly that reason — detectTapGestures's own
+                            // callback isn't a coroutine, so it has to be launched into one.
+                            coroutineScope.launch {
+                                state.revealQuadAt(point, canvasSize.width.toFloat(), canvasSize.height.toFloat())
+                            }
                         }
                     },
                 ) { drawPlainPhoto(photo) }
+                if (state.isDetectingQuad) {
+                    Text(
+                        "Đang dò cạnh...",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .background(Color(0x8C000000))
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                    )
+                }
             }
 
             !state.isCalibrated -> {
