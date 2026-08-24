@@ -163,4 +163,34 @@ class MeasureMathTest {
         val zero = Vec3(0f, 0f, 0f)
         assertEquals(zero, zero.normalized())
     }
+
+    @Test
+    fun `nearest index picks the closest point within range`() {
+        val positions = listOf(0f to 0f, 100f to 100f, 20f to 0f)
+        assertEquals(2, nearestIndexWithin(positions, touch = 25f to 0f, maxDistancePx = 30f))
+    }
+
+    @Test
+    fun `nearest index is null when every point is out of range`() {
+        val positions = listOf(0f to 0f, 100f to 100f)
+        assertEquals(null, nearestIndexWithin(positions, touch = 50f to 50f, maxDistancePx = 10f))
+    }
+
+    @Test
+    fun `nearest index skips points that project behind the camera`() {
+        val positions = listOf<Pair<Float, Float>?>(null, 10f to 10f)
+        assertEquals(1, nearestIndexWithin(positions, touch = 10f to 10f, maxDistancePx = 5f))
+    }
+
+    @Test
+    fun `nearest index breaks ties by keeping the earlier index`() {
+        val positions = listOf(0f to 0f, 0f to 10f)
+        assertEquals(0, nearestIndexWithin(positions, touch = 0f to 5f, maxDistancePx = 5f))
+    }
+
+    @Test
+    fun `nearest index is exactly at the boundary distance`() {
+        val positions = listOf(0f to 0f)
+        assertEquals(0, nearestIndexWithin(positions, touch = 10f to 0f, maxDistancePx = 10f))
+    }
 }

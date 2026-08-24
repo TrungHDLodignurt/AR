@@ -2,6 +2,7 @@ package vn.quancua.artapemeasure.measure
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
@@ -87,7 +89,35 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
 
         MeasureOverlay(
             frameProvider = { state.overlay },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { touch ->
+                        // Hit-test against the same screen positions the overlay just drew, so
+                        // "grabbed the wrong point" can never happen from stale projections.
+                        val positions = state.worldPoints.map {
+                            projector.project(it, viewSize.width, viewSize.height)?.let { p -> p.x to p.y }
+                        }
+                        val index = nearestIndexWithin(
+                            positions,
+                            touch = touch.x to touch.y,
+                            maxDistancePx = 32.dp.toPx(),
+                        )
+                        if (index != null) state.beginDrag(index, touch)
+                    },
+                    onDrag = { change, _ ->
+                        if (state.draggingIndex != null) {
+                            change.consume()
+                            state.updateDragTouch(change.position)
+                        }
+                    },
+                    onDragEnd = {
+                        if (state.draggingIndex != null) {
+                            session?.let { state.commitDrag(it) } ?: state.cancelDrag()
+                        }
+                    },
+                    onDragCancel = state::cancelDrag,
+                )
+            },
         )
 
         MeasureTopBar(
@@ -124,7 +154,9 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
         )
 
         MeasureBottomBar(
-            addEnabled = state.live != null && state.liveStable,
+            // Gated on draggingIndex too: a second finger tapping + mid-drag would add a point
+            // and edit one at the same time, which is a confusing thing for one tap to do.
+            addEnabled = state.draggingIndex == null && state.live != null && state.liveStable,
             onAddPoint = { session?.let { state.commitLivePoint(it) } },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
@@ -165,6 +197,9 @@ private fun hintFor(state: MeasureState): String? {
         if (res != null) return stringResource(res)
     }
     return when {
+        // Direct manipulation is already happening — nothing about surface-hunting is relevant
+        // while the user's finger is on a point they placed a moment ago.
+        state.draggingIndex != null -> stringResource(R.string.hint_dragging_point)
         // Ahead of the plane hint: a reading that will not hold still is a specific, fixable
         // problem, and telling the user to keep hunting for a surface would be misleading when
         // the reticle is already on one that simply cannot be measured.

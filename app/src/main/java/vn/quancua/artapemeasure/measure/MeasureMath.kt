@@ -107,6 +107,38 @@ fun formatLength(meters: Float, unit: LengthUnit, locale: Locale = Locale.getDef
     }
 
 /**
+ * Index of the closest entry in [positions] to [touch], provided it is within [maxDistancePx].
+ *
+ * Backs "drag an existing point to move it": screen positions are supplied as plain pixel
+ * pairs (not `Offset`) so this hit-test — the part of dragging that can silently grab the
+ * wrong point — runs in a plain JVM test with no Compose or ARCore on the classpath. A `null`
+ * entry means that point currently projects behind the camera and can never be the closest
+ * hit. Ties (equal distance) keep the earlier index, matching iteration order.
+ */
+fun nearestIndexWithin(
+    positions: List<Pair<Float, Float>?>,
+    touch: Pair<Float, Float>,
+    maxDistancePx: Float,
+): Int? {
+    val maxDistanceSq = maxDistancePx * maxDistancePx
+    var bestIndex: Int? = null
+    var bestDistanceSq = Float.MAX_VALUE
+    positions.forEachIndexed { i, position ->
+        val (x, y) = position ?: return@forEachIndexed
+        val dx = x - touch.first
+        val dy = y - touch.second
+        val distanceSq = dx * dx + dy * dy
+        // Strict less-than on the running best (the qualifying bound above stays <=) so an
+        // exact tie keeps the earlier index instead of the later one overwriting it.
+        if (distanceSq <= maxDistanceSq && distanceSq < bestDistanceSq) {
+            bestDistanceSq = distanceSq
+            bestIndex = i
+        }
+    }
+    return bestIndex
+}
+
+/**
  * True when any point moved more than [epsilonMeters], or when the count changed.
  *
  * Anchor poses must be re-read every ARCore frame, because ARCore corrects them as it

@@ -35,6 +35,8 @@ data class OverlayFrame(
     /** The rubber-band segment from the last committed point to the reticle. Drawn dashed. */
     val live: Segment2D? = null,
     val reticleOnSurface: Boolean = false,
+    /** Screen position of the point currently being dragged, or null when nothing is. */
+    val draggingPoint: Offset? = null,
 )
 
 /**
@@ -104,6 +106,67 @@ class MeasureState {
         liveStable = steadyFrames >= MinSteadyFrames
     }
 
+    /**
+     * Index into [points] currently being dragged to a new position, or null when nothing is.
+     *
+     * Editing a placed point this way — rather than only undo/redo the whole thing — is the
+     * one gap the reference app (ARuler) has that this one did not: its "Edit measurements"
+     * instruction is exactly picking up an already-placed point and moving it.
+     */
+    var draggingIndex by mutableStateOf<Int?>(null)
+        private set
+
+    /**
+     * Latest resolved surface position under the drag touch. Sticky on purpose: only a
+     * successful hit overwrites it (see [noteDragSample]), so a momentary gap in the surface
+     * under the finger does not make the dragged point vanish for a frame.
+     */
+    var dragSample by mutableStateOf<SurfaceSample?>(null)
+        private set
+
+    /** Raw screen position of the finger while dragging. Read every AR frame to resolve [dragSample]. */
+    var dragTouchPosition by mutableStateOf<Offset?>(null)
+        private set
+
+    fun beginDrag(index: Int, at: Offset) {
+        draggingIndex = index
+        dragTouchPosition = at
+        dragSample = null
+    }
+
+    fun updateDragTouch(at: Offset) {
+        dragTouchPosition = at
+    }
+
+    /** Feeds one frame's resolved surface under the drag touch into [dragSample]. */
+    fun noteDragSample(sample: SurfaceSample?) {
+        if (sample != null) dragSample = sample
+    }
+
+    /**
+     * Ends the drag, replacing the point's anchor with one at the last resolved position.
+     *
+     * A no-op — the point stays exactly where it was — if the drag never resolved a surface,
+     * since committing a null position would either crash or silently drop the point.
+     */
+    fun commitDrag(session: Session) {
+        val index = draggingIndex
+        val sample = dragSample
+        if (index != null && sample != null) {
+            points[index].anchor.detach()
+            points[index] = MeasuredPoint(sample.commit(session), sample.source)
+            worldPoints = points.map { it.anchor.pose.toVec3() }
+            lastSource = sample.source
+        }
+        cancelDrag()
+    }
+
+    fun cancelDrag() {
+        draggingIndex = null
+        dragTouchPosition = null
+        dragSample = null
+    }
+
     var overlay by mutableStateOf(OverlayFrame())
 
     var cameraReady by mutableStateOf(false)
@@ -129,6 +192,8 @@ class MeasureState {
     }
 
     fun undo() {
+        // A stale draggingIndex pointing past the shrunk list is a crash waiting to happen.
+        cancelDrag()
         val last = points.removeLastOrNull() ?: return
         last.anchor.detach()
         worldPoints = points.map { it.anchor.pose.toVec3() }
@@ -136,6 +201,7 @@ class MeasureState {
     }
 
     fun clear() {
+        cancelDrag()
         // Detaching matters: an undetached anchor keeps costing ARCore tracking work every
         // frame, so a session of measure-and-clear slowly starves the frame budget.
         points.forEach { it.anchor.detach() }

@@ -17,6 +17,10 @@ import vn.quancua.artapemeasure.ui.drawLabelPill
 
 private val LineColor = Color.White
 private val PillText = Color(0xFF1C1C1E)
+private val DragAccent = Color(0xFF0A84FF)
+
+/** How far the lifted drag preview sits above the actual point, in dp. */
+private val DragLiftHeight = 56.dp
 
 /**
  * All measurement graphics, drawn in screen space.
@@ -53,11 +57,39 @@ fun MeasureOverlay(
         frame.committed.forEach { drawLabelPill(textMeasurer, it.label, it.midpoint, labelStyle) }
         frame.live?.let { drawLabelPill(textMeasurer, it.label, it.midpoint, labelStyle) }
 
-        drawReticle(
-            center = Offset(size.width / 2f, size.height / 2f),
-            onSurface = frame.reticleOnSurface,
-        )
+        frame.draggingPoint?.let { drawDragPreview(it) }
+
+        // The reticle and the drag preview both mean "here is the point that matters right
+        // now" — showing both at once would split the user's attention between two claims.
+        if (frame.draggingPoint == null) {
+            drawReticle(
+                center = Offset(size.width / 2f, size.height / 2f),
+                onSurface = frame.reticleOnSurface,
+            )
+        }
     }
+}
+
+/**
+ * Highlights the point being dragged, and lifts a second preview of it above the touch —
+ * the fingertip sits exactly on top of the real point otherwise, hiding the one thing the
+ * user is trying to see precisely.
+ *
+ * The reference app (ARuler) solves the same occlusion problem with a live magnified crop of
+ * the camera feed rendered by a custom GPU shader, positioned by the same logic: away from
+ * the fingertip. Reproducing that needs a per-frame texture read-back from the AR camera
+ * feed, which this app's 2D Canvas-over-SceneView overlay has no cheap access to — a
+ * disproportionate amount of GPU plumbing for a demo app. This keeps the actual goal (see
+ * where the point will land despite the finger covering it) and drops the camera-zoom fidelity.
+ */
+private fun DrawScope.drawDragPreview(anchor: Offset) {
+    drawCircle(color = LineColor, radius = 7.dp.toPx(), center = anchor)
+    drawCircle(color = DragAccent, radius = 11.dp.toPx(), center = anchor, style = Stroke(width = 2.dp.toPx()))
+
+    val lifted = anchor.copy(y = anchor.y - DragLiftHeight.toPx())
+    drawLine(color = DragAccent.copy(alpha = 0.6f), start = anchor, end = lifted, strokeWidth = 1.5.dp.toPx())
+    drawCircle(color = Color.White, radius = 14.dp.toPx(), center = lifted)
+    drawCircle(color = DragAccent, radius = 14.dp.toPx(), center = lifted, style = Stroke(width = 2.dp.toPx()))
 }
 
 private fun DrawScope.drawSegment(segment: Segment2D, dashed: Boolean) {
