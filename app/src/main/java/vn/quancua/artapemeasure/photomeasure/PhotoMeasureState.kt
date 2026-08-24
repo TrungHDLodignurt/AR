@@ -96,6 +96,7 @@ class PhotoMeasureState {
             } finally {
                 isDetectingQuad = false
             }
+            android.util.Log.d("PhotoMeasure", "autoFitQuad tap=$tapInBitmap result=$detected")
             if (detected != null && quad.isEmpty()) {
                 quad = detected.map { corner ->
                     Offset(

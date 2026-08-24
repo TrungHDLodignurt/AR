@@ -24,7 +24,11 @@ fun houghLines(
     height: Int,
     thetaStepDegrees: Float = 1f,
     minVotesFraction: Float = 0.3f,
-    maxLines: Int = 12,
+    // A real photo's background (fabric weave, printed logos, shadows) generates plenty of its
+    // own strong lines — on a real test photo the reference object's own right edge ranked
+    // outside the top 12 entirely, crowded out by mousepad-texture lines, so quadFromLines never
+    // even got to see it. Raised well past what a clean synthetic edge map would ever need.
+    maxLines: Int = 40,
 ): List<HoughLine> {
     val thetaSteps = (180f / thetaStepDegrees).toInt()
     val maxRho = hypot(width.toFloat(), height.toFloat())
