@@ -2,14 +2,13 @@ package vn.quancua.artapemeasure.photomeasure
 
 import android.graphics.Bitmap
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import vn.quancua.artapemeasure.measure.LengthUnit
 
-/** One committed measurement on the photo, with its distance already resolved. */
-data class MeasuredLine(val start: Offset, val end: Offset, val distanceMm: Float)
+/** The measuring line's two endpoints, in display-space pixels — both user-draggable. */
+data class LiveLine(val start: Offset, val end: Offset)
 
 /**
  * Mutable UI state for the photo-reference measure screen.
@@ -32,24 +31,33 @@ class PhotoMeasureState {
     var homography by mutableStateOf<Homography?>(null)
         private set
 
-    val lines = mutableStateListOf<MeasuredLine>()
-
-    /** First tap of a line in progress; the next tap completes it. */
-    var pendingStart by mutableStateOf<Offset?>(null)
+    /**
+     * One measuring line the user drags into place — matching ARuler's own "Chiều dài" tool,
+     * which is a single persistent line with two draggable endpoints, not tap-to-place-2-points.
+     * The distance is read live off wherever the endpoints currently are, so dragging an
+     * endpoint updates the number on every move rather than needing a separate commit step.
+     */
+    var line by mutableStateOf<LiveLine?>(null)
         private set
 
     var unit by mutableStateOf(LengthUnit.Metric)
 
     val isCalibrated: Boolean get() = homography != null
-    val canUndo: Boolean get() = pendingStart != null || lines.isNotEmpty()
+
+    /** The live line's real-world length, or null before calibration/placement. */
+    val currentDistanceMm: Float?
+        get() {
+            val h = homography ?: return null
+            val l = line ?: return null
+            return measureRealDistanceMm(h, Vec2(l.start.x, l.start.y), Vec2(l.end.x, l.end.y))
+        }
 
     /** Loads a new photo and resets everything downstream of it — a new picture is a new plane. */
     fun loadPhoto(bitmap: Bitmap) {
         photo = bitmap
         quad = emptyList()
         homography = null
-        lines.clear()
-        pendingStart = null
+        line = null
     }
 
     /**
@@ -79,14 +87,12 @@ class PhotoMeasureState {
     }
 
     /**
-     * Solves the homography from the current quad to [reference]'s real-world rectangle.
-     *
-     * The quad's top edge (corners 0-1) and bottom edge (2-3) are always treated as the *long*
-     * side, left/right (3-0, 1-2) as the *short* side — fixed by convention, not measured from
-     * on-screen pixel lengths, because those lengths are exactly what perspective distorts.
-     * The UI is responsible for telling the user which edge is which before they drag.
+     * Solves the homography from the current quad to [reference]'s real-world rectangle, and —
+     * unlike the quad, which needs a tap first — places the measuring line straight away,
+     * centred on screen: ARuler's own tool starts with a line already there to drag, not an
+     * empty canvas waiting for a first tap.
      */
-    fun confirmReference() {
+    fun confirmReference(canvasWidthPx: Float, canvasHeightPx: Float) {
         if (quad.size != 4) return
         val long = reference.longSideMm
         val short = reference.shortSideMm
@@ -96,33 +102,22 @@ class PhotoMeasureState {
             Vec2(long, short),
             Vec2(0f, short),
         )
-        homography = computeHomography(quad.map { Vec2(it.x, it.y) }, dst)
+        homography = computeHomography(quad.map { Vec2(it.x, it.y) }, dst) ?: return
+        resetLine(canvasWidthPx, canvasHeightPx)
     }
 
-    /** Places or completes a measurement point. No-op before [confirmReference] has succeeded. */
-    fun onTap(point: Offset) {
-        val h = homography ?: return
-        val start = pendingStart
-        if (start == null) {
-            pendingStart = point
-            return
-        }
-        val distanceMm = measureRealDistanceMm(h, Vec2(start.x, start.y), Vec2(point.x, point.y))
-        lines.add(MeasuredLine(start, point, distanceMm))
-        pendingStart = null
+    /** Re-centres the measuring line — the "start over" action once it's been dragged somewhere unhelpful. */
+    fun resetLine(canvasWidthPx: Float, canvasHeightPx: Float) {
+        val halfSpan = canvasWidthPx * 0.25f
+        val midY = canvasHeightPx / 2f
+        val midX = canvasWidthPx / 2f
+        line = LiveLine(Offset(midX - halfSpan, midY), Offset(midX + halfSpan, midY))
     }
 
-    fun undo() {
-        if (pendingStart != null) {
-            pendingStart = null
-            return
-        }
-        lines.removeLastOrNull()
-    }
-
-    fun clear() {
-        lines.clear()
-        pendingStart = null
+    /** Drags one endpoint. `isStart` picks which — there are only ever these two handles. */
+    fun moveLineEndpoint(isStart: Boolean, position: Offset) {
+        val current = line ?: return
+        line = if (isStart) current.copy(start = position) else current.copy(end = position)
     }
 
     fun toggleUnit() {

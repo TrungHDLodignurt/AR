@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,11 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import vn.quancua.artapemeasure.ui.MeasureTopBar
 
 /**
  * "Measure from a photo" — no ARCore, no camera-ar feature, no depth. A rectangle of known size
@@ -50,6 +52,7 @@ fun PhotoMeasureScreen(modifier: Modifier = Modifier) {
     var referenceChosen by remember { mutableStateOf(false) }
     var showPickPhotoSheet by remember { mutableStateOf(false) }
     var showAddReferenceFlow by remember { mutableStateOf(false) }
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
     fun selectReference(reference: ReferenceObject) {
         state.reference = reference
@@ -78,15 +81,20 @@ fun PhotoMeasureScreen(modifier: Modifier = Modifier) {
 
             else -> {
                 val imageBitmap = remember(state.photo) { state.photo!!.asImageBitmap() }
-                PhotoQuadCanvas(photo = imageBitmap, state = state, modifier = Modifier.fillMaxSize())
+                PhotoQuadCanvas(
+                    photo = imageBitmap,
+                    state = state,
+                    modifier = Modifier.fillMaxSize().onSizeChanged { canvasSize = it },
+                )
 
                 Column(modifier = Modifier.fillMaxSize()) {
-                    if (state.isCalibrated) {
-                        MeasureTopBar(canUndo = state.canUndo, onUndo = state::undo, onClear = state::clear)
-                    }
                     HintBanner(state = state)
                     Box(modifier = Modifier.weight(1f))
-                    BottomPanel(state = state, onPickAnotherPhoto = { showPickPhotoSheet = true })
+                    BottomPanel(
+                        state = state,
+                        canvasSize = canvasSize,
+                        onPickAnotherPhoto = { showPickPhotoSheet = true },
+                    )
                 }
             }
         }
@@ -158,26 +166,22 @@ private fun HintBanner(state: PhotoMeasureState) {
 }
 
 @Composable
-private fun BottomPanel(state: PhotoMeasureState, onPickAnotherPhoto: () -> Unit) {
+private fun BottomPanel(state: PhotoMeasureState, canvasSize: IntSize, onPickAnotherPhoto: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().background(Color(0xF21C1C1E)).padding(16.dp)) {
         if (!state.isCalibrated) {
             Button(
-                onClick = state::confirmReference,
+                onClick = { state.confirmReference(canvasSize.width.toFloat(), canvasSize.height.toFloat()) },
                 enabled = state.quad.size == 4,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Xác nhận vật tham chiếu") }
         } else {
-            Text(
-                if (state.pendingStart == null) {
-                    "Chạm 2 điểm trên ảnh để đo khoảng cách thật"
-                } else {
-                    "Chạm điểm thứ 2 để hoàn tất đường đo"
-                },
-                color = Color.White,
-                fontSize = 13.sp,
-            )
-            Button(onClick = onPickAnotherPhoto, modifier = Modifier.padding(top = 10.dp)) {
-                Text("Chọn ảnh khác")
+            Text("Kéo 2 đầu đoạn thẳng để đo khoảng cách thật", color = Color.White, fontSize = 13.sp)
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                Button(onClick = onPickAnotherPhoto) { Text("Chọn ảnh khác") }
+                Button(
+                    onClick = { state.resetLine(canvasSize.width.toFloat(), canvasSize.height.toFloat()) },
+                    modifier = Modifier.padding(start = 8.dp),
+                ) { Text("Đặt lại vị trí") }
             }
         }
     }

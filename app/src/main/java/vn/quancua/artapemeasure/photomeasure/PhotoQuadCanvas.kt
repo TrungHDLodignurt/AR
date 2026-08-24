@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.TextStyle
@@ -26,7 +27,7 @@ import kotlin.math.roundToInt
 import vn.quancua.artapemeasure.measure.formatLength
 import vn.quancua.artapemeasure.ui.drawLabelPill
 
-private val LineColor = Color.White
+private val LineColor = Color(0xFFFF453A)
 private val LabelStyle = TextStyle(color = Color(0xFF1C1C1E), fontSize = 13.sp, fontWeight = FontWeight.Medium)
 
 /**
@@ -34,7 +35,8 @@ private val LabelStyle = TextStyle(color = Color(0xFF1C1C1E), fontSize = 13.sp, 
  *  - no quad yet: the plain photo, waiting for a tap on the reference object (see
  *    [PhotoMeasureState.revealQuadAt] — nothing is pre-placed, same as ARuler)
  *  - a quad but not yet calibrated: the draggable quad ([QuadEditorCanvas])
- *  - calibrated: the tap-to-measure lines
+ *  - calibrated: one measuring line with two draggable endpoints ([DraggableHandlesOverlay]),
+ *    matching ARuler's "Chiều dài" tool — drag either end to measure, not tap-2-points
  *
  * Coordinates throughout are display pixels — this composable's own size — never the bitmap's
  * native pixel grid. See `Homography.kt` for why that is fine for the maths.
@@ -70,22 +72,30 @@ fun PhotoQuadCanvas(
             }
 
             else -> {
-                Canvas(
-                    modifier = Modifier.fillMaxSize().pointerInput(Unit) {
-                        detectTapGestures { state.onTap(it) }
-                    },
-                ) {
+                val line = state.line
+                Canvas(modifier = Modifier.fillMaxSize()) {
                     drawPlainPhoto(photo)
-
-                    state.lines.forEach { line ->
+                    if (line != null) {
                         drawLine(LineColor, line.start, line.end, strokeWidth = 2.dp.toPx())
                         drawCircle(LineColor, 5.dp.toPx(), line.start)
                         drawCircle(LineColor, 5.dp.toPx(), line.end)
                         val mid = Offset((line.start.x + line.end.x) / 2f, (line.start.y + line.end.y) / 2f)
-                        val label = formatLength(line.distanceMm / 1000f, state.unit)
-                        drawLabelPill(textMeasurer, label, mid, LabelStyle)
+                        val distanceMm = state.currentDistanceMm
+                        if (distanceMm != null) {
+                            val label = formatLength(distanceMm / 1000f, state.unit)
+                            drawLabelPill(textMeasurer, label, mid, LabelStyle, backgroundColor = LineColor)
+                        }
                     }
-                    state.pendingStart?.let { drawCircle(LineColor, 5.dp.toPx(), it) }
+                }
+
+                if (line != null) {
+                    DraggableHandlesOverlay(
+                        photo = photo,
+                        points = listOf(line.start, line.end),
+                        onPointDrag = { index, position -> state.moveLineEndpoint(index == 0, position) },
+                        canvasSize = canvasSize,
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
             }
         }
@@ -93,7 +103,7 @@ fun PhotoQuadCanvas(
 }
 
 /** Aspect-fit rather than stretch-to-fill — see the class doc on `Homography` for why a squashed photo would still be internally consistent but is needlessly harder to align by eye. */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPlainPhoto(photo: ImageBitmap) {
+private fun DrawScope.drawPlainPhoto(photo: ImageBitmap) {
     val fit = aspectFit(photo.width.toFloat(), photo.height.toFloat(), size.width, size.height)
     drawImage(
         photo,
