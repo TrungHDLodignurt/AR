@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backs the FileProvider declared in AndroidManifest.xml. Only the cache subdirectory the
+     camera-capture temp files actually land in is exposed — nothing else in app storage. -->
+<paths>
+    <cache-path name="camera_capture" path="camera-capture/" />
+</paths>

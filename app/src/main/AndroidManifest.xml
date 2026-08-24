@@ -40,5 +40,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Needed for the "Chụp ảnh" (take photo) option when registering a custom reference
+             object: TakePicture writes to a file the camera app must be granted access to, and
+             a plain file:// Uri is blocked by FileUriExposedException on API 24+. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

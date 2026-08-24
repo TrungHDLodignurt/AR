@@ -25,6 +25,7 @@ fun DrawScope.drawLabelPill(
     label: String,
     center: Offset,
     style: TextStyle,
+    backgroundColor: Color = PillBackground,
 ) {
     val layout = textMeasurer.measure(AnnotatedString(label), style)
     val paddingX = 8.dp.toPx()
@@ -34,7 +35,7 @@ fun DrawScope.drawLabelPill(
     val topLeft = Offset(center.x - pillWidth / 2f, center.y - pillHeight / 2f)
 
     drawRoundRect(
-        color = PillBackground,
+        color = backgroundColor,
         topLeft = topLeft,
         size = Size(pillWidth, pillHeight),
         cornerRadius = CornerRadius(pillHeight / 2f),

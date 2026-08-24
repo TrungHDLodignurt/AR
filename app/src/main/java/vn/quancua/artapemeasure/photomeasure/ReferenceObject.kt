@@ -14,6 +14,8 @@ data class ReferenceObject(
     val label: String,
     val shortSideMm: Float,
     val longSideMm: Float,
+    /** Absolute file path to a cropped thumbnail, for user-created objects. Null for built-ins, which use a glyph instead. */
+    val thumbnailPath: String? = null,
 )
 
 /** ISO 216 A4 and ISO/IEC 7810 ID-1 (payment card) — the same two defaults ARuler ships. */
