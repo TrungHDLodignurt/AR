@@ -52,11 +52,13 @@ internal fun onFrame(
     // Always the screen centre: the reticle lives there, and users aim far more precisely with
     // a centred crosshair than with a fingertip.
     val centre = Offset(viewSize.width / 2f, viewSize.height / 2f)
+    val aimRay = projector.unprojectRay(centre.x, centre.y, viewSize.width, viewSize.height)
     state.live = resolveSurface(
         frame = frame,
         xPx = centre.x,
         yPx = centre.y,
         allowDepthFallback = state.depthSupported,
+        aimRay = aimRay,
         onRay = { world ->
             val back = projector.project(world, viewSize.width, viewSize.height)
             back != null && (back - centre).getDistance() <= MaxOffRayPx

@@ -2,6 +2,7 @@ package vn.quancua.artapemeasure.measure
 
 import java.text.NumberFormat
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -35,6 +36,43 @@ fun measureDistanceMeters(a: Vec3, b: Vec3): Float {
 /** Midpoint of the segment `a`–`b` — where a segment's label sits. */
 fun measureMidpoint(a: Vec3, b: Vec3): Vec3 =
     Vec3(x = (a.x + b.x) / 2f, y = (a.y + b.y) / 2f, z = (a.z + b.z) / 2f)
+
+operator fun Vec3.plus(other: Vec3): Vec3 = Vec3(x + other.x, y + other.y, z + other.z)
+operator fun Vec3.minus(other: Vec3): Vec3 = Vec3(x - other.x, y - other.y, z - other.z)
+operator fun Vec3.times(scalar: Float): Vec3 = Vec3(x * scalar, y * scalar, z * scalar)
+fun Vec3.dot(other: Vec3): Float = x * other.x + y * other.y + z * other.z
+
+/** Normalizes to unit length, or returns the input unchanged when it is too close to zero to have a direction. */
+fun Vec3.normalized(): Vec3 {
+    val length = sqrt(x * x + y * y + z * z)
+    return if (length > 1e-6f) Vec3(x / length, y / length, z / length) else this
+}
+
+/** A world-space ray: an [origin] plus a unit-length [direction]. */
+data class Ray3(val origin: Vec3, val direction: Vec3)
+
+/**
+ * Where [ray] punches through the infinite plane defined by [planePoint] and [planeNormal].
+ *
+ * ARCore's own plane hit test walks the plane's live triangulated mesh, which keeps
+ * re-triangulating as tracking refines its estimate of the surface — so a perfectly still
+ * reticle over a perfectly still plane can still report a slightly different point from one
+ * frame to the next, purely from mesh churn and not from anything real moving. Intersecting
+ * the aim ray against the plane's mathematical definition instead — a point plus a normal —
+ * is exact and immune to that churn. This is the technique the reference app (ARuler) uses
+ * for its live reading, which is why its reticle holds noticeably steadier than a per-frame
+ * mesh-based hit test does.
+ *
+ * Returns null when the ray is (near) parallel to the plane, or when the plane is behind the
+ * ray's origin — both mean there is no meaningful intersection to report.
+ */
+fun intersectRayPlane(ray: Ray3, planePoint: Vec3, planeNormal: Vec3): Vec3? {
+    val denom = ray.direction.dot(planeNormal)
+    if (abs(denom) < 1e-4f) return null
+    val t = (planePoint - ray.origin).dot(planeNormal) / denom
+    if (t < 0f) return null
+    return ray.origin + ray.direction * t
+}
 
 /**
  * Formats metres the way the reference app does: at most two decimals, trailing zero

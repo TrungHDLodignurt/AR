@@ -119,4 +119,48 @@ class MeasureMathTest {
     fun `points moved is false for two empty lists`() {
         assertFalse(measurePointsMoved(emptyList(), emptyList()))
     }
+
+    @Test
+    fun `ray plane intersection hits a flat floor straight down`() {
+        val ray = Ray3(origin = Vec3(0f, 2f, 0f), direction = Vec3(0f, -1f, 0f))
+        val hit = intersectRayPlane(ray, planePoint = Vec3(0f, 0f, 0f), planeNormal = Vec3(0f, 1f, 0f))
+        assertEquals(Vec3(0f, 0f, 0f), hit)
+    }
+
+    @Test
+    fun `ray plane intersection follows an oblique ray to the right plane`() {
+        // Aim ray leans in x while dropping in y; must land exactly on the y=0 plane.
+        val ray = Ray3(origin = Vec3(0f, 2f, 0f), direction = Vec3(1f, -1f, 0f).normalized())
+        val hit = intersectRayPlane(ray, planePoint = Vec3(0f, 0f, 0f), planeNormal = Vec3(0f, 1f, 0f))
+        assertEquals(2f, hit!!.x, eps)
+        assertEquals(0f, hit.y, eps)
+    }
+
+    @Test
+    fun `ray plane intersection is null when the ray is parallel to the plane`() {
+        val ray = Ray3(origin = Vec3(0f, 2f, 0f), direction = Vec3(1f, 0f, 0f))
+        val hit = intersectRayPlane(ray, planePoint = Vec3(0f, 0f, 0f), planeNormal = Vec3(0f, 1f, 0f))
+        assertEquals(null, hit)
+    }
+
+    @Test
+    fun `ray plane intersection is null when the plane is behind the ray`() {
+        // Plane sits at y=5, but the ray points down and away from it.
+        val ray = Ray3(origin = Vec3(0f, 2f, 0f), direction = Vec3(0f, -1f, 0f))
+        val hit = intersectRayPlane(ray, planePoint = Vec3(0f, 5f, 0f), planeNormal = Vec3(0f, 1f, 0f))
+        assertEquals(null, hit)
+    }
+
+    @Test
+    fun `normalized preserves direction and yields unit length`() {
+        val n = Vec3(3f, 0f, 4f).normalized()
+        assertEquals(0.6f, n.x, eps)
+        assertEquals(0.8f, n.z, eps)
+    }
+
+    @Test
+    fun `normalized leaves a near-zero vector unchanged rather than dividing by zero`() {
+        val zero = Vec3(0f, 0f, 0f)
+        assertEquals(zero, zero.normalized())
+    }
 }

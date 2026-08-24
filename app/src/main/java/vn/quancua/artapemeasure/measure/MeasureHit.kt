@@ -8,6 +8,7 @@ import com.google.ar.core.Plane
 import com.google.ar.core.Point
 import com.google.ar.core.Pose
 import com.google.ar.core.Session
+import com.google.ar.core.Trackable
 import com.google.ar.core.TrackingState
 import io.github.sceneview.ar.arcore.hitTestDepth
 
@@ -30,9 +31,36 @@ class SurfaceSample(
     val source: HitSource,
     private val hitResult: HitResult?,
     private val pose: Pose,
+    /** Set only for a [HitSource.Plane] reading resolved analytically — see [resolveSurface]. */
+    private val trackable: Trackable? = null,
 ) {
-    /** Turns this reading into a tracked anchor. Call only when the user commits the point. */
-    fun commit(session: Session): Anchor = hitResult?.createAnchor() ?: session.createAnchor(pose)
+    /**
+     * Turns this reading into a tracked anchor. Call only when the user commits the point.
+     *
+     * [trackable] takes priority over [hitResult] because a plane reading's [position] may be
+     * the analytic ray/plane intersection rather than [hitResult]'s mesh-based hit pose (see
+     * [resolveSurface]) — anchoring through the trackable via [pose] places the anchor exactly
+     * where the user was shown it, while still tracking that plane as ARCore refines it, same
+     * as anchoring through the hit result would.
+     */
+    fun commit(session: Session): Anchor =
+        trackable?.createAnchor(pose) ?: hitResult?.createAnchor() ?: session.createAnchor(pose)
+}
+
+/**
+ * The plane's normal for the analytic intersection in [resolveSurface].
+ *
+ * ARCore's Plane pose always carries the plane normal on its Y axis, which is correct as-is
+ * for a horizontal plane. A VERTICAL plane (a wall) is different: its fitted pose can carry a
+ * small amount of vertical tilt as ARCore keeps refining the fit, but a wall's true normal
+ * never has a vertical component — that tilt is a fitting artefact, not something to measure
+ * against. Flattening it back to purely horizontal keeps the intersection point from drifting
+ * with that artefact.
+ */
+private fun Plane.analyticNormal(): Vec3 {
+    val axis = centerPose.yAxis
+    if (type != Plane.Type.VERTICAL) return Vec3(axis[0], axis[1], axis[2])
+    return Vec3(axis[0], 0f, axis[2]).normalized()
 }
 
 /**
@@ -57,12 +85,18 @@ class SurfaceSample(
  * anchored and still drawn correctly, it just is not on the object. It only betrays itself
  * once the camera moves and parallax slides it across the scene, which reads as the anchor
  * having come loose. Depth-map hits are the ones that fail; plane hits round-trip exactly.
+ *
+ * [aimRay], when supplied, additionally lets a plane candidate be resolved analytically
+ * (see [intersectRayPlane]) instead of through the plane hit's mesh-based pose — steadier for
+ * the reasons documented there. It is optional because that refinement only applies to plane
+ * hits; every other candidate is unaffected.
  */
 fun resolveSurface(
     frame: Frame,
     xPx: Float,
     yPx: Float,
     allowDepthFallback: Boolean,
+    aimRay: Ray3? = null,
     onRay: (Vec3) -> Boolean = { true },
 ): SurfaceSample? {
     // hitTest throws if the session is not ready for this frame yet.
@@ -75,7 +109,18 @@ fun resolveSurface(
             trackable is Plane &&
                 trackable.trackingState == TrackingState.TRACKING &&
                 trackable.isPoseInPolygon(hit.hitPose)
-        }?.let { yield(SurfaceSample(it.hitPose.toVec3(), HitSource.Plane, it, it.hitPose)) }
+        }?.let { hit ->
+            val plane = hit.trackable as Plane
+            val analytic = aimRay?.let {
+                intersectRayPlane(it, plane.centerPose.toVec3(), plane.analyticNormal())
+            }
+            val position = analytic ?: hit.hitPose.toVec3()
+            val pose = Pose(
+                floatArrayOf(position.x, position.y, position.z),
+                hit.hitPose.rotationQuaternion,
+            )
+            yield(SurfaceSample(position, HitSource.Plane, hit, pose, trackable = plane))
+        }
 
         hits.firstOrNull { it.trackable is DepthPoint }?.let {
             yield(SurfaceSample(it.hitPose.toVec3(), HitSource.Depth, it, it.hitPose))
