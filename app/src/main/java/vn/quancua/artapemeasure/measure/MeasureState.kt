@@ -1,0 +1,158 @@
+package vn.quancua.artapemeasure.measure
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import com.google.ar.core.Anchor
+import com.google.ar.core.Session
+import com.google.ar.core.TrackingFailureReason
+
+/** Frames a depth reading must hold still before it can be committed — a sixth of a second. */
+private const val MinSteadyFrames = 5
+
+/** A committed measurement point: an ARCore anchor plus how its position was obtained. */
+class MeasuredPoint(val anchor: Anchor, val source: HitSource)
+
+/** One screen-space segment ready to draw, with its label already formatted. */
+data class Segment2D(
+    val start: Offset,
+    val end: Offset,
+    val midpoint: Offset,
+    val label: String,
+)
+
+/**
+ * Everything the overlay needs for one frame, in screen pixels.
+ *
+ * Recomputed each ARCore frame and read inside the Canvas draw lambda, so a new frame
+ * invalidates only the draw phase — no recomposition, no relayout.
+ */
+data class OverlayFrame(
+    val points: List<Offset> = emptyList(),
+    val committed: List<Segment2D> = emptyList(),
+    /** The rubber-band segment from the last committed point to the reticle. Drawn dashed. */
+    val live: Segment2D? = null,
+    val reticleOnSurface: Boolean = false,
+)
+
+/**
+ * Mutable UI state for the measure screen.
+ *
+ * A plain state holder rather than a ViewModel: nothing here outlives the screen and nothing
+ * needs to survive process death — a half-finished measurement is not worth restoring, since
+ * the ARCore session that gave the anchors meaning is gone anyway.
+ */
+class MeasureState {
+
+    val points = mutableStateListOf<MeasuredPoint>()
+
+    /**
+     * World positions mirroring [points], refreshed from the anchors only when they actually
+     * move. Anchors drift as ARCore refines tracking, so this cannot be captured once at tap
+     * time — but neither can it be written every frame without making the numbers flicker.
+     */
+    var worldPoints by mutableStateOf<List<Vec3>>(emptyList())
+        private set
+
+    /** Live surface reading under the reticle, or null when the reticle is off-surface. */
+    var live by mutableStateOf<SurfaceSample?>(null)
+
+    /**
+     * Whether the live reading has held still long enough to be worth committing.
+     *
+     * Plane readings are steady by construction. Depth-map readings are not: on a glossy or
+     * blank surface — a television, a painted wall — the depth estimate for one fixed target
+     * has been measured swinging between 0.46 m and 3.73 m from frame to frame. A point
+     * committed from one of those samples is anchored firmly at a distance that was never
+     * real, and parallax then slides it across the scene as the phone moves, which reads as
+     * the anchor having come loose. No surface moves metres in a thirtieth of a second, so
+     * that jump is the tell, and refusing the point beats reporting a length nobody can tell
+     * is wrong.
+     */
+    var liveStable by mutableStateOf(false)
+        private set
+
+    private var steadyFrames = 0
+    private var lastLivePosition: Vec3? = null
+
+    /** Feeds one frame's reading into the steadiness gate behind [liveStable]. */
+    fun noteLiveSample(sample: SurfaceSample?, distanceMeters: Float?) {
+        if (sample == null) {
+            steadyFrames = 0
+            lastLivePosition = null
+            liveStable = false
+            return
+        }
+        if (sample.source == HitSource.Plane) {
+            steadyFrames = MinSteadyFrames
+            lastLivePosition = sample.position
+            liveStable = true
+            return
+        }
+        val previous = lastLivePosition
+        // Scale the allowance with distance — reticle sweep covers more ground further out —
+        // but keep a floor so close-up readings are not held to sub-centimetre steadiness.
+        val allowed = maxOf(0.05f, 0.2f * (distanceMeters ?: 0f))
+        steadyFrames = if (previous != null && measureDistanceMeters(previous, sample.position) <= allowed) {
+            steadyFrames + 1
+        } else {
+            0
+        }
+        lastLivePosition = sample.position
+        liveStable = steadyFrames >= MinSteadyFrames
+    }
+
+    var overlay by mutableStateOf(OverlayFrame())
+
+    var cameraReady by mutableStateOf(false)
+    var tracking by mutableStateOf(false)
+    var anyPlaneTracked by mutableStateOf(false)
+    var depthSupported by mutableStateOf(false)
+    var trackingFailure by mutableStateOf<TrackingFailureReason?>(null)
+    var unit by mutableStateOf(LengthUnit.Metric)
+
+    /** Last point's hit source, surfaced in the UI: a reading you cannot attribute is a reading you cannot calibrate. */
+    var lastSource by mutableStateOf<HitSource?>(null)
+
+    val canUndo: Boolean get() = points.isNotEmpty()
+    val isDrawing: Boolean get() = points.isNotEmpty()
+
+    /** Commits the current live reading as a new point. No-op when off-surface. */
+    fun commitLivePoint(session: Session): Boolean {
+        val sample = live ?: return false
+        points.add(MeasuredPoint(sample.commit(session), sample.source))
+        lastSource = sample.source
+        worldPoints = points.map { it.anchor.pose.toVec3() }
+        return true
+    }
+
+    fun undo() {
+        val last = points.removeLastOrNull() ?: return
+        last.anchor.detach()
+        worldPoints = points.map { it.anchor.pose.toVec3() }
+        lastSource = points.lastOrNull()?.source
+    }
+
+    fun clear() {
+        // Detaching matters: an undetached anchor keeps costing ARCore tracking work every
+        // frame, so a session of measure-and-clear slowly starves the frame budget.
+        points.forEach { it.anchor.detach() }
+        points.clear()
+        worldPoints = emptyList()
+        lastSource = null
+        overlay = OverlayFrame()
+    }
+
+    /** Re-reads anchor poses, writing state only past the 1 mm dead-band. */
+    fun refreshWorldPoints() {
+        if (points.isEmpty()) return
+        val next = points.map { it.anchor.pose.toVec3() }
+        if (measurePointsMoved(worldPoints, next)) worldPoints = next
+    }
+
+    fun toggleUnit() {
+        unit = if (unit == LengthUnit.Metric) LengthUnit.Imperial else LengthUnit.Metric
+    }
+}
