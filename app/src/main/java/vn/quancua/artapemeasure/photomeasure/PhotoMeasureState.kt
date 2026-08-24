@@ -53,22 +53,21 @@ class PhotoMeasureState {
     }
 
     /**
-     * Places the default calibration quad once the display size is known — a fresh photo has
-     * no quad yet because until `PhotoQuadCanvas` is laid out, "display pixels" (the coordinate
-     * space every point in this class lives in) has no meaning. No-op once a quad already
-     * exists, so this is safe to call on every recomposition.
+     * Drops the quad centred on [tapPoint] — nothing is shown until the user taps roughly where
+     * the reference object is in the photo, matching ARuler's own flow ("Nhấp vào ... để đánh
+     * dấu nó"): a quad that just appears pre-placed on every fresh photo would sit somewhere
+     * arbitrary far more often than not, since the reference object could be anywhere in frame.
+     * No-op once a quad already exists — this only ever creates the *first* one.
      */
-    fun ensureQuad(canvasWidthPx: Float, canvasHeightPx: Float) {
+    fun revealQuadAt(tapPoint: Offset, canvasWidthPx: Float, canvasHeightPx: Float) {
         if (quad.isNotEmpty()) return
-        val bitmap = photo ?: return
-        val fit = aspectFit(bitmap.width.toFloat(), bitmap.height.toFloat(), canvasWidthPx, canvasHeightPx)
-        val insetX = fit.width * 0.2f
-        val insetY = fit.height * 0.25f
+        val halfWidth = canvasWidthPx * 0.22f
+        val halfHeight = canvasHeightPx * 0.14f
         quad = listOf(
-            Offset(fit.offsetX + insetX, fit.offsetY + insetY),
-            Offset(fit.offsetX + fit.width - insetX, fit.offsetY + insetY),
-            Offset(fit.offsetX + fit.width - insetX, fit.offsetY + fit.height - insetY),
-            Offset(fit.offsetX + insetX, fit.offsetY + fit.height - insetY),
+            Offset(tapPoint.x - halfWidth, tapPoint.y - halfHeight),
+            Offset(tapPoint.x + halfWidth, tapPoint.y - halfHeight),
+            Offset(tapPoint.x + halfWidth, tapPoint.y + halfHeight),
+            Offset(tapPoint.x - halfWidth, tapPoint.y + halfHeight),
         )
     }
 
