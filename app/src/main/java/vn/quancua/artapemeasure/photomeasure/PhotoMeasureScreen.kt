@@ -98,8 +98,12 @@ fun PhotoMeasureScreen(modifier: Modifier = Modifier) {
             )
         }
         if (showAddReferenceFlow) {
-            AddCustomReferenceFlow(
-                onSaved = { newReference ->
+            NameReferenceDialog(
+                onConfirm = { label, shortSideMm, longSideMm ->
+                    // Normalises short/long ordering in case the two fields got swapped —
+                    // see customReferenceObject()'s doc for why that matters.
+                    val validated = customReferenceObject(label, shortSideMm, longSideMm) ?: return@NameReferenceDialog
+                    val newReference = store.add(validated.label, validated.shortSideMm, validated.longSideMm)
                     customReferences.add(newReference)
                     showAddReferenceFlow = false
                     selectReference(newReference)

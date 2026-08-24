@@ -40,10 +40,8 @@ private val ShortEdgeColor = Color(0xFFFFD60A)
 private val EdgeLabelText = Color(0xFF1C1C1E)
 
 /**
- * A photo with a draggable 4-corner quad on top of it — shared between calibrating the
- * measurement photo (`PhotoQuadCanvas`) and registering a new custom reference object
- * (`AddCustomReferenceFlow`), since both are exactly the same interaction: line a quad up with
- * a rectangle of known proportions in a still photo.
+ * A photo with a draggable 4-corner quad on top of it — the calibration step in
+ * `PhotoQuadCanvas`, lining a quad up with a rectangle of known proportions in a still photo.
  *
  * Top/bottom edges are always the "long side", left/right the "short side" — labelled directly
  * on the edges the way ARuler does, rather than leaving orientation to be inferred from colour

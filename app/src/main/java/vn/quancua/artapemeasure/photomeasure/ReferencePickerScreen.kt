@@ -1,14 +1,11 @@
 package vn.quancua.artapemeasure.photomeasure
 
-import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -16,13 +13,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,6 +28,10 @@ import kotlin.math.roundToInt
  * photograph (or pick a photo of) the reference object together with whatever they want to
  * measure, so the app needs to know which real-world size it is calibrating against before that
  * photo even exists.
+ *
+ * No thumbnails: confirmed against the real "Đối tượng tham chiếu mới" dialog (name + length +
+ * width, nothing else) that custom objects are never tied to a photo at all — every card, built-in
+ * or custom, shows initials only.
  */
 @Composable
 fun ReferencePickerScreen(
@@ -77,26 +75,13 @@ private fun ReferenceCard(reference: ReferenceObject, onClick: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        val thumbnailPath = reference.thumbnailPath
-        val thumbnail = remember(thumbnailPath) { thumbnailPath?.let { BitmapFactory.decodeFile(it)?.asImageBitmap() } }
-        if (thumbnail != null) {
-            Image(
-                bitmap = thumbnail,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth().aspectRatio(1.4f).clip(RoundedCornerShape(8.dp)),
-            )
-        } else {
-            // Built-ins and any custom object saved before a thumbnail existed both fall back
-            // to initials — same idea as ARuler's own picker for objects it has no photo of.
-            Text(
-                reference.label.take(2).lowercase(),
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        }
+        Text(
+            reference.label.take(2).lowercase(),
+            color = Color.White,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
         Text(reference.label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         Text(
             "${(reference.shortSideMm / 10).roundToInt()} x ${(reference.longSideMm / 10).roundToInt()} cm",
