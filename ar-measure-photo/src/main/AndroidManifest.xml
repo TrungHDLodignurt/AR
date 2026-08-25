@@ -1,2 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Needed for the "Chụp ảnh" (take photo) option when registering a custom reference
+             object: TakePicture writes to a file the camera app must be granted access to, and
+             a plain file:// Uri is blocked by FileUriExposedException on API 24+. Module-owned
+             subclass + authority so a host app's own FileProvider never manifest-merger-conflicts
+             with this one. -->
+        <provider
+            android:name="vn.apero.armeasure.photo.data.ArMeasurePhotoFileProvider"
+            android:authorities="${applicationId}.armeasure.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+    </application>
+</manifest>
