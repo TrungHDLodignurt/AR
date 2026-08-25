@@ -5,6 +5,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
@@ -182,5 +183,20 @@ class ShapeMathTest {
         val basis = planeBasis(diagonal)
         assertNotNull(basis)
         assertEquals(0f, basis.u.dot(diagonal), eps)
+    }
+
+    @Test
+    fun `plane basis switches its reference vector when the normal is nearly parallel to Z`() {
+        // A wall facing almost straight along ARCore's Z axis is the one case where the default
+        // world-Z reference vector is itself nearly parallel to the normal (dot >= 0.9) — the
+        // fallback to world-X must still produce an orthonormal, non-degenerate basis.
+        val nearZ = Vec3(0.1f, 0.1f, 0.99f).normalized()
+        assertTrue(abs(nearZ.dot(Vec3(0f, 0f, 1f))) >= 0.9f)
+        val basis = planeBasis(nearZ)
+        assertEquals(0f, basis.u.dot(nearZ), eps)
+        assertEquals(0f, basis.v.dot(nearZ), eps)
+        assertEquals(0f, basis.u.dot(basis.v), eps)
+        assertEquals(1f, sqrt(basis.u.dot(basis.u)), eps)
+        assertEquals(1f, sqrt(basis.v.dot(basis.v)), eps)
     }
 }

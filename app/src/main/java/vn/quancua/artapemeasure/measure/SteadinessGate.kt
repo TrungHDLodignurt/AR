@@ -7,10 +7,12 @@ private const val MinSteadyFrames = 5
  * Tracks whether a stream of noisy surface samples has held still long enough to trust.
  *
  * Extracted out of [MeasureState] so the box/cylinder tools can reuse the exact same gate for
- * their tap-3 (height) commit instead of re-deriving it: a height reading almost always comes
- * from a depth-map or feature-point hit (there is rarely a plane floating above a box's top
- * face), which is exactly the unstable case this gate exists to catch — see the rationale on
- * plane vs. depth-map trust in [MeasureState.liveStable]'s doc comment.
+ * every tap-commit (origin, base, and height alike), not just height, instead of re-deriving it.
+ * Height is the tap most likely to need it — a height reading almost always comes from a
+ * depth-map or feature-point hit, since there is rarely a plane floating above a box's top face,
+ * which is exactly the unstable case this gate exists to catch — but origin and base commits go
+ * through the identical gate for the same reason the original point ruler did: see the rationale
+ * on plane vs. depth-map trust in [MeasureState.liveStable]'s doc comment.
  */
 class SteadinessGate {
 
