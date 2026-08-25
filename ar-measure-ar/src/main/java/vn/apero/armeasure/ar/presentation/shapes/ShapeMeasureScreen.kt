@@ -57,7 +57,7 @@ internal fun ShapeMeasureScreen(
     kind: ShapeKind,
     modifier: Modifier = Modifier,
     unit: LengthUnit = LengthUnit.Metric,
-    onShapeCommitted: (MeasuredShape) -> Unit = {},
+    onShapeCommitted: (MeasuredShape, LengthUnit) -> Unit = { _, _ -> },
     onClose: (() -> Unit)? = null,
 ) {
     val engine = rememberEngine()
@@ -146,7 +146,7 @@ internal fun ShapeMeasureScreen(
                 session?.let {
                     val before = state.shapes.size
                     state.commitStep(it)
-                    if (state.shapes.size > before) onShapeCommitted(state.shapes.last())
+                    if (state.shapes.size > before) onShapeCommitted(state.shapes.last(), state.unit)
                 }
             },
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -173,9 +173,9 @@ fun ArMeasureBoxScreen(
         kind = ShapeKind.Box,
         modifier = modifier,
         unit = unit,
-        onShapeCommitted = { shape ->
+        onShapeCommitted = { shape, liveUnit ->
             val rect = shape.base as? ShapeBase.Rect ?: return@ShapeMeasureScreen
-            onResult(MeasurementResult.Box(rect.edgeU.length(), rect.edgeV.length(), abs(shape.height), unit))
+            onResult(MeasurementResult.Box(rect.edgeU.length(), rect.edgeV.length(), abs(shape.height), liveUnit))
         },
         onClose = onClose,
     )
@@ -200,9 +200,9 @@ fun ArMeasureCylinderScreen(
         kind = ShapeKind.Cylinder,
         modifier = modifier,
         unit = unit,
-        onShapeCommitted = { shape ->
+        onShapeCommitted = { shape, liveUnit ->
             val circle = shape.base as? ShapeBase.Circle ?: return@ShapeMeasureScreen
-            onResult(MeasurementResult.Cylinder(circle.radius, abs(shape.height), unit))
+            onResult(MeasurementResult.Cylinder(circle.radius, abs(shape.height), liveUnit))
         },
         onClose = onClose,
     )
