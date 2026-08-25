@@ -28,15 +28,35 @@ wrong by 3 cm ruins the job.
 The reference video that shaped this UI was shot on an iPhone with LiDAR. The UX is
 reproducible on Android; **that accuracy is not.**
 
+## Module layout
+
+The repo is multi-module: three reusable library modules hold all feature code, `:app` is nav
+only.
+
+| Module | Package | Contents | JVM tests |
+|---|---|---|---|
+| `:ar-measure-common` | `vn.apero.armeasure.common.*` | `LengthUnit`, length formatters, `LabelPill` — shared by both feature modules | 6 |
+| `:ar-measure-ar` | `vn.apero.armeasure.ar.*` | Ruler/Box/Cylinder/Level + ARCore infra. Public API: `ArAvailability`, `ArMeasureKit`, `ArMeasureRulerScreen`, `ArMeasureBoxScreen`, `ArMeasureCylinderScreen`, `LevelScreen` | 54 |
+| `:ar-measure-photo` | `vn.apero.armeasure.photo.*` | Canny/Hough/Homography photo-reference measuring. Public API: `PhotoMeasureScreen`, `CustomReferenceStore` (constructor only) | 7 |
+| `:app` | `vn.quancua.artapemeasure` | `MainActivity` + tab nav only, wires the three modules above | 0 |
+
+Integration guides for pulling a module into another app live in each module's own `README.md`
+(phase 07).
+
 ## Build & run
 
 Requires a **real device** — the ARCore emulator replays a synthetic scene, so any number it
 gives describes the simulation, not a sensor.
 
 ```bash
-./gradlew :app:assembleDebug          # APK -> app/build/outputs/apk/debug/
-./gradlew :app:testDebugUnitTest      # 67 pure-maths tests, no device needed
-./gradlew :app:installDebug           # to a connected device
+./gradlew assembleDebug                          # whole app APK -> app/build/outputs/apk/debug/
+./gradlew testDebugUnitTest                      # all 67 pure-maths tests across the 3 modules, no device needed
+./gradlew :app:installDebug                      # to a connected device
+
+# per-module, e.g. while working on one feature module in isolation:
+./gradlew :ar-measure-common:testDebugUnitTest   # 6 tests
+./gradlew :ar-measure-ar:testDebugUnitTest       # 54 tests
+./gradlew :ar-measure-photo:testDebugUnitTest    # 7 tests
 ```
 
 Toolchain (verified working, not guessed):

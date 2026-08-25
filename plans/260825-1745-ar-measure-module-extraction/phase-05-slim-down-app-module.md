@@ -11,7 +11,7 @@
 ## Overview
 
 - **Priority:** P1 (this is the phase that makes the repo compile again end to end)
-- **Status:** pending
+- **Status:** done except the on-device smoke test (verified by code-reviewer against commit b1dd385)
 - **Effort:** 1.5h
 - `:app` ends up as `MainActivity.kt` + `ui/AppTabBar.kt` + resources, consuming the three modules
   through their public API only. First on-device verification of the whole extraction happens here.

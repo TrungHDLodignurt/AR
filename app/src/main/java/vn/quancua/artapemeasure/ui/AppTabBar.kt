@@ -19,11 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// Restored from the pre-extraction ui/MeasureControls.kt (see phase-03-app-tab-stash.kt): this is
-// app-level navigation chrome, not part of the AR/photo measure library surface, so it stays here
-// rather than becoming module public API. The 3 colour literals below are duplicated on purpose
-// per the phase 03 plan ("3 duplicated Color(...) literals is the correct price for not making
-// chrome colours public API").
+// Restored from the pre-extraction ui/MeasureControls.kt: this is app-level navigation chrome,
+// not part of the AR/photo measure library surface, so it stays here rather than becoming module
+// public API. The 3 colour literals below are duplicated on purpose per the phase 03 plan ("3
+// duplicated Color(...) literals is the correct price for not making chrome colours public API").
 private val ChromeContent = Color.White
 private val Disabled = Color(0x4DFFFFFF)
 

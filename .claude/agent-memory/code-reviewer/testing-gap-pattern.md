@@ -20,6 +20,16 @@ Also seen: `SteadinessGate` was extracted as shared logic (used by both the tape
 box/cylinder tools) but has zero dedicated unit tests of its own — neither before nor after
 the extraction — despite gating every commit action across 3 screens.
 
+Also seen (ar-measure module extraction, commit 61160dc): `ArMeasureBoxScreen`/
+`ArMeasureCylinderScreen`'s `onResult` lambda captures the composable's own `unit: LengthUnit`
+parameter instead of the live `state.unit` — so if the user toggles the in-screen m/ft control
+before finishing a shape, the callback reports the *original* unit while the on-screen label
+already shows the toggled one. `ArMeasureRulerScreen` and `PhotoMeasureScreen` got this right
+(`state.unit`). No JVM test catches it because the whole `onResult` plumbing is composable-only
+(Compose UI, not exercised by JVM unit tests) — the same class of gap as the untested
+`SteadinessGate` above: a plausible-looking wiring change that only a state-vs-parameter read
+catches, not a test-name skim.
+
 **Why:** worth flagging because this is exactly the "wrong basis or dropped sign renders a
 plausible-looking result that only a test catches" risk the test files' own docstrings call out.
 
