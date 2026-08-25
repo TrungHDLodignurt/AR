@@ -48,14 +48,6 @@
 - Case ảnh sáng/nhiều vật thể (log trên) — nguyên nhân thật chưa xác nhận bằng ảnh gốc (không tìm thấy trên 2 máy adb hiện có, scratchpad ảnh/video cũ cũng đã bị dọn). Cần user cung cấp lại ảnh/video repro để đào tiếp theo đúng quy trình ở mục "Phương pháp tinh chỉnh".
 - Chưa có cách phân biệt UI-wise cho user biết "đây là auto-detect thật hay fallback" — hiện chỉ có log, không có tín hiệu trên UI.
 
-## Update 260825 (session khác): fix ở mục dưới ĐÃ ĐƯỢC COMMIT — `f3ad223`
-Một session khác chạy song song ngày 25/08 đã commit đúng fix được đề xuất ở mục "Update 260824-1928"
-dưới đây (`fix: recover rotated reference-object quads in photo auto-fit`, commit `f3ad223`), có thêm
-test synthetic rectangle xoay 35° (regression test, PASS). **Chưa verify trên ảnh thật case 2** (mục
-dưới) — fix chỉ mới xác nhận bằng synthetic test, không phải bằng ảnh thật đang gặp lỗi. Xem
-`plans/reports/report-260825-1703-session-handoff-box-cylinder-measure.md` §16 để biết đầy đủ ngữ
-cảnh cross-session.
-
 ## Update 260824-1928: fix bug kiến trúc (không phải tuning) trong `QuadFromEdges.kt`
 **Phát hiện qua code review, không qua ảnh thật** (không có ảnh case 2 để test) — nhưng là bug rõ ràng, độc lập với ảnh cụ thể nào:
 
