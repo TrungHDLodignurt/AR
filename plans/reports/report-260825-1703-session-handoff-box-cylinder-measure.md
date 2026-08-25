@@ -301,17 +301,25 @@ General lesson matching Session 1's §5 lesson: for this repo, an on-device test
 truth — reasoning about the library's source without a live repro produced two confident, wrong
 fixes in a row.
 
-## 12. Known interaction with Box/Cylinder (Session 1's feature) — not yet verified
+## 12. Known interaction with Box/Cylinder (Session 1's feature) — FIXED (commit `6a5cb50`)
 
-`ShapeMeasureScreen.kt` (added by Session 1, §4) creates its own `ARSceneView` + `rememberEngine()`
-independently of `MeasureScreen.kt` — it does **not** have the `ArWarmupDelayMs` warm-up guard from
-§10.2. If a user's first AR screen after a cold launch is Box or Cylinder rather than Measure, it
-is likely exposed to the identical `TextureNotSetException` race, unmitigated. This was found by
-a code cross-check after both sessions' work was already merged, not by reproducing it on device —
-flagged as a probable regression risk for whoever picks this up next, not a confirmed bug. The
-straightforward fix, if confirmed, is extracting the warm-up gate (§10.2) into something shared
-between `MeasureScreen.kt` and `ShapeMeasureScreen.kt` rather than duplicating the constant and
-flag.
+`ShapeMeasureScreen.kt` (added by Session 1, §4) created its own `ARSceneView` + `rememberEngine()`
+independently of `MeasureScreen.kt` — it did **not** have the `ArWarmupDelayMs` warm-up guard from
+§10.2. If a user's first AR screen after a cold launch was Box or Cylinder rather than Measure, it
+was exposed to the identical `TextureNotSetException` race, unmitigated. Flagged during handoff
+review (code cross-check, not an on-device repro) and fixed the same session it was found: the
+constant, the process-global one-shot flag, and the `LaunchedEffect`/`delay` pattern were extracted
+out of `MeasureScreen.kt` into a new `ArWarmup.kt` (`rememberArWarmedUp()`), and both
+`MeasureScreen.kt` and `ShapeMeasureScreen.kt` now call the same shared composable instead of
+duplicating it.
+
+**Still not on-device-verified**: confirmed via `compileDebugKotlin` + `testDebugUnitTest` (both
+green, 67 tests) and an install+launch that didn't crash, but the actual race — cold-killing the
+process and launching straight into the Box or Cylinder tab as the very first screen — was not
+specifically reproduced before or after this fix, since doing so requires navigating Compose tabs
+on-device rather than a scripted `adb` step. Whoever picks this up next and wants full confidence
+should force-stop the app, launch directly into Box/Cylinder, and confirm no black screen —
+following §10's own reproduction method, just starting from a different tab.
 
 ## 13. Git state (as of Session 2's commits)
 
@@ -321,7 +329,8 @@ flag.
 
 ## 14. Open questions from Session 2
 
-- §12's Box/Cylinder warm-up gap — confirm on-device, then fix if real.
+- §12's Box/Cylinder warm-up gap — fixed (commit `6a5cb50`); still needs a from-cold-launch
+  on-device repro to fully close out (see §12's own note), not a "confirm if real" anymore.
 - Not tested: a background lasting several minutes (only up to ~1 minute was tested) — the 10s
   watchdog and the resume-reset logic should handle it in principle, but it wasn't specifically
   exercised.
