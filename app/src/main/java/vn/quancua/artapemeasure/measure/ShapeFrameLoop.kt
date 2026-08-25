@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntSize
 import com.google.ar.core.Frame
 import com.google.ar.core.Plane
+import com.google.ar.core.Pose
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import kotlin.math.abs
@@ -37,7 +38,12 @@ internal fun onShapeFrame(
     projector.update(frame)
 
     val centre = Offset(viewSize.width / 2f, viewSize.height / 2f)
-    val sample = resolveAt(frame, projector, viewSize, centre, state.depthSupported)
+    val sample = when (val phase = state.phase) {
+        // Height has nothing real to hit-test against — resolve it analytically instead. See
+        // heightConstructionPlaneNormal's doc for why.
+        is ShapePhase.SizingHeight -> resolveHeightSample(frame, projector, viewSize, centre, phase)
+        else -> resolveAt(frame, projector, viewSize, centre, state.depthSupported)
+    }
 
     state.noteLiveSample(
         sample = sample,
@@ -45,6 +51,39 @@ internal fun onShapeFrame(
     )
 
     state.overlay = buildShapeOverlay(state, projector, viewSize)
+}
+
+/**
+ * Resolves the height step's live reading analytically instead of by hit-testing — see
+ * [heightConstructionPlaneNormal]'s doc for why the height tap needs this instead of the real
+ * plane/depth/feature-point chain [resolveAt] uses for the origin and base taps.
+ *
+ * Returns a [SurfaceSample] tagged [HitSource.Plane] on purpose, not a new [HitSource] case: this
+ * reading is exact and driven by tracked camera pose, not noisy depth data, so it earns the same
+ * "trusted instantly" treatment [SteadinessGate] already gives a real plane hit — the whole point
+ * is that raising the phone reports a height immediately, not after half a second of holding
+ * still. `null` only when the aim ray is (near) exactly parallel to the construction plane, which
+ * in practice means aiming the phone edge-on to it.
+ */
+private fun resolveHeightSample(
+    frame: Frame,
+    projector: PoseProjector,
+    viewSize: IntSize,
+    screen: Offset,
+    phase: ShapePhase.SizingHeight,
+): SurfaceSample? {
+    val origin = phase.originAnchor.pose.toVec3()
+    val cameraPosition = frame.camera.pose.toVec3()
+    val planeNormal = heightConstructionPlaneNormal(
+        origin = origin,
+        towardPosition = cameraPosition,
+        axis = phase.normal,
+        fallback = phase.basis.u,
+    )
+    val ray = projector.unprojectRay(screen.x, screen.y, viewSize.width, viewSize.height)
+    val hit = intersectRayPlane(ray, origin, planeNormal) ?: return null
+    val pose = Pose(floatArrayOf(hit.x, hit.y, hit.z), floatArrayOf(0f, 0f, 0f, 1f))
+    return SurfaceSample(hit, HitSource.Plane, hitResult = null, pose = pose)
 }
 
 /** Projects every committed shape plus whatever is currently being sized into screen space. */

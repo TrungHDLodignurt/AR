@@ -186,6 +186,42 @@ class ShapeMathTest {
     }
 
     @Test
+    fun `height construction plane normal is horizontal and faces the camera`() {
+        val origin = Vec3(0f, 0f, 0f)
+        // Camera stands 2m back along +Z and 1.5m up — only the horizontal (Z) part should
+        // survive once the vertical (up) component is stripped out.
+        val camera = Vec3(0f, 1.5f, 2f)
+        val normal = heightConstructionPlaneNormal(origin, camera, axis = up, fallback = Vec3(1f, 0f, 0f))
+        assertEquals(0f, normal.dot(up), eps) // stays perpendicular to the height axis
+        assertEquals(Vec3(0f, 0f, 1f), normal) // points straight at the camera's horizontal position
+    }
+
+    @Test
+    fun `height construction plane normal falls back when the camera is directly above the origin`() {
+        val origin = Vec3(0f, 0f, 0f)
+        val camera = Vec3(0f, 2f, 0f) // straight up — no horizontal direction to the camera exists
+        val fallback = Vec3(1f, 0f, 0f)
+        val normal = heightConstructionPlaneNormal(origin, camera, axis = up, fallback = fallback)
+        assertEquals(fallback, normal)
+    }
+
+    @Test
+    fun `an aim ray through the construction plane resolves a height matching how far the phone rose`() {
+        // End-to-end sanity check tying heightConstructionPlaneNormal to intersectRayPlane and
+        // heightAlongAxis the same way ShapeFrameLoop.resolveHeightSample chains them: a camera
+        // standing back from the origin, aiming level at a point 1.2m above it, should read a
+        // construction-plane height of 1.2m — the same number a person raising the phone to that
+        // height and looking straight at the target would see, with no real surface involved.
+        val origin = Vec3(0f, 0f, 0f)
+        val cameraPosition = Vec3(0f, 1.2f, 3f)
+        val planeNormal = heightConstructionPlaneNormal(origin, cameraPosition, axis = up, fallback = Vec3(1f, 0f, 0f))
+        val aimRay = Ray3(origin = cameraPosition, direction = Vec3(0f, 0f, -1f))
+        val hit = intersectRayPlane(aimRay, origin, planeNormal)
+        assertNotNull(hit)
+        assertEquals(1.2f, heightAlongAxis(origin, hit!!, up), eps)
+    }
+
+    @Test
     fun `plane basis switches its reference vector when the normal is nearly parallel to Z`() {
         // A wall facing almost straight along ARCore's Z axis is the one case where the default
         // world-Z reference vector is itself nearly parallel to the normal (dot >= 0.9) — the

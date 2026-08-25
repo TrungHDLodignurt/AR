@@ -98,6 +98,31 @@ fun circleFromPoints(center: Vec3, edge: Vec3, basis: PlaneBasis, segments: Int 
  */
 fun heightAlongAxis(base: Vec3, top: Vec3, axis: Vec3): Float = (top - base).dot(axis)
 
+/**
+ * A construction-plane normal for the height step's live reading: perpendicular to [axis] (so the
+ * plane always contains the axis the height is measured along) and oriented toward
+ * [towardPosition] — the camera — so the aim ray reliably crosses it as the phone tilts up.
+ *
+ * The height tap has no real surface to aim at: the reticle is pointed at open air above a box's
+ * top face, or wherever the room happens to be behind it. Resolving that against ARCore's actual
+ * depth map or feature points (the way the origin and base taps do, because for them a real
+ * surface IS the point) makes the reading depend on whatever texture or geometry is incidentally
+ * behind the phone, and go stale or vanish when there is none — the reticle has to hunt for a
+ * hit, then hold still while [SteadinessGate] catches up. A box's height is a number the user is
+ * choosing by how far they raise the phone, not a surface they are aiming at, so it should be
+ * resolved the same way a plane hit already is elsewhere in this codebase: analytically, against
+ * a mathematical plane, immune to whatever is or is not actually there.
+ *
+ * Falls back to [fallback] on the degenerate case where the camera sits (almost) directly above
+ * or below [origin] along [axis], where "horizontal direction to the camera" has no answer —
+ * any plane containing [axis] still works, so the shape's own in-plane basis is a safe pick.
+ */
+fun heightConstructionPlaneNormal(origin: Vec3, towardPosition: Vec3, axis: Vec3, fallback: Vec3): Vec3 {
+    val toward = towardPosition - origin
+    val perpendicular = toward - axis * toward.dot(axis)
+    return if (perpendicular.dot(perpendicular) > 1e-6f) perpendicular.normalized() else fallback
+}
+
 private fun centroid(points: List<Vec3>): Vec3 {
     var x = 0f
     var y = 0f
