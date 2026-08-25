@@ -169,6 +169,20 @@ class MeasureState {
 
     var overlay by mutableStateOf(OverlayFrame())
 
+    /**
+     * Wall-clock time of the last ARCore frame that actually arrived, seeded at construction
+     * (not left at 0) so a session that never produces a single frame is caught by the same
+     * watchdog in [MeasureScreen] as one that freezes mid-use — see that file for why this is
+     * needed: the AR library swallows `CameraNotAvailableException` from inside its own render
+     * loop with nothing but a log line, so without an external timeout the camera feed can go
+     * black forever with no path back except killing the app.
+     *
+     * Backed by Compose state (not a plain `var`) because the library's frame callback may not
+     * run on the same thread as the watchdog's polling coroutine — a plain field would risk the
+     * watchdog reading a stale value across threads.
+     */
+    var lastFrameAtMillis by mutableStateOf(System.currentTimeMillis())
+
     var cameraReady by mutableStateOf(false)
     var tracking by mutableStateOf(false)
     var anyPlaneTracked by mutableStateOf(false)

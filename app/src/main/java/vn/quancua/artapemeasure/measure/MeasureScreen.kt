@@ -12,7 +12,11 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -26,6 +30,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
 import com.google.ar.core.Session
@@ -33,9 +40,70 @@ import com.google.ar.core.TrackingFailureReason
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberMaterialLoader
+import kotlinx.coroutines.delay
 import vn.quancua.artapemeasure.R
 import vn.quancua.artapemeasure.ui.MeasureBottomBar
 import vn.quancua.artapemeasure.ui.MeasureTopBar
+
+/**
+ * How often the watchdog below checks whether ARCore frames are still arriving.
+ */
+private const val CameraWatchdogPollIntervalMs = 1_000L
+
+/**
+ * How long without a single ARCore frame — of actual foreground time, see the gating in the
+ * watchdog loop below — counts as "stuck", not just a slow start.
+ *
+ * This is the ONLY recovery mechanism now (an earlier attempt also force-remounted on every
+ * plain resume, proactively — that was worse: it tore down and reopened the camera even after a
+ * trivial round trip that was already working fine, and the close-then-reopen race that
+ * introduces turned out to be a more frequent failure than the one it was meant to fix).
+ * Root cause, confirmed on-device via a full Java stack trace while the screen was black:
+ * ```
+ * com.google.ar.core.exceptions.TextureNotSetException
+ *     at com.google.ar.core.Session.update(Session.java)
+ *     at io.github.sceneview.ar.arcore.ARSession.updateOrNull(ArSession.kt:155)
+ *     at io.github.sceneview.SceneRenderer.renderFrame(SceneRenderer.kt:251)
+ * ```
+ * `arsceneview`'s `ARSceneView.kt` calls `session.setCameraTextureNames(...)` exactly ONCE,
+ * inside `onSessionCreated` — which fires once per `ARSceneView` mount. Its lifecycle observer's
+ * `onPause`/`onResume` only call `Session.pause()`/`Session.resume()`; neither ever re-registers
+ * the camera texture. If backgrounding invalidates the underlying GL texture (common after a
+ * long background — the surface gets torn down), the Session keeps a stale texture id forever,
+ * and every `update()` call throws `TextureNotSetException` from the very first frame after
+ * resume — permanently, regardless of camera hardware (confirmed separately: `CameraService`
+ * logs show the camera opening and streaming normally the whole time) and regardless of
+ * restarting the app process (confirmed by the user: force-killing and relaunching still showed
+ * the bug — only clearing app storage, which resets more than our own negligible app data,
+ * incidentally cleared it).
+ *
+ * Since a stuck session fails from its very first post-resume frame rather than degrading
+ * gradually, this doesn't need to be long to tell "stuck" apart from "slow but working" — kept
+ * moderate rather than generous now that it only ever measures genuine foreground stall time.
+ */
+private const val CameraWatchdogTimeoutMs = 10_000L
+
+/**
+ * How long to wait before ever mounting `ARSceneView` for the first time in this process.
+ *
+ * Confirmed by hand on-device (Pixel 6 + POCO X7, both affected; a Samsung device was not): the
+ * `TextureNotSetException` race above (see [CameraWatchdogTimeoutMs]'s doc) fires almost every
+ * time on a cold app launch — mounting the AR camera pipeline immediately races the GPU/camera
+ * driver, which hasn't caught up yet right after process start. Switching away from the Measure
+ * tab and back — which fully unmounts and remounts everything, engine included, with a couple
+ * seconds' gap in between — reliably cleared it in testing, with no code change at all. This
+ * reproduces that same gap on the very first mount instead of requiring the user to discover the
+ * workaround themselves. Device-dependent (a fast enough driver — e.g. that Samsung — never hits
+ * the race regardless), so this is a blunt, generous margin, not a measured minimum.
+ */
+private const val ArWarmupDelayMs = 2_000L
+
+/**
+ * Set once this process has attempted the warm-up delay above — never reset except by a fresh
+ * process (kill + relaunch), which is exactly the boundary that needs it: switching tabs back to
+ * Measure later in the same process is already past the cold-start race window.
+ */
+private var hasAttemptedArWarmup = false
 
 /**
  * The measure tab.
@@ -48,44 +116,128 @@ import vn.quancua.artapemeasure.ui.MeasureTopBar
  */
 @Composable
 fun MeasureScreen(modifier: Modifier = Modifier) {
-    val engine = rememberEngine()
-    val materialLoader = rememberMaterialLoader(engine)
-
     val state = remember { MeasureState() }
     val projector = remember { PoseProjector() }
+
+    // Created ONCE for the screen's whole lifetime — this is how every other ARSceneView usage
+    // (the library's own samples, other apps built on it) does it. An earlier attempt moved
+    // these inside the key(instanceKey) block below so a watchdog remount would tear down and
+    // recreate the whole Filament Engine, not just the ARCore Session — reasoning that the
+    // Engine, not just the Session, owned the stale-texture state. That made recovery WORSE, not
+    // better (confirmed: near-100% failure rate afterward, even on a fresh cold start) — Engine
+    // objects are heavyweight, GPU-resource-owning, and destroying/recreating one on a tight
+    // ~10s retry cadence very plausibly leaves GPU resources mid-teardown when the next Engine
+    // tries to claim the camera texture, i.e. it looks like it was compounding the very race
+    // it was meant to fix. Reverted to the standard, single-Engine usage.
+    val engine = rememberEngine()
+    val materialLoader = rememberMaterialLoader(engine)
 
     var session by remember { mutableStateOf<Session?>(null) }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
 
+    // Bumped by the watchdog below to force a remount of ARSceneView — recreates the ARCore
+    // Session (and re-runs its onSessionCreated camera-texture registration) without touching
+    // the Engine above.
+    var instanceKey by remember { mutableIntStateOf(0) }
+
+    // Tried forcing a full ARSceneView remount on every resume — WORSE, not better: it tore
+    // down and reopened the camera even after a trivial, working background/resume round trip
+    // (previously fine on its own), and the close-then-immediately-reopen race that introduces
+    // on EVERY resume is a more frequent failure mode than the rare stale-texture case it was
+    // meant to fix. Reverted to something less invasive: a resume just gives the *existing*
+    // session's watchdog a fresh, fair timeout window (below) instead of judging it by time
+    // elapsed while the app wasn't even in the foreground to produce frames — remounting stays
+    // the watchdog's call, made only once a session actually fails to produce a frame after
+    // really resuming.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) state.lastFrameAtMillis = System.currentTimeMillis()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // See ArWarmupDelayMs's doc. `hasAttemptedArWarmup` is set immediately (not after the delay
+    // completes) so this only ever waits once per process, regardless of outcome.
+    var isWarmedUp by remember { mutableStateOf(hasAttemptedArWarmup) }
+    LaunchedEffect(Unit) {
+        if (!hasAttemptedArWarmup) {
+            hasAttemptedArWarmup = true
+            delay(ArWarmupDelayMs)
+            isWarmedUp = true
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize().onSizeChanged { viewSize = it }) {
 
-        ARSceneView(
-            modifier = Modifier.fillMaxSize(),
-            engine = engine,
-            materialLoader = materialLoader,
-            // The plane grid is genuine feedback here: it shows the user which surfaces are
-            // actually measurable before they commit a point.
-            planeRenderer = true,
-            sessionConfiguration = { configuredSession, config ->
-                config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-                // Probe before assigning: requesting an unsupported depth mode fails session
-                // configuration outright rather than degrading quietly.
-                val supported = configuredSession.isDepthModeSupported(Config.DepthMode.AUTOMATIC)
-                state.depthSupported = supported
-                config.depthMode =
-                    if (supported) Config.DepthMode.AUTOMATIC else Config.DepthMode.DISABLED
-                // Instant placement is deliberately off: its initial pose is an estimate that
-                // refines later, which is exactly wrong for a tool whose whole output is a
-                // number the user reads immediately.
-                config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
-            },
-            onSessionCreated = { session = it },
-            onSessionUpdated = { updatedSession, frame ->
-                state.cameraReady = true
-                onFrame(state, projector, updatedSession, frame, viewSize)
-            },
-            onTrackingFailureChanged = { state.trackingFailure = it },
-        )
+        if (!isWarmedUp) {
+            HintBanner(
+                text = stringResource(R.string.hint_warming_up),
+                modifier = Modifier.align(Alignment.Center),
+            )
+            return@Box
+        }
+
+        key(instanceKey) {
+            ARSceneView(
+                modifier = Modifier.fillMaxSize(),
+                engine = engine,
+                materialLoader = materialLoader,
+                // The plane grid is genuine feedback here: it shows the user which surfaces are
+                // actually measurable before they commit a point.
+                planeRenderer = true,
+                sessionConfiguration = { configuredSession, config ->
+                    config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                    // Probe before assigning: requesting an unsupported depth mode fails session
+                    // configuration outright rather than degrading quietly.
+                    val supported = configuredSession.isDepthModeSupported(Config.DepthMode.AUTOMATIC)
+                    state.depthSupported = supported
+                    config.depthMode =
+                        if (supported) Config.DepthMode.AUTOMATIC else Config.DepthMode.DISABLED
+                    // Instant placement is deliberately off: its initial pose is an estimate that
+                    // refines later, which is exactly wrong for a tool whose whole output is a
+                    // number the user reads immediately.
+                    config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
+                },
+                onSessionCreated = { session = it },
+                onSessionUpdated = { updatedSession, frame ->
+                    state.cameraReady = true
+                    state.lastFrameAtMillis = System.currentTimeMillis()
+                    onFrame(state, projector, updatedSession, frame, viewSize)
+                },
+                onTrackingFailureChanged = { state.trackingFailure = it },
+            )
+        }
+
+        // Watchdog: if no ARCore frame arrives for CameraWatchdogTimeoutMs of actual foreground
+        // time, the session is considered stuck (see the constant's doc) and gets
+        // force-recreated. Keyed on instanceKey so each remount starts its own fresh timeout
+        // window instead of tripping again immediately on the brand-new session before it has
+        // had a chance to open the camera.
+        //
+        // Gated on the Activity actually being resumed: a `LaunchedEffect` keeps running while
+        // backgrounded (Compose doesn't pause it just because the Activity did), so without this
+        // check the stall clock keeps ticking through an arbitrarily long background period and
+        // can fire — forcing a remount — while the app isn't even in the foreground to render
+        // anything, which cannot possibly succeed and just wastes a cycle. Instead the deadline
+        // is kept pushed out the whole time the app is backgrounded, so it only ever measures
+        // real "resumed but no frame" time, same as the ON_RESUME reset above.
+        LaunchedEffect(instanceKey) {
+            state.lastFrameAtMillis = System.currentTimeMillis()
+            while (true) {
+                delay(CameraWatchdogPollIntervalMs)
+                if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                    state.lastFrameAtMillis = System.currentTimeMillis()
+                    continue
+                }
+                val stalledFor = System.currentTimeMillis() - state.lastFrameAtMillis
+                if (stalledFor > CameraWatchdogTimeoutMs) {
+                    instanceKey++
+                    break
+                }
+            }
+        }
 
         MeasureOverlay(
             frameProvider = { state.overlay },

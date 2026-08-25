@@ -9,6 +9,7 @@
     <string name="action_undo">Undo</string>
     <string name="action_add_point">Add a point</string>
 
+    <string name="hint_warming_up">Getting the camera ready…</string>
     <string name="hint_move_to_find_surface">Move your phone to find a surface</string>
     <string name="hint_aim_at_surface">Aim at a surface</string>
     <string name="hint_tap_to_start">Tap + to add a point</string>
