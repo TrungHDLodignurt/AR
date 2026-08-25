@@ -84,28 +84,6 @@ private const val CameraWatchdogPollIntervalMs = 1_000L
 private const val CameraWatchdogTimeoutMs = 10_000L
 
 /**
- * How long to wait before ever mounting `ARSceneView` for the first time in this process.
- *
- * Confirmed by hand on-device (Pixel 6 + POCO X7, both affected; a Samsung device was not): the
- * `TextureNotSetException` race above (see [CameraWatchdogTimeoutMs]'s doc) fires almost every
- * time on a cold app launch — mounting the AR camera pipeline immediately races the GPU/camera
- * driver, which hasn't caught up yet right after process start. Switching away from the Measure
- * tab and back — which fully unmounts and remounts everything, engine included, with a couple
- * seconds' gap in between — reliably cleared it in testing, with no code change at all. This
- * reproduces that same gap on the very first mount instead of requiring the user to discover the
- * workaround themselves. Device-dependent (a fast enough driver — e.g. that Samsung — never hits
- * the race regardless), so this is a blunt, generous margin, not a measured minimum.
- */
-private const val ArWarmupDelayMs = 2_000L
-
-/**
- * Set once this process has attempted the warm-up delay above — never reset except by a fresh
- * process (kill + relaunch), which is exactly the boundary that needs it: switching tabs back to
- * Measure later in the same process is already past the cold-start race window.
- */
-private var hasAttemptedArWarmup = false
-
-/**
  * The measure tab.
  *
  * Nothing is rendered as Filament geometry: the AR view supplies the camera feed, tracking and
@@ -158,16 +136,7 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // See ArWarmupDelayMs's doc. `hasAttemptedArWarmup` is set immediately (not after the delay
-    // completes) so this only ever waits once per process, regardless of outcome.
-    var isWarmedUp by remember { mutableStateOf(hasAttemptedArWarmup) }
-    LaunchedEffect(Unit) {
-        if (!hasAttemptedArWarmup) {
-            hasAttemptedArWarmup = true
-            delay(ArWarmupDelayMs)
-            isWarmedUp = true
-        }
-    }
+    val isWarmedUp = rememberArWarmedUp()
 
     Box(modifier = modifier.fillMaxSize().onSizeChanged { viewSize = it }) {
 

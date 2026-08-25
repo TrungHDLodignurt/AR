@@ -52,7 +52,21 @@ fun ShapeMeasureScreen(kind: ShapeKind, modifier: Modifier = Modifier) {
     var session by remember { mutableStateOf<Session?>(null) }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
 
+    // See ArWarmup.kt's doc: shared with MeasureScreen so whichever AR tab is opened first after
+    // a cold launch pays this once, not per-tab. Was missing here entirely before — a cold launch
+    // straight into Box/Cylinder was exposed to the same TextureNotSetException race MeasureScreen
+    // already guards against.
+    val isWarmedUp = rememberArWarmedUp()
+
     Box(modifier = modifier.fillMaxSize().onSizeChanged { viewSize = it }) {
+
+        if (!isWarmedUp) {
+            HintBanner(
+                text = stringResource(R.string.hint_warming_up),
+                modifier = Modifier.align(Alignment.Center),
+            )
+            return@Box
+        }
 
         ARSceneView(
             modifier = Modifier.fillMaxSize(),
