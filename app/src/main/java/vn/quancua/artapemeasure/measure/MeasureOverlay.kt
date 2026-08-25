@@ -92,7 +92,8 @@ private fun DrawScope.drawDragPreview(anchor: Offset) {
     drawCircle(color = DragAccent, radius = 14.dp.toPx(), center = lifted, style = Stroke(width = 2.dp.toPx()))
 }
 
-private fun DrawScope.drawSegment(segment: Segment2D, dashed: Boolean) {
+/** Shared with [ShapeOverlay] — the box/cylinder tools draw the same kind of line. */
+internal fun DrawScope.drawSegment(segment: Segment2D, dashed: Boolean) {
     drawLine(
         color = LineColor,
         start = segment.start,
@@ -113,7 +114,7 @@ private fun DrawScope.drawSegment(segment: Segment2D, dashed: Boolean) {
  * Solid dot when a surface is locked, hollow ring when not — so "nothing measurable here" is
  * visible before the user taps, rather than after they read a wrong number.
  */
-private fun DrawScope.drawReticle(center: Offset, onSurface: Boolean) {
+internal fun DrawScope.drawReticle(center: Offset, onSurface: Boolean) {
     val ringRadius = 11.dp.toPx()
     val ringStroke = Stroke(width = 1.5.dp.toPx())
     if (onSurface) {

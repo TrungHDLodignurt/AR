@@ -81,7 +81,8 @@ internal fun onFrame(
  * dragged, for the finger's current position — the two are the same problem (what is under
  * this pixel, resolved analytically for a plane hit) at a different screen location.
  */
-private fun resolveAt(
+/** Shared with [onShapeFrame] — the box/cylinder tools resolve their reticle the same way. */
+internal fun resolveAt(
     frame: Frame,
     projector: PoseProjector,
     viewSize: IntSize,

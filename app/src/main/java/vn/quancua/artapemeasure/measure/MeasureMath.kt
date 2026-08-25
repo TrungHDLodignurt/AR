@@ -42,6 +42,13 @@ operator fun Vec3.minus(other: Vec3): Vec3 = Vec3(x - other.x, y - other.y, z - 
 operator fun Vec3.times(scalar: Float): Vec3 = Vec3(x * scalar, y * scalar, z * scalar)
 fun Vec3.dot(other: Vec3): Float = x * other.x + y * other.y + z * other.z
 
+/** Right-hand-rule cross product — feeds [vn.quancua.artapemeasure.measure.planeBasis], where the second in-plane axis is `normal cross primaryAxis`. */
+fun Vec3.cross(other: Vec3): Vec3 = Vec3(
+    x = y * other.z - z * other.y,
+    y = z * other.x - x * other.z,
+    z = x * other.y - y * other.x,
+)
+
 /** Normalizes to unit length, or returns the input unchanged when it is too close to zero to have a direction. */
 fun Vec3.normalized(): Vec3 {
     val length = sqrt(x * x + y * y + z * z)
