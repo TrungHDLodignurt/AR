@@ -1,4 +1,4 @@
-package vn.quancua.artapemeasure.ui
+package vn.apero.armeasure.common.ui
 
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
