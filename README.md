@@ -35,13 +35,16 @@ only.
 
 | Module | Package | Contents | JVM tests |
 |---|---|---|---|
-| `:ar-measure-common` | `vn.apero.armeasure.common.*` | `LengthUnit`, length formatters, `LabelPill` — shared by both feature modules | 6 |
-| `:ar-measure-ar` | `vn.apero.armeasure.ar.*` | Ruler/Box/Cylinder/Level + ARCore infra. Public API: `ArAvailability`, `ArMeasureKit`, `ArMeasureRulerScreen`, `ArMeasureBoxScreen`, `ArMeasureCylinderScreen`, `LevelScreen` | 54 |
-| `:ar-measure-photo` | `vn.apero.armeasure.photo.*` | Canny/Hough/Homography photo-reference measuring. Public API: `PhotoMeasureScreen`, `CustomReferenceStore` (constructor only) | 7 |
+| [`:ar-measure-common`](ar-measure-common/README.md) | `vn.apero.armeasure.common.*` | `LengthUnit`, length formatters, `LabelPill` — shared by both feature modules | 6 |
+| [`:ar-measure-ar`](ar-measure-ar/README.md) | `vn.apero.armeasure.ar.*` | Ruler/Box/Cylinder/Level + ARCore infra. Public API: `ArAvailability`, `ArMeasureKit`, `ArMeasureRulerScreen`, `ArMeasureBoxScreen`, `ArMeasureCylinderScreen`, `LevelScreen` | 54 |
+| [`:ar-measure-photo`](ar-measure-photo/README.md) | `vn.apero.armeasure.photo.*` | Canny/Hough/Homography photo-reference measuring. Public API: `PhotoMeasureScreen`, `CustomReferenceStore` (constructor only) | 7 |
 | `:app` | `vn.quancua.artapemeasure` | `MainActivity` + tab nav only, wires the three modules above | 0 |
 
-Integration guides for pulling a module into another app live in each module's own `README.md`
-(phase 07).
+Each module's own `README.md` (linked above) is a self-contained integration guide for pulling
+that module into another app: exact `settings.gradle.kts`/`build.gradle.kts` lines, the
+`gradle/libs.versions.toml` block to append, the manifest/permission story, and every public
+signature with a copy-pasteable call example. `:ar-measure-photo` works with zero ARCore/SceneView
+on the host's classpath; take `:ar-measure-ar` only if you need live-camera AR measuring too.
 
 ## Build & run
 

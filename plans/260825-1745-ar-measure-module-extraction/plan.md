@@ -30,7 +30,7 @@ Do not re-derive either.
 | 04 | [Extract `:ar-measure-photo`](phase-04-extract-ar-measure-photo.md) | 2h | done | module compile + 7 JVM tests |
 | 05 | [Slim down `:app`](phase-05-slim-down-app-module.md) | 1.5h | done except on-device smoke test | whole project compile + 67 tests + on-device smoke |
 | 06 | [Final verification + code review](phase-06-final-verification-and-review.md) | 1h | code-reviewer pass done (see `code-reviewer-260825-1835-*.md`); no `vn.quancua` leftovers confirmed | `code-reviewer` clean, no `vn.quancua` leftovers |
-| 07 | [Per-module integration-guide READMEs](phase-07-module-integration-guide-readmes.md) | 1.5h | pending | 3 READMEs sufficient to automate an integration |
+| 07 | [Per-module integration-guide READMEs](phase-07-module-integration-guide-readmes.md) | 1.5h | done | 3 READMEs sufficient to automate an integration |
 
 Phases 03 and 04 are independent of each other (only both depend on 02) — safe to run in
 parallel or swap order. Everything else is strictly sequential.

@@ -14,7 +14,7 @@
 ## Overview
 
 - **Priority:** P2
-- **Status:** pending
+- **Status:** done
 - **Effort:** 1.5h
 - Write one `README.md` per module, accurate and complete enough that a later automation step can
   integrate the modules into an unfamiliar app without reading module source.
@@ -157,15 +157,15 @@ Delete: none.
 
 ## Todo List
 
-- [ ] Dependency blocks transcribed from the actual `build.gradle.kts` files
-- [ ] Public signatures transcribed from the actual sources
-- [ ] `ar-measure-common/README.md`
-- [ ] `ar-measure-ar/README.md` (manifest + permission + availability + warm-up note)
-- [ ] `ar-measure-photo/README.md` (store injection + FileProvider + no-ARCore guarantee)
-- [ ] Verify-the-integration checklist in all three
-- [ ] Paper dry-run against AIP936; compatibility notes recorded; AIP936 untouched
-- [ ] Root `README.md` links the three
-- [ ] Commit
+- [x] Dependency blocks transcribed from the actual `build.gradle.kts` files
+- [x] Public signatures transcribed from the actual sources
+- [x] `ar-measure-common/README.md`
+- [x] `ar-measure-ar/README.md` (manifest + permission + availability + warm-up note)
+- [x] `ar-measure-photo/README.md` (store injection + FileProvider + no-ARCore guarantee)
+- [x] Verify-the-integration checklist in all three
+- [x] Paper dry-run against AIP936; compatibility notes recorded; AIP936 untouched
+- [x] Root `README.md` links the three
+- [x] Commit
 
 ## Success Criteria
 
