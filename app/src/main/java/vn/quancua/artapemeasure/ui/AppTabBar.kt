@@ -1,35 +1,33 @@
-// Stashed from app/src/main/java/vn/quancua/artapemeasure/ui/MeasureControls.kt during phase 03
-// extraction (:ar-measure-ar). Phase 05 recreates these in :app — record §4 drops them from the
-// module's public surface, they are app-level navigation, not part of the AR measure library.
-//
-// Needs these imports when recreated in :app:
-//   androidx.compose.foundation.background
-//   androidx.compose.foundation.clickable
-//   androidx.compose.foundation.layout.Arrangement
-//   androidx.compose.foundation.layout.Column
-//   androidx.compose.foundation.layout.Row
-//   androidx.compose.foundation.layout.WindowInsets
-//   androidx.compose.foundation.layout.fillMaxWidth
-//   androidx.compose.foundation.layout.navigationBars
-//   androidx.compose.foundation.layout.padding
-//   androidx.compose.foundation.layout.windowInsetsPadding
-//   androidx.compose.material3.Text
-//   androidx.compose.runtime.Composable
-//   androidx.compose.ui.Alignment
-//   androidx.compose.ui.Modifier
-//   androidx.compose.ui.graphics.Color
-//   androidx.compose.ui.text.font.FontWeight
-//   androidx.compose.ui.unit.dp
-//   androidx.compose.ui.unit.sp
-//
-// Also needs its own ChromeContent/Disabled colour constants — duplicated on purpose per the
-// phase 03 plan ("3 duplicated Color(...) literals is the correct price for not making chrome
-// colours public API").
+package vn.quancua.artapemeasure.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+// Restored from the pre-extraction ui/MeasureControls.kt (see phase-03-app-tab-stash.kt): this is
+// app-level navigation chrome, not part of the AR/photo measure library surface, so it stays here
+// rather than becoming module public API. The 3 colour literals below are duplicated on purpose
+// per the phase 03 plan ("3 duplicated Color(...) literals is the correct price for not making
+// chrome colours public API").
 private val ChromeContent = Color.White
 private val Disabled = Color(0x4DFFFFFF)
 
-/** Bottom tab bar: Measure | Level. */
+/** Bottom tab bar: Measure | Photo | Box | Cylinder | Level. */
 @Composable
 fun AppTabBar(
     selected: AppTab,

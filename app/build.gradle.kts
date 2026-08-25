@@ -34,6 +34,10 @@ android {
 }
 
 dependencies {
+    implementation(project(":ar-measure-common"))
+    implementation(project(":ar-measure-ar"))
+    implementation(project(":ar-measure-photo"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -42,9 +46,4 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-
-    // 3D + AR: Filament renderer + ARCore, Compose-native
-    implementation(libs.sceneview.ar)
-
-    testImplementation(libs.junit)
 }
