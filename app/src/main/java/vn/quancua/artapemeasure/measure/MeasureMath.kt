@@ -55,6 +55,9 @@ fun Vec3.normalized(): Vec3 {
     return if (length > 1e-6f) Vec3(x / length, y / length, z / length) else this
 }
 
+/** This vector's own magnitude, treating it as a displacement rather than a point. */
+fun Vec3.length(): Float = sqrt(x * x + y * y + z * z)
+
 /** A world-space ray: an [origin] plus a unit-length [direction]. */
 data class Ray3(val origin: Vec3, val direction: Vec3)
 

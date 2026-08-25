@@ -42,36 +42,27 @@ fun planeBasis(normal: Vec3): PlaneBasis {
 }
 
 /**
- * The basis for the box tool's first drawn edge: [second]'s direction from [origin], projected
- * onto the plane with the given [normal] — NOT [planeBasis]'s fixed world-derived axis.
+ * [second]'s position relative to [origin], flattened onto the plane with the given [normal] —
+ * the box tool's free-hand edge vector.
  *
- * [planeBasis] exists because deriving an axis from a single live point can't produce two
- * independent lengths (see its doc). That problem goes away once the first edge is a committed,
- * separate tap of its own: the box tool asks the user to draw edge U first (this function), fixes
- * it, and only then asks for edge V's length against that now-fixed perpendicular — so the box's
- * sides land wherever the user actually drew them instead of snapping to an arbitrary, unrelated
- * world axis (ARCore's session-start frame, which has no relationship to the real object's
- * orientation).
- *
- * Falls back to [planeBasis] of [normal] when [second] is too close to [origin] for a direction to
- * exist yet (the moment the drag starts, or a noisy first sample).
+ * The box's two base edges are each just this: wherever the user actually drew them, with no
+ * fixed axis and no forced right angle between them. A box measured by hand rarely comes out
+ * perfectly square either — asking for a second independent edge and building the base as the
+ * parallelogram those two vectors describe (see [parallelogramCorners]) matches what was actually
+ * measured instead of silently correcting it to 90°, which would visibly disagree with where the
+ * user aimed the second edge.
  */
-fun drawnEdgeBasis(origin: Vec3, second: Vec3, normal: Vec3): PlaneBasis {
+fun projectedEdgeVector(origin: Vec3, second: Vec3, normal: Vec3): Vec3 {
     val delta = second - origin
-    val onPlane = delta - normal * delta.dot(normal)
-    if (onPlane.dot(onPlane) < 1e-6f) return planeBasis(normal)
-    val u = onPlane.normalized()
-    val v = normal.cross(u).normalized()
-    return PlaneBasis(u, v)
+    return delta - normal * delta.dot(normal)
 }
 
-/** The 4 corners of a [origin]-anchored rectangle with signed edge lengths [lengthU]/[lengthV] along [basis]. */
-fun rectangleCorners(origin: Vec3, basis: PlaneBasis, lengthU: Float, lengthV: Float): List<Vec3> {
-    val cornerU = origin + basis.u * lengthU
-    val cornerUV = cornerU + basis.v * lengthV
-    val cornerV = origin + basis.v * lengthV
-    return listOf(origin, cornerU, cornerUV, cornerV)
-}
+/**
+ * The 4 corners of the parallelogram [origin] plus two independently drawn edges describe — not
+ * forced to a right angle. See [projectedEdgeVector].
+ */
+fun parallelogramCorners(origin: Vec3, edgeU: Vec3, edgeV: Vec3): List<Vec3> =
+    listOf(origin, origin + edgeU, origin + edgeU + edgeV, origin + edgeV)
 
 /** How many points make up a drawn circle — enough to read as round, not so many the wireframe clutters. */
 private const val CircleSegments = 24

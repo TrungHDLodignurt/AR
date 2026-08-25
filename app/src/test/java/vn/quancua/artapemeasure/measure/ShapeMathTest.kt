@@ -42,59 +42,42 @@ class ShapeMathTest {
     }
 
     @Test
-    fun `drawn edge basis points wherever the user actually dragged, not a fixed world axis`() {
-        // A direction that matches neither of planeBasis(up)'s own axes — the whole point of
-        // drawnEdgeBasis is that the box's first edge follows this, not a world-derived axis.
+    fun `projected edge vector points wherever the user actually dragged, not a fixed world axis`() {
+        // A direction that matches neither of planeBasis(up)'s own axes — the whole point is that
+        // the box's edges follow this, not a world-derived axis.
         val origin = Vec3(0f, 0f, 0f)
         val drawnDirection = Vec3(1f, 0f, 1f).normalized()
         val second = origin + drawnDirection * 2f + up * 0.05f // plus off-plane noise to ignore
-        val basis = drawnEdgeBasis(origin, second, up)
-        assertEquals(drawnDirection.x, basis.u.x, eps)
-        assertEquals(drawnDirection.z, basis.u.z, eps)
-        assertEquals(0f, basis.u.dot(up), eps)
-        assertEquals(0f, basis.v.dot(up), eps)
-        assertEquals(0f, basis.u.dot(basis.v), eps)
+        val edge = projectedEdgeVector(origin, second, up)
+        assertEquals(2f, edge.length(), eps)
+        assertEquals(drawnDirection.x * 2f, edge.x, eps)
+        assertEquals(drawnDirection.z * 2f, edge.z, eps)
+        assertEquals(0f, edge.dot(up), eps) // the off-plane noise was discarded
     }
 
     @Test
-    fun `drawn edge length is the on-plane distance, ignoring off-plane noise`() {
+    fun `a second edge need not be perpendicular to the first — the base is whatever parallelogram results`() {
+        // The whole point of drawing two edges independently: nothing here forces a right angle.
         val origin = Vec3(0f, 0f, 0f)
-        val basis = planeBasis(up)
-        val second = origin + basis.u * 2f + up * 0.5f // 0.5m of noise straight off the plane
-        val edgeBasis = drawnEdgeBasis(origin, second, up)
-        assertEquals(2f, heightAlongAxis(origin, second, edgeBasis.u), eps)
-    }
-
-    @Test
-    fun `drawn edge basis falls back to planeBasis when the drag has not moved yet`() {
-        val origin = Vec3(0f, 0f, 0f)
-        val fallback = planeBasis(up)
-        val basis = drawnEdgeBasis(origin, origin, up) // second == origin: no direction exists yet
-        assertEquals(fallback.u, basis.u)
-        assertEquals(fallback.v, basis.v)
-    }
-
-    @Test
-    fun `rectangle corners form a closed loop back to the origin`() {
-        val basis = planeBasis(up)
-        val origin = Vec3(1f, 0f, 1f)
-        val corners = rectangleCorners(origin, basis, lengthU = 2f, lengthV = 1.5f)
+        val edgeU = Vec3(2f, 0f, 0f)
+        val edgeV = Vec3(0.5f, 0f, 1f) // deliberately not perpendicular to edgeU
+        assertTrue(abs(edgeU.normalized().dot(edgeV.normalized())) > 0.01f)
+        val corners = parallelogramCorners(origin, edgeU, edgeV)
+        assertEquals(4, corners.size)
         assertEquals(origin, corners[0])
-        // Adjacent corners differ by exactly one edge length along one axis.
+        assertEquals(origin + edgeU, corners[1])
+        assertEquals(origin + edgeU + edgeV, corners[2])
+        assertEquals(origin + edgeV, corners[3])
+    }
+
+    @Test
+    fun `parallelogram corners form a closed loop back to the origin`() {
+        val origin = Vec3(1f, 0f, 1f)
+        val corners = parallelogramCorners(origin, edgeU = Vec3(2f, 0f, 0f), edgeV = Vec3(0f, 0f, 1.5f))
+        assertEquals(origin, corners[0])
+        // Adjacent corners differ by exactly one edge length.
         assertEquals(2f, measureDistanceMeters(corners[0], corners[1]), eps)
         assertEquals(1.5f, measureDistanceMeters(corners[1], corners[2]), eps)
-    }
-
-    @Test
-    fun `box width reads negative when the user drags toward the opposite quadrant`() {
-        // Matches how ShapeMeasureState.commitStep actually computes lengthV in SizingBase: the
-        // edge basis is already fixed (from a prior SizingEdge tap), only the live point can be
-        // on either side of it.
-        val basis = planeBasis(up)
-        val origin = Vec3(0f, 0f, 0f)
-        val second = origin - basis.v * 1f
-        val lengthV = heightAlongAxis(origin, second, basis.v)
-        assertEquals(-1f, lengthV, eps)
     }
 
     @Test
@@ -155,7 +138,7 @@ class ShapeMathTest {
     @Test
     fun `prism edge visibility marks only the face the camera is actually looking at`() {
         val basis = planeBasis(up)
-        val base = rectangleCorners(Vec3(0f, 0f, 0f), basis, lengthU = 2f, lengthV = 1f)
+        val base = parallelogramCorners(Vec3(0f, 0f, 0f), basis.u * 2f, basis.v * 1f)
         val top = base.map { it + up * 0.5f }
         // Far off to the +X side, roughly level with the box's mid-height: only the side face
         // it's looking at (index 2) — and that face's own two bounding verticals — should read
@@ -170,7 +153,7 @@ class ShapeMathTest {
     @Test
     fun `a camera looking straight down sees only the top cap`() {
         val basis = planeBasis(up)
-        val base = rectangleCorners(Vec3(0f, 0f, 0f), basis, lengthU = 2f, lengthV = 1f)
+        val base = parallelogramCorners(Vec3(0f, 0f, 0f), basis.u * 2f, basis.v * 1f)
         val top = base.map { it + up * 0.5f }
         val camera = Vec3(0.5f, 20f, 1f) // directly above the box's centroid
         val visibility = prismEdgeVisibility(base, top, up, camera)
@@ -181,7 +164,7 @@ class ShapeMathTest {
     @Test
     fun `loop edges for a rectangle produce 4 base, 4 top and 4 vertical edges`() {
         val basis = planeBasis(up)
-        val base = rectangleCorners(Vec3(0f, 0f, 0f), basis, 2f, 1f)
+        val base = parallelogramCorners(Vec3(0f, 0f, 0f), basis.u * 2f, basis.v * 1f)
         val top = base.map { it + up * 0.5f }
         val edges = loopEdges(base, top, up, farCamera)
         assertEquals(12, edges.size)

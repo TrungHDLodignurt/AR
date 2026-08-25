@@ -11,10 +11,14 @@ import com.google.ar.core.TrackingFailureReason
 /** Which shape a [ShapeMeasureState] is building. Box and Cylinder share every state transition below — only which pure-math functions turn the live reading into a base differ. */
 enum class ShapeKind(val label: String) { Box("Box"), Cylinder("Cylinder") }
 
-/** A committed base: a rectangle's two edge lengths, or a circle's radius. */
+/**
+ * A committed base: a box's two independently drawn edge vectors (see [parallelogramCorners] —
+ * NOT forced to a right angle, a box is whatever parallelogram the two actually drawn edges
+ * describe), or a circle's radius plus the arbitrary basis its ring is drawn in.
+ */
 sealed class ShapeBase {
-    data class Rect(val lengthU: Float, val lengthV: Float) : ShapeBase()
-    data class Circle(val radius: Float) : ShapeBase()
+    data class Rect(val edgeU: Vec3, val edgeV: Vec3) : ShapeBase()
+    data class Circle(val radius: Float, val basis: PlaneBasis) : ShapeBase()
 }
 
 /** One finished box or cylinder: an anchored origin plus everything needed to redraw it every frame. */
@@ -22,7 +26,6 @@ class MeasuredShape(
     val kind: ShapeKind,
     val originAnchor: Anchor,
     val normal: Vec3,
-    val basis: PlaneBasis,
     val base: ShapeBase,
     val height: Float,
 )
@@ -30,37 +33,34 @@ class MeasuredShape(
 /**
  * Which tap this shape is waiting on next.
  *
- * Only the origin gets an anchor — every later step is a plain number measured relative to it
- * (see [ShapeMath]) and re-derived from the anchor's current pose every frame, so a box never
- * costs more than one entry in ARCore's anchor budget, no matter how many corners it has.
+ * Only the origin gets an anchor — every later step is a plain number (or vector) measured
+ * relative to it (see [ShapeMath]) and re-derived from the anchor's current pose every frame, so
+ * a box never costs more than one entry in ARCore's anchor budget, no matter how many corners it
+ * has.
  *
- * Box and Cylinder diverge for exactly one step: a circle has no orientation to get wrong, so its
- * base is one tap (center to edge, radius). A rectangle does — [SizingEdge] is the box-only step
- * that lets the user draw the first edge's own direction, rather than the box being forced onto a
- * fixed world axis unrelated to how the real object sits in the room. See [drawnEdgeBasis].
+ * Box and Cylinder diverge for the base: a circle is rotationally symmetric, so it has nothing to
+ * orient — one tap (center to edge) is enough ([SizingCircle]). A box's two sides are each
+ * something the user actually measured, so both are drawn freehand, independently
+ * ([SizingEdgeU], then [SizingEdgeV]) — the base is whatever parallelogram those two edges
+ * describe, not corrected to a right angle a fixed axis would have implied instead.
  */
 sealed class ShapePhase {
     object AwaitingOrigin : ShapePhase()
-    /** Box only: the user is dragging out the first edge's direction and length. */
-    data class SizingEdge(val originAnchor: Anchor, val normal: Vec3) : ShapePhase()
-    /**
-     * Box: [basis] is already fixed to the edge drawn in [SizingEdge] and [lengthU] to its
-     * length — only the perpendicular width is still live. Cylinder: [basis] is an arbitrary
-     * (rotationally irrelevant) plane basis and [lengthU] is unused.
-     */
-    data class SizingBase(val originAnchor: Anchor, val normal: Vec3, val basis: PlaneBasis, val lengthU: Float = 0f) : ShapePhase()
-    data class SizingHeight(val originAnchor: Anchor, val normal: Vec3, val basis: PlaneBasis, val base: ShapeBase) : ShapePhase()
+    /** Box only: drawing the first edge's direction and length freehand. */
+    data class SizingEdgeU(val originAnchor: Anchor, val normal: Vec3) : ShapePhase()
+    /** Box only: drawing the second edge, independent of the first — see [ShapeBase.Rect]. */
+    data class SizingEdgeV(val originAnchor: Anchor, val normal: Vec3, val edgeU: Vec3) : ShapePhase()
+    /** Cylinder only: a circle has no edge to draw — one tap sets center-to-edge, i.e. the radius. */
+    data class SizingCircle(val originAnchor: Anchor, val normal: Vec3, val basis: PlaneBasis) : ShapePhase()
+    data class SizingHeight(val originAnchor: Anchor, val normal: Vec3, val base: ShapeBase) : ShapePhase()
 }
 
 /**
  * Mutable UI state for the box/cylinder tools.
  *
- * One class for both — cylinder is a strict subset of box's state machine (it skips
- * [ShapePhase.SizingEdge] since a circle has no edge to draw), and everywhere else the only real
- * difference is which of [drawnEdgeBasis]/[circleFromPoints] turns a live reticle reading into a
- * base — so a `BoxMeasureState`/`CylinderMeasureState` pair would mostly be the same state
- * machine typed out twice. [kind] picks the math and the phase transitions at the two call sites
- * ([commitStep], [undo]) where they diverge.
+ * One class for both — most of the state machine is shared, and [kind] picks the few steps
+ * (which phases exist for the base, which pure-math function turns a live reading into one) where
+ * box and cylinder genuinely diverge, at the two call sites ([commitStep], [undo]) that need it.
  */
 class ShapeMeasureState(val kind: ShapeKind) {
 
@@ -98,10 +98,9 @@ class ShapeMeasureState(val kind: ShapeKind) {
     val canUndo: Boolean get() = shapes.isNotEmpty() || phase != ShapePhase.AwaitingOrigin
 
     /**
-     * Advances the shape currently in progress by one tap: places the origin, fixes the base,
-     * or fixes the height and files the finished shape into [shapes]. A no-op when the live
-     * reading is not steady enough to trust — see [SteadinessGate] — since committing an
-     * unstable reading would bake a false number into the shape permanently.
+     * Advances the shape currently in progress by one tap. A no-op when the live reading is not
+     * steady enough to trust — see [SteadinessGate] — since committing an unstable reading would
+     * bake a false number into the shape permanently.
      */
     fun commitStep(session: Session) {
         val sample = live ?: return
@@ -115,65 +114,51 @@ class ShapeMeasureState(val kind: ShapeKind) {
                 val normal = (sample.planeNormal ?: Vec3(0f, 1f, 0f)).normalized()
                 val anchor = sample.commit(session)
                 phase = when (kind) {
-                    // Box needs its first edge drawn before a basis means anything.
-                    ShapeKind.Box -> ShapePhase.SizingEdge(anchor, normal)
-                    // A circle has no edge to draw — planeBasis's arbitrary axes are fine since
-                    // nothing about a circle's rendering depends on which way they point.
-                    ShapeKind.Cylinder -> ShapePhase.SizingBase(anchor, normal, planeBasis(normal))
+                    ShapeKind.Box -> ShapePhase.SizingEdgeU(anchor, normal)
+                    ShapeKind.Cylinder -> ShapePhase.SizingCircle(anchor, normal, planeBasis(normal))
                 }
             }
-            is ShapePhase.SizingEdge -> {
+            is ShapePhase.SizingEdgeU -> {
                 val origin = current.originAnchor.pose.toVec3()
-                val basis = drawnEdgeBasis(origin, sample.position, current.normal)
-                val lengthU = heightAlongAxis(origin, sample.position, basis.u)
-                phase = ShapePhase.SizingBase(current.originAnchor, current.normal, basis, lengthU)
+                val edgeU = projectedEdgeVector(origin, sample.position, current.normal)
+                phase = ShapePhase.SizingEdgeV(current.originAnchor, current.normal, edgeU)
             }
-            is ShapePhase.SizingBase -> {
+            is ShapePhase.SizingEdgeV -> {
                 val origin = current.originAnchor.pose.toVec3()
-                val base = when (kind) {
-                    ShapeKind.Box -> {
-                        // U is already fixed from SizingEdge — only V, the perpendicular width,
-                        // comes from this tap's live reading.
-                        val lengthV = heightAlongAxis(origin, sample.position, current.basis.v)
-                        ShapeBase.Rect(current.lengthU, lengthV)
-                    }
-                    ShapeKind.Cylinder -> {
-                        val circle = circleFromPoints(origin, sample.position, current.basis)
-                        ShapeBase.Circle(circle.radius)
-                    }
-                }
-                phase = ShapePhase.SizingHeight(current.originAnchor, current.normal, current.basis, base)
+                val edgeV = projectedEdgeVector(origin, sample.position, current.normal)
+                phase = ShapePhase.SizingHeight(current.originAnchor, current.normal, ShapeBase.Rect(current.edgeU, edgeV))
+            }
+            is ShapePhase.SizingCircle -> {
+                val origin = current.originAnchor.pose.toVec3()
+                val circle = circleFromPoints(origin, sample.position, current.basis)
+                phase = ShapePhase.SizingHeight(current.originAnchor, current.normal, ShapeBase.Circle(circle.radius, current.basis))
             }
             is ShapePhase.SizingHeight -> {
                 val origin = current.originAnchor.pose.toVec3()
                 val height = heightAlongAxis(origin, sample.position, current.normal)
-                shapes.add(MeasuredShape(kind, current.originAnchor, current.normal, current.basis, current.base, height))
+                shapes.add(MeasuredShape(kind, current.originAnchor, current.normal, current.base, height))
                 phase = ShapePhase.AwaitingOrigin
             }
         }
     }
 
     /**
-     * Steps back one tap: height -> base -> (box only: edge) -> origin -> the previous finished
-     * shape, if any.
+     * Steps back one tap: height -> the base step(s) -> origin -> the previous finished shape, if
+     * any.
      */
     fun undo() {
         when (val current = phase) {
-            is ShapePhase.SizingHeight -> {
-                // Restore the width step exactly as it was — lengthU (box only) must survive
-                // the trip back, or undo-then-redo would silently reset the drawn edge's length.
-                val lengthU = (current.base as? ShapeBase.Rect)?.lengthU ?: 0f
-                phase = ShapePhase.SizingBase(current.originAnchor, current.normal, current.basis, lengthU)
+            is ShapePhase.SizingHeight -> phase = when (val base = current.base) {
+                // Restore edgeU exactly as drawn — undo-then-redo must not silently reset it.
+                is ShapeBase.Rect -> ShapePhase.SizingEdgeV(current.originAnchor, current.normal, base.edgeU)
+                is ShapeBase.Circle -> ShapePhase.SizingCircle(current.originAnchor, current.normal, base.basis)
             }
-            is ShapePhase.SizingBase -> phase = when (kind) {
-                // Box has an edge-drawing step to go back to; cylinder does not.
-                ShapeKind.Box -> ShapePhase.SizingEdge(current.originAnchor, current.normal)
-                ShapeKind.Cylinder -> {
-                    current.originAnchor.detach()
-                    ShapePhase.AwaitingOrigin
-                }
+            is ShapePhase.SizingEdgeV -> phase = ShapePhase.SizingEdgeU(current.originAnchor, current.normal)
+            is ShapePhase.SizingEdgeU -> {
+                current.originAnchor.detach()
+                phase = ShapePhase.AwaitingOrigin
             }
-            is ShapePhase.SizingEdge -> {
+            is ShapePhase.SizingCircle -> {
                 current.originAnchor.detach()
                 phase = ShapePhase.AwaitingOrigin
             }
@@ -185,8 +170,9 @@ class ShapeMeasureState(val kind: ShapeKind) {
     }
 
     fun clear() {
-        (phase as? ShapePhase.SizingEdge)?.originAnchor?.detach()
-        (phase as? ShapePhase.SizingBase)?.originAnchor?.detach()
+        (phase as? ShapePhase.SizingEdgeU)?.originAnchor?.detach()
+        (phase as? ShapePhase.SizingEdgeV)?.originAnchor?.detach()
+        (phase as? ShapePhase.SizingCircle)?.originAnchor?.detach()
         (phase as? ShapePhase.SizingHeight)?.originAnchor?.detach()
         phase = ShapePhase.AwaitingOrigin
         // Detaching matters: an undetached anchor keeps costing ARCore tracking work every

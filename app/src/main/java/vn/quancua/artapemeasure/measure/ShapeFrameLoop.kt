@@ -53,6 +53,12 @@ internal fun onShapeFrame(
     state.overlay = buildShapeOverlay(state, projector, viewSize, frame.camera.pose.toVec3())
 }
 
+/** A safe in-plane fallback direction for [heightConstructionPlaneNormal] — see its doc. */
+private fun ShapeBase.fallbackAxis(): Vec3 = when (this) {
+    is ShapeBase.Rect -> edgeU.normalized()
+    is ShapeBase.Circle -> basis.u
+}
+
 /**
  * Resolves the height step's live reading analytically instead of by hit-testing — see
  * [heightConstructionPlaneNormal]'s doc for why the height tap needs this instead of the real
@@ -78,12 +84,23 @@ private fun resolveHeightSample(
         origin = origin,
         towardPosition = cameraPosition,
         axis = phase.normal,
-        fallback = phase.basis.u,
+        fallback = phase.base.fallbackAxis(),
     )
     val ray = projector.unprojectRay(screen.x, screen.y, viewSize.width, viewSize.height)
     val hit = intersectRayPlane(ray, origin, planeNormal) ?: return null
     val pose = Pose(floatArrayOf(hit.x, hit.y, hit.z), floatArrayOf(0f, 0f, 0f, 1f))
     return SurfaceSample(hit, HitSource.Plane, hitResult = null, pose = pose)
+}
+
+/** A shape's base corners in world space — shared by the committed-shape and height-preview paths. */
+private fun ShapeBase.corners(origin: Vec3): List<Vec3> = when (this) {
+    is ShapeBase.Rect -> parallelogramCorners(origin, edgeU, edgeV)
+    is ShapeBase.Circle -> circleRing(origin, basis, radius)
+}
+
+private fun ShapeBase.dimensionLabel(height: Float, unit: LengthUnit): String = when (this) {
+    is ShapeBase.Rect -> formatBoxDimensions(edgeU.length(), edgeV.length(), height, unit)
+    is ShapeBase.Circle -> formatCylinderDimensions(radius, height, unit)
 }
 
 /** Projects every committed shape plus whatever is currently being sized into screen space. */
@@ -103,10 +120,7 @@ internal fun buildShapeOverlay(
 
     state.shapes.forEach { shape ->
         val origin = shape.originAnchor.pose.toVec3()
-        val baseCorners = when (val base = shape.base) {
-            is ShapeBase.Rect -> rectangleCorners(origin, shape.basis, base.lengthU, base.lengthV)
-            is ShapeBase.Circle -> circleRing(origin, shape.basis, base.radius)
-        }
+        val baseCorners = shape.base.corners(origin)
         val topCorners = baseCorners.map { it + shape.normal * shape.height }
 
         loopEdges(baseCorners, topCorners, shape.normal, cameraPosition).forEach { edge ->
@@ -117,11 +131,7 @@ internal fun buildShapeOverlay(
         }
 
         project(labelAnchor(topCorners))?.let { anchor ->
-            val label = when (val base = shape.base) {
-                is ShapeBase.Rect -> formatBoxDimensions(base.lengthU, base.lengthV, shape.height, state.unit)
-                is ShapeBase.Circle -> formatCylinderDimensions(base.radius, shape.height, state.unit)
-            }
-            committedLabels += anchor to label
+            committedLabels += anchor to shape.base.dimensionLabel(shape.height, state.unit)
         }
     }
 
@@ -130,8 +140,9 @@ internal fun buildShapeOverlay(
     if (sample != null) {
         when (val phase = state.phase) {
             ShapePhase.AwaitingOrigin -> Unit
-            is ShapePhase.SizingEdge -> buildSizingEdgeSegment(phase, sample, state.unit, ::project, liveEdges)
-            is ShapePhase.SizingBase -> buildSizingBaseEdges(state.kind, phase, sample, state.unit, ::project, liveEdges)
+            is ShapePhase.SizingEdgeU -> buildEdgeUSegment(phase, sample, state.unit, ::project, liveEdges)
+            is ShapePhase.SizingEdgeV -> buildEdgeVEdges(phase, sample, state.unit, ::project, liveEdges)
+            is ShapePhase.SizingCircle -> buildSizingCircleEdges(phase, sample, state.unit, ::project, liveEdges)
             is ShapePhase.SizingHeight -> buildSizingHeightEdges(phase, sample, state.unit, ::project, liveEdges)
         }
     }
@@ -147,77 +158,82 @@ internal fun buildShapeOverlay(
     )
 }
 
-/** Box-only tap-2 preview: a single line from the origin to the live reticle, drawing the first edge. */
-private fun buildSizingEdgeSegment(
-    phase: ShapePhase.SizingEdge,
+/** Box-only tap-2 preview: a single freehand line from the origin to the live reticle — the first edge. */
+private fun buildEdgeUSegment(
+    phase: ShapePhase.SizingEdgeU,
     sample: SurfaceSample,
     unit: LengthUnit,
     project: (Vec3) -> Offset?,
     out: MutableList<Segment2D>,
 ) {
     val origin = phase.originAnchor.pose.toVec3()
-    val basis = drawnEdgeBasis(origin, sample.position, phase.normal)
-    val length = heightAlongAxis(origin, sample.position, basis.u)
-    val end = origin + basis.u * length
+    val edge = projectedEdgeVector(origin, sample.position, phase.normal)
     val a = project(origin) ?: return
-    val b = project(end) ?: return
-    out += Segment2D(a, b, (a + b) / 2f, formatLength(abs(length), unit))
+    val b = project(origin + edge) ?: return
+    out += Segment2D(a, b, (a + b) / 2f, formatLength(edge.length(), unit))
 }
 
-/** Box-only tap-3 preview: the perpendicular width growing from the already-fixed first edge. */
-private fun buildSizingBaseEdges(
-    kind: ShapeKind,
-    phase: ShapePhase.SizingBase,
+/**
+ * Box-only tap-3 preview: the parallelogram [phase.edgeU][ShapePhase.SizingEdgeV.edgeU] (already
+ * fixed) plus a second freehand edge growing from the origin — independent of the first, not
+ * forced perpendicular to it. See [ShapeBase.Rect].
+ */
+private fun buildEdgeVEdges(
+    phase: ShapePhase.SizingEdgeV,
     sample: SurfaceSample,
     unit: LengthUnit,
     project: (Vec3) -> Offset?,
     out: MutableList<Segment2D>,
 ) {
     val origin = phase.originAnchor.pose.toVec3()
-    when (kind) {
-        ShapeKind.Box -> {
-            // lengthU is already fixed from SizingEdge; only the perpendicular width is live.
-            val lengthV = heightAlongAxis(origin, sample.position, phase.basis.v)
-            val corners = rectangleCorners(origin, phase.basis, phase.lengthU, lengthV)
-            for (i in corners.indices) {
-                val a = project(corners[i]) ?: continue
-                val b = project(corners[(i + 1) % corners.size]) ?: continue
-                // Only the two edges touching the origin carry a length — the far two are the
-                // same lengths mirrored, and labelling all 4 would just repeat the same numbers.
-                val label = when (i) {
-                    0 -> formatLength(abs(phase.lengthU), unit)
-                    3 -> formatLength(abs(lengthV), unit)
-                    else -> ""
-                }
-                out += Segment2D(a, b, (a + b) / 2f, label)
-            }
+    val edgeV = projectedEdgeVector(origin, sample.position, phase.normal)
+    val corners = parallelogramCorners(origin, phase.edgeU, edgeV)
+    for (i in corners.indices) {
+        val a = project(corners[i]) ?: continue
+        val b = project(corners[(i + 1) % corners.size]) ?: continue
+        // Only the two edges touching the origin carry a length — the far two are the same
+        // lengths mirrored, and labelling all 4 would just repeat the same numbers.
+        val label = when (i) {
+            0 -> formatLength(phase.edgeU.length(), unit)
+            3 -> formatLength(edgeV.length(), unit)
+            else -> ""
         }
-        ShapeKind.Cylinder -> {
-            val circle = circleFromPoints(origin, sample.position, phase.basis)
-            val ring = circle.ring
-            for (i in ring.indices) {
-                val a = project(ring[i]) ?: continue
-                val b = project(ring[(i + 1) % ring.size]) ?: continue
-                out += Segment2D(a, b, (a + b) / 2f, "")
-            }
-            val originScreen = project(origin)
-            val edgeScreen = project(origin + phase.basis.u * circle.radius)
-            if (originScreen != null && edgeScreen != null) {
-                out += Segment2D(
-                    originScreen,
-                    edgeScreen,
-                    (originScreen + edgeScreen) / 2f,
-                    formatLength(2f * circle.radius, unit),
-                )
-            }
-        }
+        out += Segment2D(a, b, (a + b) / 2f, label)
+    }
+}
+
+/** Cylinder-only tap-2 preview: the base circle growing from the origin to the live reticle. */
+private fun buildSizingCircleEdges(
+    phase: ShapePhase.SizingCircle,
+    sample: SurfaceSample,
+    unit: LengthUnit,
+    project: (Vec3) -> Offset?,
+    out: MutableList<Segment2D>,
+) {
+    val origin = phase.originAnchor.pose.toVec3()
+    val circle = circleFromPoints(origin, sample.position, phase.basis)
+    val ring = circle.ring
+    for (i in ring.indices) {
+        val a = project(ring[i]) ?: continue
+        val b = project(ring[(i + 1) % ring.size]) ?: continue
+        out += Segment2D(a, b, (a + b) / 2f, "")
+    }
+    val originScreen = project(origin)
+    val edgeScreen = project(origin + phase.basis.u * circle.radius)
+    if (originScreen != null && edgeScreen != null) {
+        out += Segment2D(
+            originScreen,
+            edgeScreen,
+            (originScreen + edgeScreen) / 2f,
+            formatLength(2f * circle.radius, unit),
+        )
     }
 }
 
 /** How many of a cylinder's ring points get a live vertical preview edge while sizing height. */
 private const val LiveVerticalCount = 8
 
-/** Tap-3 preview: the base held still, with a live vertical extrusion growing to the reticle. */
+/** Tap-3 (box) / tap-3 (cylinder) preview: the base held still, with a live vertical extrusion growing to the reticle. */
 private fun buildSizingHeightEdges(
     phase: ShapePhase.SizingHeight,
     sample: SurfaceSample,
@@ -227,10 +243,7 @@ private fun buildSizingHeightEdges(
 ) {
     val origin = phase.originAnchor.pose.toVec3()
     val signedHeight = heightAlongAxis(origin, sample.position, phase.normal)
-    val baseCorners = when (val base = phase.base) {
-        is ShapeBase.Rect -> rectangleCorners(origin, phase.basis, base.lengthU, base.lengthV)
-        is ShapeBase.Circle -> circleRing(origin, phase.basis, base.radius)
-    }
+    val baseCorners = phase.base.corners(origin)
     val topCorners = baseCorners.map { it + phase.normal * signedHeight }
 
     for (i in baseCorners.indices) {
