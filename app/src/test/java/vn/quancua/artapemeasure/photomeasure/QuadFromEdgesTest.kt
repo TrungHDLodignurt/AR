@@ -1,5 +1,8 @@
 package vn.quancua.artapemeasure.photomeasure
 
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.sqrt
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -64,6 +67,41 @@ class QuadFromEdgesTest {
     }
 
     @Test
+    fun `recovers a rectangle photographed at an angle, not aligned to the image axes`() {
+        // Real photos rarely have the reference object perfectly square to the frame. The old
+        // implementation only ever looked for near-0deg/near-90deg lines and returned null on
+        // anything rotated past its 20deg tolerance — this is the regression test for that gap.
+        val width = 200
+        val height = 200
+        val center = Vec2(100f, 100f)
+        val halfWidth = 50f
+        val halfHeight = 30f
+        val angleDegrees = 35f
+        val image = syntheticRotatedRectangle(width, height, center, halfWidth, halfHeight, angleDegrees)
+
+        val edges = cannyEdges(image)
+        val lines = houghLines(edges, width, height)
+        val quad = quadFromLines(lines, center)
+
+        requireNotNull(quad) { "expected a quad for a 35deg-rotated rectangle; got null. lines=$lines" }
+        val angleRadians = angleDegrees * Math.PI.toFloat() / 180f
+        val cosA = cos(angleRadians)
+        val sinA = sin(angleRadians)
+        fun rotated(dx: Float, dy: Float) = Vec2(center.x + dx * cosA - dy * sinA, center.y + dx * sinA + dy * cosA)
+        val trueCorners = listOf(
+            rotated(-halfWidth, -halfHeight),
+            rotated(halfWidth, -halfHeight),
+            rotated(halfWidth, halfHeight),
+            rotated(-halfWidth, halfHeight),
+        )
+        quad.forEach { corner ->
+            val nearestTrueCorner = trueCorners.minBy { distance(it, corner) }
+            val error = distance(nearestTrueCorner, corner)
+            assertTrue("corner $corner is $error px from the nearest true corner (expected < 8px)", error < 8f)
+        }
+    }
+
+    @Test
     fun `a blank image has no lines to build a quad from`() {
         val width = 100
         val height = 100
@@ -78,6 +116,34 @@ class QuadFromEdgesTest {
         for (y in top until bottom) {
             for (x in left until right) {
                 pixels[y * width + x] = 20f
+            }
+        }
+        return GrayscaleImage(width, height, pixels)
+    }
+
+    /** Same idea as [syntheticRectangle] but the rectangle is rotated [angleDegrees] about [center]. */
+    private fun syntheticRotatedRectangle(
+        width: Int,
+        height: Int,
+        center: Vec2,
+        halfWidth: Float,
+        halfHeight: Float,
+        angleDegrees: Float,
+    ): GrayscaleImage {
+        val angleRadians = angleDegrees * Math.PI.toFloat() / 180f
+        val cosA = cos(-angleRadians)
+        val sinA = sin(-angleRadians)
+        val pixels = FloatArray(width * height) { 250f }
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                // Rotate the pixel back into the rectangle's own frame, then a plain axis-aligned check.
+                val dx = x - center.x
+                val dy = y - center.y
+                val localX = dx * cosA - dy * sinA
+                val localY = dx * sinA + dy * cosA
+                if (abs(localX) <= halfWidth && abs(localY) <= halfHeight) {
+                    pixels[y * width + x] = 20f
+                }
             }
         }
         return GrayscaleImage(width, height, pixels)

@@ -8,51 +8,72 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Picks the 4 [HoughLine]s most likely to be a rectangle's edges immediately around [point] —
- * the nearest near-horizontal line on each side, the nearest near-vertical line on each side —
- * and returns their pairwise intersections as a quad, ordered top-left/top-right/bottom-right/
+ * Picks the 4 [HoughLine]s most likely to be a rectangle's edges immediately around [point] and
+ * returns their pairwise intersections as a quad, ordered top-left/top-right/bottom-right/
  * bottom-left the way `PhotoMeasureState.confirmReference` expects.
  *
- * Returns null when fewer than 4 suitable lines exist around [point], or the intersections don't
- * form a sane quad (parallel lines, or a shape too small/large to plausibly be what the user
- * tapped on) — a caller MUST fall back to a plain default box rather than trust a degenerate
- * result, same principle as `computeHomography` returning null on a degenerate system.
+ * Does NOT assume the rectangle is aligned with the image's horizontal/vertical axes — a
+ * reference object photographed at an angle has no lines anywhere near 0°/90°, and an
+ * axis-locked version would return null on every such photo even with a perfect edge map. Instead
+ * every detected line's own direction is tried as a candidate "primary" axis, paired with its
+ * perpendicular as the "secondary" axis; whichever pair actually sandwiches [point] into a
+ * plausible quad, with the most combined Hough votes, wins. This also naturally rejects a
+ * nearby unrelated object's edges: their lines only win if they happen to enclose the tap point,
+ * which a foreign object's edges generally don't.
+ *
+ * Returns null when no direction pair yields a sane enclosing quad (fewer than 4 suitable lines,
+ * only parallel lines, or every candidate quad is degenerate/doesn't contain [point]) — a caller
+ * MUST fall back to a plain default box rather than trust a degenerate result, same principle as
+ * `computeHomography` returning null on a degenerate system.
  */
 fun quadFromLines(
     lines: List<HoughLine>,
     point: Vec2,
     angleToleranceDegrees: Float = 20f,
 ): List<Vec2>? {
+    if (lines.size < 4) return null
     val angleTolerance = angleToleranceDegrees * PI.toFloat() / 180f
 
     fun lineDirection(line: HoughLine) = normalizeAngle(line.thetaRadians + PI.toFloat() / 2f)
     fun signedDistance(line: HoughLine) = point.x * cos(line.thetaRadians) + point.y * sin(line.thetaRadians) - line.rho
 
-    val horizontalLines = lines.filter { angularDistance(lineDirection(it), 0f) <= angleTolerance }
-    val verticalLines = lines.filter { angularDistance(lineDirection(it), PI.toFloat() / 2f) <= angleTolerance }
+    var quad: List<Vec2>? = null
+    var bestVotes = -1
+    for (candidate in lines) {
+        val primaryDirection = lineDirection(candidate)
+        val secondaryDirection = normalizeAngle(primaryDirection + PI.toFloat() / 2f)
+        val primaryLines = lines.filter { angularDistance(lineDirection(it), primaryDirection) <= angleTolerance }
+        val secondaryLines = lines.filter { angularDistance(lineDirection(it), secondaryDirection) <= angleTolerance }
 
-    val sideA = horizontalLines.filter { signedDistance(it) < 0 }.maxByOrNull { signedDistance(it) } ?: return null
-    val sideB = horizontalLines.filter { signedDistance(it) > 0 }.minByOrNull { signedDistance(it) } ?: return null
-    val sideC = verticalLines.filter { signedDistance(it) < 0 }.maxByOrNull { signedDistance(it) } ?: return null
-    val sideD = verticalLines.filter { signedDistance(it) > 0 }.minByOrNull { signedDistance(it) } ?: return null
+        val sideA = primaryLines.filter { signedDistance(it) < 0 }.maxByOrNull { signedDistance(it) } ?: continue
+        val sideB = primaryLines.filter { signedDistance(it) > 0 }.minByOrNull { signedDistance(it) } ?: continue
+        val sideC = secondaryLines.filter { signedDistance(it) < 0 }.maxByOrNull { signedDistance(it) } ?: continue
+        val sideD = secondaryLines.filter { signedDistance(it) > 0 }.minByOrNull { signedDistance(it) } ?: continue
 
-    val corner1 = intersect(sideA, sideC) ?: return null
-    val corner2 = intersect(sideA, sideD) ?: return null
-    val corner3 = intersect(sideB, sideD) ?: return null
-    val corner4 = intersect(sideB, sideC) ?: return null
-    var quad = listOf(corner1, corner2, corner3, corner4)
+        val corner1 = intersect(sideA, sideC) ?: continue
+        val corner2 = intersect(sideA, sideD) ?: continue
+        val corner3 = intersect(sideB, sideD) ?: continue
+        val corner4 = intersect(sideB, sideC) ?: continue
+        val candidateQuad = listOf(corner1, corner2, corner3, corner4)
+        if (!isPlausibleQuad(candidateQuad, point)) continue
 
-    if (!isPlausibleQuad(quad, point)) return null
+        val totalVotes = sideA.votes + sideB.votes + sideC.votes + sideD.votes
+        if (totalVotes > bestVotes) {
+            bestVotes = totalVotes
+            quad = candidateQuad
+        }
+    }
+    var result = quad ?: return null
 
     // Auto-orient: corners[0..1] must be the LONGER edge (the convention's "long side"). Which
     // of the two axes (horizontal/vertical Hough lines) is actually longer isn't known until
     // the intersections exist, so fix it up after the fact by rotating one step if needed.
-    val firstEdge = distance(quad[0], quad[1])
-    val secondEdge = distance(quad[1], quad[2])
+    val firstEdge = distance(result[0], result[1])
+    val secondEdge = distance(result[1], result[2])
     if (secondEdge > firstEdge) {
-        quad = listOf(quad[1], quad[2], quad[3], quad[0])
+        result = listOf(result[1], result[2], result[3], result[0])
     }
-    return quad
+    return result
 }
 
 private fun intersect(line1: HoughLine, line2: HoughLine): Vec2? {
