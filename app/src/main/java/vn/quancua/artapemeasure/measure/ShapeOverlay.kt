@@ -20,7 +20,14 @@ import vn.quancua.artapemeasure.ui.drawLabelPill
  * are drawn plain and only the ones next to a label actually carry one.
  */
 data class ShapeOverlayFrame(
+    /** Edges facing the camera — drawn solid. */
     val committedEdges: List<Segment2D> = emptyList(),
+    /**
+     * Edges occluded by the shape's own front side (see [prismEdgeVisibility]) — drawn dashed,
+     * the usual "hidden line" wireframe convention, so a finished box or cylinder still reads as
+     * a 3D solid instead of a flat tangle of lines.
+     */
+    val committedHiddenEdges: List<Segment2D> = emptyList(),
     /** One combined "L x W x H" (or "⌀D x H") pill per finished shape, at its top face centre. */
     val committedLabels: List<Pair<Offset, String>> = emptyList(),
     /** The shape currently being sized — dashed, with per-edge labels where they matter. */
@@ -53,6 +60,7 @@ fun ShapeOverlay(
         val frame = frameProvider()
 
         frame.committedEdges.forEach { drawSegment(it, dashed = false) }
+        frame.committedHiddenEdges.forEach { drawSegment(it, dashed = true) }
         frame.liveEdges.forEach { drawSegment(it, dashed = true) }
 
         // Labels last, same as MeasureOverlay — nothing should overlap a number.

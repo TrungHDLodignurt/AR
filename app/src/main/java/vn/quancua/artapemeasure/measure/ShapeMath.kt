@@ -41,8 +41,29 @@ fun planeBasis(normal: Vec3): PlaneBasis {
     return PlaneBasis(u, v)
 }
 
-/** A rectangle's 4 corners, in winding order, plus its signed edge lengths along [PlaneBasis.u]/[PlaneBasis.v]. */
-data class RectBase(val corners: List<Vec3>, val lengthU: Float, val lengthV: Float)
+/**
+ * The basis for the box tool's first drawn edge: [second]'s direction from [origin], projected
+ * onto the plane with the given [normal] — NOT [planeBasis]'s fixed world-derived axis.
+ *
+ * [planeBasis] exists because deriving an axis from a single live point can't produce two
+ * independent lengths (see its doc). That problem goes away once the first edge is a committed,
+ * separate tap of its own: the box tool asks the user to draw edge U first (this function), fixes
+ * it, and only then asks for edge V's length against that now-fixed perpendicular — so the box's
+ * sides land wherever the user actually drew them instead of snapping to an arbitrary, unrelated
+ * world axis (ARCore's session-start frame, which has no relationship to the real object's
+ * orientation).
+ *
+ * Falls back to [planeBasis] of [normal] when [second] is too close to [origin] for a direction to
+ * exist yet (the moment the drag starts, or a noisy first sample).
+ */
+fun drawnEdgeBasis(origin: Vec3, second: Vec3, normal: Vec3): PlaneBasis {
+    val delta = second - origin
+    val onPlane = delta - normal * delta.dot(normal)
+    if (onPlane.dot(onPlane) < 1e-6f) return planeBasis(normal)
+    val u = onPlane.normalized()
+    val v = normal.cross(u).normalized()
+    return PlaneBasis(u, v)
+}
 
 /** The 4 corners of a [origin]-anchored rectangle with signed edge lengths [lengthU]/[lengthV] along [basis]. */
 fun rectangleCorners(origin: Vec3, basis: PlaneBasis, lengthU: Float, lengthV: Float): List<Vec3> {
@@ -50,20 +71,6 @@ fun rectangleCorners(origin: Vec3, basis: PlaneBasis, lengthU: Float, lengthV: F
     val cornerUV = cornerU + basis.v * lengthV
     val cornerV = origin + basis.v * lengthV
     return listOf(origin, cornerU, cornerUV, cornerV)
-}
-
-/**
- * The live/base rectangle from [origin] to [second], decomposed onto [basis].
- *
- * [second] need not lie exactly on the plane — only its projection onto [basis] is used — so a
- * reticle reading that is a few millimetres off the analytic plane (ordinary sensor noise) still
- * produces a clean rectangle rather than a warped one.
- */
-fun rectangleFromPoints(origin: Vec3, second: Vec3, basis: PlaneBasis): RectBase {
-    val delta = second - origin
-    val lengthU = delta.dot(basis.u)
-    val lengthV = delta.dot(basis.v)
-    return RectBase(rectangleCorners(origin, basis, lengthU, lengthV), lengthU, lengthV)
 }
 
 /** How many points make up a drawn circle — enough to read as round, not so many the wireframe clutters. */
@@ -132,19 +139,70 @@ private fun centroid(points: List<Vec3>): Vec3 {
     return Vec3(x / n, y / n, z / n)
 }
 
-/** One line of a wireframe, still in world space — projecting to screen space happens elsewhere. */
-data class Edge3(val a: Vec3, val b: Vec3)
+/**
+ * One line of a wireframe, still in world space — projecting to screen space happens elsewhere.
+ *
+ * [visible] is true when at least one of this edge's two adjacent faces faces the camera — see
+ * [prismEdgeVisibility]. An edge with both adjacent faces turned away is occluded by the shape's
+ * own front side and should render dashed, the usual "hidden line" wireframe convention, rather
+ * than solid as if it sat in plain view.
+ */
+data class Edge3(val a: Vec3, val b: Vec3, val visible: Boolean = true)
 
-/** Base ring/rectangle + matching top ring/rectangle + a handful of verticals connecting them. */
-fun loopEdges(base: List<Vec3>, top: List<Vec3>, maxVerticals: Int = 8): List<Edge3> {
+/** Which of a convex prism's base/top/vertical edges face the camera — see [loopEdges]. */
+data class PrismVisibility(
+    val baseVisible: List<Boolean>,
+    val topVisible: List<Boolean>,
+    val verticalVisible: List<Boolean>,
+)
+
+/**
+ * Per-edge visibility for a right prism (box or cylinder alike — both are just an N-gon extruded
+ * along [axis]) as seen from [cameraPosition].
+ *
+ * A face's outward direction is taken radially from its ring's own centroid rather than from a
+ * cross-product of its edges, so this needs no assumption about winding order: side face `i`'s
+ * outward direction is `(midpoint of base edge i) - (base centroid)`, and the top/bottom caps use
+ * [axis] directly since a right prism's caps are always perpendicular to it. A face is
+ * front-facing when the camera sits on the outward side of it.
+ *
+ * An edge is visible when EITHER of its adjacent faces is front-facing — true for any convex
+ * solid: an edge with both neighbours turned away is entirely behind the shape's own near side.
+ * Base/top edges each border one side face and one cap; vertical edges border the two side faces
+ * meeting at that corner.
+ */
+fun prismEdgeVisibility(base: List<Vec3>, top: List<Vec3>, axis: Vec3, cameraPosition: Vec3): PrismVisibility {
     val n = base.size
-    val baseEdges = (0 until n).map { Edge3(base[it], base[(it + 1) % n]) }
-    val topEdges = (0 until n).map { Edge3(top[it], top[(it + 1) % n]) }
+    val baseCentroid = centroid(base)
+    val topCentroid = centroid(top)
+    val bottomFaces = axis.dot(cameraPosition - baseCentroid) < 0f
+    val topFaces = axis.dot(cameraPosition - topCentroid) > 0f
+    val sideFaces = (0 until n).map { i ->
+        val edgeMid = (base[i] + base[(i + 1) % n]) * 0.5f
+        (edgeMid - baseCentroid).dot(cameraPosition - edgeMid) > 0f
+    }
+    return PrismVisibility(
+        baseVisible = (0 until n).map { i -> bottomFaces || sideFaces[i] },
+        topVisible = (0 until n).map { i -> topFaces || sideFaces[i] },
+        // Vertical edge i sits between side face (i-1) and side face i.
+        verticalVisible = (0 until n).map { i -> sideFaces[i] || sideFaces[(i - 1 + n) % n] },
+    )
+}
+
+/**
+ * Base ring/rectangle + matching top ring/rectangle + a handful of verticals connecting them,
+ * each tagged [Edge3.visible] against [cameraPosition] via [prismEdgeVisibility].
+ */
+fun loopEdges(base: List<Vec3>, top: List<Vec3>, axis: Vec3, cameraPosition: Vec3, maxVerticals: Int = 8): List<Edge3> {
+    val n = base.size
+    val visibility = prismEdgeVisibility(base, top, axis, cameraPosition)
+    val baseEdges = (0 until n).map { Edge3(base[it], base[(it + 1) % n], visibility.baseVisible[it]) }
+    val topEdges = (0 until n).map { Edge3(top[it], top[(it + 1) % n], visibility.topVisible[it]) }
     // A box has only 4 corners, so all 4 verticals are drawn; a circle's ring has many more
     // points than are worth a vertical each, so only every Nth one is — enough to read as a
     // cylinder without the wireframe turning into a solid mesh of lines.
     val step = maxOf(1, n / maxVerticals)
-    val verticals = (0 until n step step).map { Edge3(base[it], top[it]) }
+    val verticals = (0 until n step step).map { Edge3(base[it], top[it], visibility.verticalVisible[it]) }
     return baseEdges + topEdges + verticals
 }
 

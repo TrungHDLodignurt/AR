@@ -50,7 +50,7 @@ internal fun onShapeFrame(
         distanceMeters = sample?.let { measureDistanceMeters(it.position, frame.camera.pose.toVec3()) },
     )
 
-    state.overlay = buildShapeOverlay(state, projector, viewSize)
+    state.overlay = buildShapeOverlay(state, projector, viewSize, frame.camera.pose.toVec3())
 }
 
 /**
@@ -87,12 +87,18 @@ private fun resolveHeightSample(
 }
 
 /** Projects every committed shape plus whatever is currently being sized into screen space. */
-internal fun buildShapeOverlay(state: ShapeMeasureState, projector: PoseProjector, viewSize: IntSize): ShapeOverlayFrame {
+internal fun buildShapeOverlay(
+    state: ShapeMeasureState,
+    projector: PoseProjector,
+    viewSize: IntSize,
+    cameraPosition: Vec3,
+): ShapeOverlayFrame {
     val width = viewSize.width
     val height = viewSize.height
     fun project(point: Vec3) = projector.project(point, width, height)
 
     val committedEdges = mutableListOf<Segment2D>()
+    val committedHiddenEdges = mutableListOf<Segment2D>()
     val committedLabels = mutableListOf<Pair<Offset, String>>()
 
     state.shapes.forEach { shape ->
@@ -103,10 +109,11 @@ internal fun buildShapeOverlay(state: ShapeMeasureState, projector: PoseProjecto
         }
         val topCorners = baseCorners.map { it + shape.normal * shape.height }
 
-        loopEdges(baseCorners, topCorners).forEach { edge ->
+        loopEdges(baseCorners, topCorners, shape.normal, cameraPosition).forEach { edge ->
             val a = project(edge.a) ?: return@forEach
             val b = project(edge.b) ?: return@forEach
-            committedEdges += Segment2D(a, b, (a + b) / 2f, "")
+            val segment = Segment2D(a, b, (a + b) / 2f, "")
+            if (edge.visible) committedEdges += segment else committedHiddenEdges += segment
         }
 
         project(labelAnchor(topCorners))?.let { anchor ->
@@ -123,6 +130,7 @@ internal fun buildShapeOverlay(state: ShapeMeasureState, projector: PoseProjecto
     if (sample != null) {
         when (val phase = state.phase) {
             ShapePhase.AwaitingOrigin -> Unit
+            is ShapePhase.SizingEdge -> buildSizingEdgeSegment(phase, sample, state.unit, ::project, liveEdges)
             is ShapePhase.SizingBase -> buildSizingBaseEdges(state.kind, phase, sample, state.unit, ::project, liveEdges)
             is ShapePhase.SizingHeight -> buildSizingHeightEdges(phase, sample, state.unit, ::project, liveEdges)
         }
@@ -130,6 +138,7 @@ internal fun buildShapeOverlay(state: ShapeMeasureState, projector: PoseProjecto
 
     return ShapeOverlayFrame(
         committedEdges = committedEdges,
+        committedHiddenEdges = committedHiddenEdges,
         committedLabels = committedLabels,
         liveEdges = liveEdges,
         // Only a reading steady enough to commit earns the solid reticle — same rule as the
@@ -138,7 +147,24 @@ internal fun buildShapeOverlay(state: ShapeMeasureState, projector: PoseProjecto
     )
 }
 
-/** Tap-2 preview: the rectangle/circle growing from the origin to the live reticle position. */
+/** Box-only tap-2 preview: a single line from the origin to the live reticle, drawing the first edge. */
+private fun buildSizingEdgeSegment(
+    phase: ShapePhase.SizingEdge,
+    sample: SurfaceSample,
+    unit: LengthUnit,
+    project: (Vec3) -> Offset?,
+    out: MutableList<Segment2D>,
+) {
+    val origin = phase.originAnchor.pose.toVec3()
+    val basis = drawnEdgeBasis(origin, sample.position, phase.normal)
+    val length = heightAlongAxis(origin, sample.position, basis.u)
+    val end = origin + basis.u * length
+    val a = project(origin) ?: return
+    val b = project(end) ?: return
+    out += Segment2D(a, b, (a + b) / 2f, formatLength(abs(length), unit))
+}
+
+/** Box-only tap-3 preview: the perpendicular width growing from the already-fixed first edge. */
 private fun buildSizingBaseEdges(
     kind: ShapeKind,
     phase: ShapePhase.SizingBase,
@@ -150,16 +176,17 @@ private fun buildSizingBaseEdges(
     val origin = phase.originAnchor.pose.toVec3()
     when (kind) {
         ShapeKind.Box -> {
-            val rect = rectangleFromPoints(origin, sample.position, phase.basis)
-            val corners = rect.corners
+            // lengthU is already fixed from SizingEdge; only the perpendicular width is live.
+            val lengthV = heightAlongAxis(origin, sample.position, phase.basis.v)
+            val corners = rectangleCorners(origin, phase.basis, phase.lengthU, lengthV)
             for (i in corners.indices) {
                 val a = project(corners[i]) ?: continue
                 val b = project(corners[(i + 1) % corners.size]) ?: continue
                 // Only the two edges touching the origin carry a length — the far two are the
                 // same lengths mirrored, and labelling all 4 would just repeat the same numbers.
                 val label = when (i) {
-                    0 -> formatLength(abs(rect.lengthU), unit)
-                    3 -> formatLength(abs(rect.lengthV), unit)
+                    0 -> formatLength(abs(phase.lengthU), unit)
+                    3 -> formatLength(abs(lengthV), unit)
                     else -> ""
                 }
                 out += Segment2D(a, b, (a + b) / 2f, label)

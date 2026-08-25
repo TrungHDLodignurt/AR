@@ -138,7 +138,11 @@ private fun hintFor(state: ShapeMeasureState): String? {
     val originNoun = if (state.kind == ShapeKind.Box) "corner" else "center"
     return when (state.phase) {
         is ShapePhase.AwaitingOrigin -> "Tap + to place the $shapeName's $originNoun"
-        is ShapePhase.SizingBase -> "Move to size the base, tap + to fix it"
+        is ShapePhase.SizingEdge -> "Move to draw the first edge, tap + to fix it"
+        is ShapePhase.SizingBase -> when (state.kind) {
+            ShapeKind.Box -> "Move to size the width, tap + to fix it"
+            ShapeKind.Cylinder -> "Move to size the base, tap + to fix it"
+        }
         is ShapePhase.SizingHeight -> "Tilt up to set height, tap + to finish the $shapeName"
     }
 }
