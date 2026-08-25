@@ -9,9 +9,6 @@ import com.google.ar.core.Anchor
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
 
-/** Frames a depth reading must hold still before it can be committed — a sixth of a second. */
-private const val MinSteadyFrames = 5
-
 /** A committed measurement point: an ARCore anchor plus how its position was obtained. */
 class MeasuredPoint(val anchor: Anchor, val source: HitSource)
 
@@ -73,37 +70,12 @@ class MeasureState {
      * that jump is the tell, and refusing the point beats reporting a length nobody can tell
      * is wrong.
      */
-    var liveStable by mutableStateOf(false)
-        private set
-
-    private var steadyFrames = 0
-    private var lastLivePosition: Vec3? = null
+    private val steadinessGate = SteadinessGate()
+    val liveStable: Boolean get() = steadinessGate.stable
 
     /** Feeds one frame's reading into the steadiness gate behind [liveStable]. */
     fun noteLiveSample(sample: SurfaceSample?, distanceMeters: Float?) {
-        if (sample == null) {
-            steadyFrames = 0
-            lastLivePosition = null
-            liveStable = false
-            return
-        }
-        if (sample.source == HitSource.Plane) {
-            steadyFrames = MinSteadyFrames
-            lastLivePosition = sample.position
-            liveStable = true
-            return
-        }
-        val previous = lastLivePosition
-        // Scale the allowance with distance — reticle sweep covers more ground further out —
-        // but keep a floor so close-up readings are not held to sub-centimetre steadiness.
-        val allowed = maxOf(0.05f, 0.2f * (distanceMeters ?: 0f))
-        steadyFrames = if (previous != null && measureDistanceMeters(previous, sample.position) <= allowed) {
-            steadyFrames + 1
-        } else {
-            0
-        }
-        lastLivePosition = sample.position
-        liveStable = steadyFrames >= MinSteadyFrames
+        steadinessGate.note(sample, distanceMeters)
     }
 
     /**

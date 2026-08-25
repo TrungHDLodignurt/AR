@@ -315,8 +315,9 @@ fun MeasureScreen(modifier: Modifier = Modifier) {
     }
 }
 
+/** Shared with [ShapeMeasureScreen] — the box/cylinder tools show the same kind of one-line hint. */
 @Composable
-private fun HintBanner(text: String?, modifier: Modifier = Modifier) {
+internal fun HintBanner(text: String?, modifier: Modifier = Modifier) {
     if (text == null) return
     Text(
         text = text,

@@ -35,6 +35,18 @@ class SurfaceSample(
     private val trackable: Trackable? = null,
 ) {
     /**
+     * The plane's analytic normal (see [analyticNormal]), or null when this reading did not
+     * come from a plane.
+     *
+     * The box/cylinder tools need this at commit time — a rectangle or circle only makes sense
+     * drawn flat against the surface it sits on, and the height extrusion only makes sense
+     * running perpendicular to it. [MeasuredPoint] never needed this because the plain ruler
+     * only ever measures straight-line distance between two points, never a surface's own
+     * orientation.
+     */
+    val planeNormal: Vec3? = (trackable as? Plane)?.analyticNormal()
+
+    /**
      * Turns this reading into a tracked anchor. Call only when the user commits the point.
      *
      * [trackable] takes priority over [hitResult] because a plane reading's [position] may be
