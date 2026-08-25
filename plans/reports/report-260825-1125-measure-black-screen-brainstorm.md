@@ -1,5 +1,11 @@
 # Brainstorm + fix: Measure tab đen sau khi background/resume
 
+> **Bản tóm tắt kỹ thuật cuối cùng (đã merge, đã user xác nhận OK) nằm ở
+> `report-260825-1703-session-handoff-box-cylinder-measure.md` §9-§14** — file đó có cả context
+> của session làm Box/Cylinder song song, và flag 1 rủi ro chưa xác nhận (Box/Cylinder tab có thể
+> dính lại đúng bug này vì chưa có warm-up delay). File này (bên dưới) là log brainstorm chi tiết
+> gốc — giữ lại để tham khảo quá trình đào bug, không phải nguồn cập nhật nhất.
+
 ## Problem
 Tab AR "Measure" hiện đen sì sau khi user rời app (bấm home) rồi quay lại, chỉ hết khi xoá cache/kill process. Bug ban đầu report ở tab Photo (Canny/Hough), không liên quan — đây là tab AR riêng (ARSceneView/ARCore), package `measure/`.
 
