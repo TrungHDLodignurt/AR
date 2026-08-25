@@ -4,7 +4,10 @@ Measure real distances through the camera. Kotlin + Jetpack Compose, one Activit
 
 Replicates the UX of Apple's built-in Measure app: centred reticle, `+` to commit a point,
 dashed rubber-band line while aiming, solid line with a distance pill once committed, chained
-polyline, undo / clear, and a `Level` tab.
+polyline, undo / clear. Five tabs: **Measure** (the point-to-point ruler above), **Photo**
+(calibrate against a reference object in a photo — a card or A4 sheet, no AR needed), **Box** /
+**Cylinder** (3-tap origin → freehand base → height AR shapes), and **Level** (gravity vector
+only, no AR).
 
 ## Read this before trusting a number
 
@@ -32,7 +35,7 @@ gives describes the simulation, not a sensor.
 
 ```bash
 ./gradlew :app:assembleDebug          # APK -> app/build/outputs/apk/debug/
-./gradlew :app:testDebugUnitTest      # 17 pure-maths tests, no device needed
+./gradlew :app:testDebugUnitTest      # 67 pure-maths tests, no device needed
 ./gradlew :app:installDebug           # to a connected device
 ```
 
@@ -58,6 +61,14 @@ MainActivity              one Activity; ARCore install gate, camera permission, 
     ├── PoseProjector     world -> screen, allocation-free
     ├── MeasureState      anchors, units, per-frame overlay snapshot
     └── MeasureMath       pure arithmetic — the only unit-tested part
+└── ShapeMeasureScreen    Box/Cylinder — same ARSceneView + 2D-overlay shape, parameterized by ShapeKind
+    ├── ShapeFrameLoop    per-frame resolve (real hit-test for origin/base, analytic
+    │                     construction-plane ray-cast for height) -> build wireframe overlay
+    ├── ShapeOverlay      Canvas: wireframe edges (dashed where occluded), dimension pill, reticle
+    ├── ShapeMeasureState state machine: origin -> freehand edge(s) -> height -> committed shape
+    ├── SteadinessGate    "hold still before it counts" trust gate, shared with MeasureState
+    └── ShapeMath         pure geometry — parallelogram/circle bases, hidden-edge visibility
+└── PhotoMeasureScreen    calibrate against a photographed reference object; no AR/camera-feed dependency
 └── LevelScreen           gravity vector only; no AR, works on every device
 ```
 
@@ -109,8 +120,9 @@ question ("where will this land") without a per-frame texture read-back.
 ## Deliberately not implemented
 
 Shutter capture (button is rendered inert rather than lying about being wired), edge snapping
-to floor/wall seams, position smoothing on the reticle, closed-loop perimeter, bounding box,
-coaching overlay, area measurement.
+to floor/wall seams, position smoothing on the reticle, closed-loop perimeter, coaching overlay,
+area measurement, Floor Plan / Angle / Vertical-Wall / Chain modes (Box and Cylinder are done —
+see the diagram above).
 
 Each is a separate step, and none of them matter until the accuracy table below has numbers.
 
