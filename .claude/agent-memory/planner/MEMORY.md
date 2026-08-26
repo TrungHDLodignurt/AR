@@ -1,0 +1,2 @@
+- [Design file source of truth](design-file-source-of-truth.md) — the AIP936 `.pen` on disk is stale; read it only via the pencil MCP tools
+- [UI review report has two disproven findings](ui-review-report-has-two-disproven-findings.md) — the clipped-grid and missing-Box/Cylinder findings are wrong; the rest holds

@@ -36,3 +36,13 @@ plausible-looking result that only a test catches" risk the test files' own docs
 **How to apply:** when reviewing new geometry/gating code here, explicitly compute which
 branch each test actually hits (don't just read test names) and call out any conditional
 branch or extracted shared class left completely untested.
+
+**Update (2026-08-26, AR_feature single-module review):** the `planeBasis()` dot≥0.9 fallback
+gap above is now fixed — `ShapeMathTest.kt` (in `AR_feature/src/test/.../ar/domain/geometry/`)
+explicitly exercises it with `Vec3(0.1f, 0.1f, 0.99f)`. Don't re-flag it; do keep checking new
+basis/gate helpers for the same class of gap going forward.
+
+**New instance of the broader pattern, but for string-literal/grep audits, not tests:** this
+repo's own grep-based invariant audits (see [[grep-audit-blind-spots]]) can have the identical
+blind spot as a test suite — a check that reads as "covers X" but its actual pattern doesn't
+reach every code shape X can take.

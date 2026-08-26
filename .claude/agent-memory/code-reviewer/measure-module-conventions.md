@@ -1,9 +1,19 @@
 ---
 name: measure-module-conventions
-description: Architectural conventions in app/src/main/java/vn/quancua/artapemeasure/measure/ — pure math files, anchor lifecycle, shared helpers
+description: Architectural conventions for the AR measuring code — pure math files, anchor lifecycle, shared helpers. Originally app/src/main/java/vn/quancua/artapemeasure/measure/, now AR_feature/src/main/java/vn/apero/armeasure/
 metadata:
   type: project
 ---
+
+**2026-08-26 update:** this code has since moved. It now lives in the standalone `AR_feature`
+Gradle module, package `vn.apero.armeasure` (namespace changed from the old `vn.quancua.*`),
+split into `ar/domain/geometry/` (MeasureMath.kt, ShapeMath.kt), `ar/presentation/ruler/`
+(MeasureState.kt) and `ar/presentation/shapes/` (ShapeMeasureState.kt). `vn.quancua` is now
+`app/`'s own separate namespace only — unrelated, out of scope for `AR_feature` reviews. The
+conventions below (pure-math split, anchor-detach discipline, `internal` over duplication) still
+hold exactly as described; only the paths changed. See the phase-01..09 plans under
+`plans/260826-1137-ar-feature-single-module/` for the full merge/extraction history, and
+[[grep-audit-blind-spots]] for that module's own self-enforced (grep-based) invariants.
 
 The `measure/` package (MeasureMath.kt, ShapeMath.kt, etc.) keeps a strict split: files
 named `*Math.kt` are pure functions taking/returning only `Vec3`/primitives, zero ARCore or
