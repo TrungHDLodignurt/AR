@@ -10,15 +10,16 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 
 /**
- * Shared warm-up gate for every AR screen (`ArMeasureRulerScreen`, `ArMeasureBoxScreen`,
- * `ArMeasureCylinderScreen`): `true` once it is safe to mount `ARSceneView`, `false` while the
- * one-time warm-up delay is still running.
+ * Warm-up gate for `ArCameraScreen`'s one shared `ARSceneView` (Distance/Box/Cylinder alike):
+ * `true` once it is safe to mount it, `false` while the one-time warm-up delay is still running.
  *
- * Was only ever implemented in the ruler screen originally — the shape screen mounted its own
- * `ARSceneView` immediately with no equivalent guard, so a cold launch straight into Box or
- * Cylinder was exposed to the identical race unmitigated. Extracted here once that gap was found,
- * rather than duplicating the flag and delay a second time (the exact bug class fixed in commit
- * `6a5cb50`) — kept as a single `object` rather than per-file `private var`s for the same reason.
+ * Was only ever implemented in the old, separate ruler screen originally — the old, separate
+ * shape screen mounted its own `ARSceneView` immediately with no equivalent guard, so a cold
+ * launch straight into Box or Cylinder was exposed to the identical race unmitigated. Extracted
+ * here once that gap was found, rather than duplicating the flag and delay a second time (the
+ * exact bug class fixed in commit `6a5cb50`) — kept as a single `object` rather than per-file
+ * `private var`s for the same reason. Phase 05's merge into one shared mount point makes that bug
+ * class structurally impossible going forward, but the gate itself is unchanged.
  */
 internal object ArWarmupGate {
 
