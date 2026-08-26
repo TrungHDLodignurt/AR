@@ -1,12 +1,14 @@
 # AR Tape Measure — Android demo
 
-Measure real distances through the camera. Kotlin + Jetpack Compose, one Activity.
+Measure real distances through the camera. Kotlin + Jetpack Compose, one library module
+(`AR_feature`) embedded in a minimal demo host.
 
 Replicates the UX of Apple's built-in Measure app: centred reticle, `+` to commit a point,
 dashed rubber-band line while aiming, solid line with a distance pill once committed, chained
-polyline, undo / clear. Four tabs: **Measure** (the point-to-point ruler above), **Photo**
-(calibrate against a reference object in a photo — a card or A4 sheet, no AR needed), and **Box** /
-**Cylinder** (3-tap origin → freehand base → height AR shapes).
+polyline, undo **and redo**. The demo host's **Measure** tab renders the module's own hub, which
+offers **AR Measure** (Distance / Box / Cylinder, switchable mid-session over one shared ARCore
+session — see `AR_feature/README.md` §12) and **Picture Measure** (calibrate against a reference
+object in a photo — a card, an A4 sheet, or a custom object — no AR needed).
 
 ## Read this before trusting a number
 
@@ -33,7 +35,7 @@ The repo is two modules: one library module holds all feature code, `:app` is na
 
 | Module | Package | Contents | JVM tests |
 |---|---|---|---|
-| [`:AR_feature`](AR_feature/README.md) | `vn.apero.armeasure.*` | `common` (LengthUnit, formatters, LabelPill) + `ar` (Ruler/Box/Cylinder + ARCore infra) + `photo` (Canny/Hough/Homography photo-reference measuring). Public API: `ArAvailability`, `ArMeasureKit`, `ArMeasureRulerScreen`, `ArMeasureBoxScreen`, `ArMeasureCylinderScreen`, `PhotoMeasureScreen`, `CustomReferenceStore` (constructor only) | 67 |
+| [`:AR_feature`](AR_feature/README.md) | `vn.apero.armeasure.*` | `common` (LengthUnit, formatters, LabelPill) + `ar` (Distance/Box/Cylinder + ARCore infra) + `photo` (Canny/Hough/Homography photo-reference measuring). Public API is exactly 3 symbols: `ArMeasureHub` (the entry composable), `ArMeasureConfig`, `MeasurementImageSaver` — everything else is `internal` | 102 |
 | `:app` | `vn.quancua.artapemeasure` | `MainActivity` + tab nav only, wires `:AR_feature` | 0 |
 
 `AR_feature/README.md` (linked above) is a self-contained integration guide for pulling the
@@ -48,17 +50,17 @@ gives describes the simulation, not a sensor.
 
 ```bash
 ./gradlew assembleDebug                          # whole app APK -> app/build/outputs/apk/debug/
-./gradlew testDebugUnitTest                      # all 67 pure-maths tests, no device needed
+./gradlew testDebugUnitTest                      # all 102 pure-maths tests, no device needed
 ./gradlew :app:installDebug                      # to a connected device
-./gradlew :AR_feature:testDebugUnitTest          # same 67 tests, feature module only
+./gradlew :AR_feature:testDebugUnitTest          # same 102 tests, feature module only
 ```
 
 Toolchain (verified working, not guessed):
 
 | | |
 |---|---|
-| Gradle | 9.5.0 (wrapper) — AGP 9.3.1 refuses 9.4 |
-| AGP | 9.3.1 — **ships built-in Kotlin**, so no `kotlin-android` plugin |
+| Gradle | 9.4.1 (wrapper) |
+| AGP | 9.2.0-rc01 — **ships built-in Kotlin**, so no `kotlin-android` plugin; pinned to the highest version Android Studio AI-253 (2025.3) accepts for IDE sync |
 | Kotlin | 2.4.10 |
 | Compose BOM | 2026.05.01 — 2026.08.00 needs `compileSdk 37` |
 | compileSdk / minSdk | 36 / 24 |
@@ -67,23 +69,21 @@ Toolchain (verified working, not guessed):
 ## How it works
 
 ```
-MainActivity              one Activity; ARCore install gate, camera permission, tab switch
-└── MeasureScreen         ARSceneView (camera + tracking + hit tests) under a 2D overlay
-    ├── MeasureFrameLoop  per-frame: resolve reticle -> refresh anchors -> build overlay
-    ├── MeasureOverlay    Canvas: lines, label pills, endpoint dots, reticle
-    ├── MeasureHit        hit resolution, in accuracy order
-    ├── PoseProjector     world -> screen, allocation-free
-    ├── MeasureState      anchors, units, per-frame overlay snapshot
-    └── MeasureMath       pure arithmetic — the only unit-tested part
-└── ShapeMeasureScreen    Box/Cylinder — same ARSceneView + 2D-overlay shape, parameterized by ShapeKind
-    ├── ShapeFrameLoop    per-frame resolve (real hit-test for origin/base, analytic
-    │                     construction-plane ray-cast for height) -> build wireframe overlay
-    ├── ShapeOverlay      Canvas: wireframe edges (dashed where occluded), dimension pill, reticle
-    ├── ShapeMeasureState state machine: origin -> freehand edge(s) -> height -> committed shape
-    ├── SteadinessGate    "hold still before it counts" trust gate, shared with MeasureState
-    └── ShapeMath         pure geometry — parallelogram/circle bases, hidden-edge visibility
-└── PhotoMeasureScreen    calibrate against a photographed reference object; no AR/camera-feed dependency
+MainActivity (:app)         Home/Measure tab switch only; Measure renders ArMeasureHub()
+└── ArMeasureHub             module entry composable — AR Measure card + Picture Measure card,
+    │                        hides the AR card when ArAvailability.Unsupported
+    ├── ArCameraActivity     module-owned; ARCore install gate, camera permission, then:
+    │   └── ArCameraScreen   ONE ARSceneView + ONE Engine shared by all 3 AR tools; a
+    │       │                bottom-sheet tool switch swaps overlay/state, never remounts the view
+    │       ├── MeasureFrameLoop / MeasureOverlay / MeasureHit / MeasureState / MeasureMath  (Distance)
+    │       ├── ShapeFrameLoop / ShapeOverlay / ShapeMeasureState / ShapeMath                (Box, Cylinder)
+    │       └── PoseProjector  world -> screen, allocation-free, shared by both tools above
+    └── ArPhotoActivity      module-owned; constructs its own CustomReferenceStore, then:
+        └── PhotoMeasureScreen  calibrate against a photographed reference object; no ARCore
 ```
+
+Full detail, including the shared-session structural rules and why two earlier fixes there were
+reverted, lives in `AR_feature/README.md` §12 — not duplicated here.
 
 ### Nothing is drawn as 3D geometry
 
