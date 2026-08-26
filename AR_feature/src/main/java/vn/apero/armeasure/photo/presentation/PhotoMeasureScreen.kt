@@ -1,17 +1,15 @@
 package vn.apero.armeasure.photo.presentation
 
+import android.graphics.Bitmap
+import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,24 +18,33 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import vn.apero.armeasure.MeasurementImageSaver
 import vn.apero.armeasure.R
 import vn.apero.armeasure.common.data.UnitPreference
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
+import vn.apero.armeasure.common.domain.formatLength
 import vn.apero.armeasure.photo.data.CustomReferenceStore
 import vn.apero.armeasure.photo.data.loadRotatedBitmap
 import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
@@ -47,23 +54,20 @@ import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
  * "Measure from a photo" — no ARCore, no camera-ar feature, no depth. A rectangle of known size
  * (a sheet of paper, a payment card, or a custom object the user registers themselves) lets any
  * two points on a still photo be measured, distorted-perspective photo included. See
- * `Homography.kt` for the maths this ports from ARuler's "Photoruler", and the port-feasibility
- * report in `plans/reports/` for why this feature specifically sidesteps every ARCore
- * device-support limitation this app otherwise has: it needs a camera app and a bitmap, nothing
- * ARCore-certification-gated.
+ * `Homography.kt` for the maths this ports from ARuler's "Photoruler".
  *
- * Flow order matches ARuler's own, not the more obvious "pick a photo, then say what's in it":
- * the reference object has to be chosen FIRST, because the next step is taking one photo that
- * shows it *together with* whatever is being measured — the app can't ask for that photo
- * without already knowing what to tell the user to include in it.
+ * Built to SCR-21 (place the quad) / SCR-22 (adjust + confirm it) / SCR-23 (edit the measuring
+ * line, which also hosts "Chỉnh sửa tỉ lệ" back into the SCR-22 quad editor without losing the
+ * line — see [PhotoMeasureState.beginEditQuad]).
  *
  * @param referenceStore the host constructs and owns this — the module never creates or holds
  *   its own instance, so a host app controls exactly where/how the reference objects persist.
+ * @param imageSaver where "Lưu" writes the finished annotated photo; the caller ([ArPhotoActivity])
+ *   defaults this to the module's own `MediaStoreImageSaver` when a host hasn't installed one via
+ *   `ArMeasureConfig`.
  * @param unit fallback display unit for the very first launch, before [UnitPreference] holds any
  *   value; the persisted, process-wide unit choice (shared with the AR tools) takes over from
- *   then on — see decision 8. This screen has no unit control of its own yet (that lands in
- *   phase 08's `ColorPickerBar` `cm` badge); it still reads/writes the shared preference so a
- *   unit picked on an AR tab is honoured here too.
+ *   then on — see decision 8.
  * @param onResult emitted once per completed measurement gesture (drag-end or first placement),
  *   never per drag frame.
  * @param onClose null renders no close affordance (today's chrome, unchanged); non-null renders
@@ -72,12 +76,16 @@ import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
 @Composable
 internal fun PhotoMeasureScreen(
     referenceStore: CustomReferenceStore,
+    imageSaver: MeasurementImageSaver,
     modifier: Modifier = Modifier,
     unit: LengthUnit = LengthUnit.Cm,
     onResult: (MeasurementResult.Photo) -> Unit = {},
     onClose: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val textMeasurer = rememberTextMeasurer()
+    val coroutineScope = rememberCoroutineScope()
     val unitPreference = remember { UnitPreference(context) }
     // unitPreference.unit already falls back to LengthUnit.Cm on a first-ever launch — same
     // value as the unit param's own default, so the persisted store is the single seed.
@@ -102,6 +110,16 @@ internal fun PhotoMeasureScreen(
         onResult(MeasurementResult.Photo(distanceMm / 1000f, state.unit))
     }
 
+    fun requestSave() {
+        val photo = state.photo ?: return
+        val label = state.currentDistanceMm?.let { formatLength(it / 1000f, state.unit) }
+        coroutineScope.launch {
+            val uri = performSave(photo, state.line, canvasSize, label, state.lineColor, textMeasurer, density, imageSaver)
+            val messageRes = if (uri != null) R.string.armeasure_photo_save_success else R.string.armeasure_photo_save_failure
+            Toast.makeText(context, context.getString(messageRes), Toast.LENGTH_SHORT).show()
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize().background(Color(0xFF1C1C1E))) {
         when {
             !referenceChosen -> {
@@ -121,30 +139,73 @@ internal fun PhotoMeasureScreen(
                     referenceLabel = state.reference.label,
                     onPickPhoto = { showPickPhotoSheet = true },
                     onChangeReference = { referenceChosen = false },
+                    onClose = onClose,
                 )
             }
 
             else -> {
                 val imageBitmap = remember(state.photo) { state.photo!!.asImageBitmap() }
-                PhotoQuadCanvas(
-                    photo = imageBitmap,
-                    state = state,
-                    modifier = Modifier.fillMaxSize().onSizeChanged { canvasSize = it },
-                    onLineDragEnd = { emitResult() },
-                )
+                val hasEverCalibrated = state.isCalibrated || state.isEditingQuad
+                val awaitingQuadConfirm = state.quad.size == 4 && (!state.isCalibrated || state.isEditingQuad)
+                val saveSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
                 Column(modifier = Modifier.fillMaxSize()) {
-                    HintBanner(state = state)
-                    Box(modifier = Modifier.weight(1f))
-                    BottomPanel(
-                        state = state,
-                        canvasSize = canvasSize,
-                        onPickAnotherPhoto = { showPickPhotoSheet = true },
-                        onConfirmReference = {
-                            state.confirmReference(canvasSize.width.toFloat(), canvasSize.height.toFloat())
-                            emitResult()
-                        },
+                    PhotoTopNav(
+                        onBack = { state.discardPhoto() },
+                        canUndo = state.canUndo,
+                        onUndo = state::undo,
+                        canRedo = state.canRedo,
+                        onRedo = state::redo,
+                        showUndoRedoAndSave = hasEverCalibrated,
+                        saveSupported = saveSupported,
+                        saveEnabled = state.isCalibrated,
+                        onSave = { requestSave() },
                     )
+
+                    if (!hasEverCalibrated) {
+                        InstructionBox(
+                            text = if (state.quad.isEmpty()) {
+                                stringResource(R.string.armeasure_photo_instruction_place, state.reference.label)
+                            } else {
+                                stringResource(R.string.armeasure_photo_instruction_adjust, state.reference.label)
+                            },
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                        )
+                    }
+
+                    Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+                        PhotoQuadCanvas(
+                            photo = imageBitmap,
+                            state = state,
+                            modifier = Modifier.fillMaxSize().onSizeChanged { canvasSize = it },
+                            onLineDragEnd = { emitResult() },
+                        )
+                        if (awaitingQuadConfirm) {
+                            CheckmarkBtn(
+                                onClick = {
+                                    state.confirmReference(canvasSize.width.toFloat(), canvasSize.height.toFloat())
+                                    emitResult()
+                                },
+                                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp),
+                            )
+                        }
+                    }
+
+                    if (hasEverCalibrated) {
+                        PhotoBottomToolbar(
+                            onLineSegment = {
+                                state.resetLine(canvasSize.width.toFloat(), canvasSize.height.toFloat())
+                                emitResult()
+                            },
+                            onEditScale = state::beginEditQuad,
+                        )
+                        ColorPickerBar(
+                            selected = state.lineColor,
+                            onSelect = state::setLineColor,
+                            unit = state.unit,
+                            onSelectUnit = state::setUnit,
+                        )
+                    }
                 }
             }
         }
@@ -182,136 +243,78 @@ internal fun PhotoMeasureScreen(
                 },
             )
         }
+    }
+}
 
-        // Only meaningful once a photo is loaded — nothing is undoable on the reference-picker
-        // step. Final placement lands in phase 08's SCR-23 `UndoForwardGroup` toolbar; this is
-        // the minimal affordance so the mechanism is reachable and on-device testable now.
-        if (state.photo != null) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(16.dp),
-            ) {
-                PhotoIconButton(
-                    glyph = "↩",
-                    enabled = state.canUndo,
-                    onClick = state::undo,
-                    contentDescription = stringResource(R.string.armeasure_action_undo),
-                )
-                PhotoIconButton(
-                    glyph = "↪",
-                    enabled = state.canRedo,
-                    onClick = state::redo,
-                    contentDescription = stringResource(R.string.armeasure_action_redo),
-                    modifier = Modifier.padding(start = 12.dp),
-                )
-            }
+@Composable
+private fun WaitingForPhoto(
+    referenceLabel: String,
+    onPickPhoto: () -> Unit,
+    onChangeReference: () -> Unit,
+    onClose: (() -> Unit)?,
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                stringResource(R.string.armeasure_photo_waiting_title, referenceLabel),
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                stringResource(R.string.armeasure_photo_waiting_body, referenceLabel),
+                color = Color(0xB3FFFFFF),
+                fontSize = 14.sp,
+                modifier = Modifier.padding(top = 8.dp, bottom = 20.dp),
+            )
+            Button(onClick = onPickPhoto) { Text(stringResource(R.string.armeasure_photo_waiting_pick_cta)) }
+            Text(
+                stringResource(R.string.armeasure_photo_waiting_change_reference),
+                color = Color(0xB3FFFFFF),
+                fontSize = 13.sp,
+                modifier = Modifier.padding(top = 16.dp).clickable(onClick = onChangeReference),
+            )
         }
-
-        // Hidden on the reference-picker step: ReferencePickerScreen's own TopNav already
-        // supplies a back affordance wired to the same onClose, so this would be a second one.
-        if (onClose != null && referenceChosen) {
+        if (onClose != null) {
             Text(
                 "✕",
                 color = Color.White,
                 fontSize = 18.sp,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(16.dp)
-                    .clickable(onClick = onClose),
+                    .clickable(onClick = onClose)
+                    .padding(12.dp),
             )
         }
     }
 }
 
-/** A single "↩"/"↪" glyph button, same reasoning as the AR tools' `ChromePill`: one glyph is not worth the extended Material icon set as a dependency. */
-@Composable
-private fun PhotoIconButton(
-    glyph: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    contentDescription: String,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .background(Color(0x66000000), shape = androidx.compose.foundation.shape.CircleShape)
-            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
-            .semantics { this.contentDescription = contentDescription }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    ) {
-        Text(glyph, color = if (enabled) Color.White else Color(0x4DFFFFFF), fontSize = 18.sp)
-    }
-}
-
-@Composable
-private fun WaitingForPhoto(referenceLabel: String, onPickPhoto: () -> Unit, onChangeReference: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text("Chụp ảnh có $referenceLabel", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-        Text(
-            "Ảnh cần có cả $referenceLabel và vật cần đo cùng trong khung hình.",
-            color = Color(0xB3FFFFFF),
-            fontSize = 14.sp,
-            modifier = Modifier.padding(top = 8.dp, bottom = 20.dp),
-        )
-        Button(onClick = onPickPhoto) { Text("Chọn ảnh") }
-        Text(
-            "Đổi vật tham chiếu",
-            color = Color(0xB3FFFFFF),
-            fontSize = 13.sp,
-            modifier = Modifier.padding(top = 16.dp).clickable(onClick = onChangeReference),
-        )
-    }
-}
-
-@Composable
-private fun HintBanner(state: PhotoMeasureState) {
-    if (state.isCalibrated) return
-    val text = if (state.quad.isEmpty()) {
-        "Nhấp vào ${state.reference.label} để đánh dấu nó và điều chỉnh kích thước"
-    } else {
-        "Giữ và kéo các góc để điều chỉnh vùng ${state.reference.label}"
-    }
-    Text(
-        text,
-        color = Color.White,
-        fontSize = 13.sp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0x8C000000))
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-    )
-}
-
-@Composable
-private fun BottomPanel(
-    state: PhotoMeasureState,
+/**
+ * Renders the annotated export bitmap and hands it to [imageSaver], entirely off the main thread
+ * — [renderAnnotatedBitmap] does real drawing work and [MeasurementImageSaver.save] does file IO,
+ * neither of which belongs on the UI thread. The export bitmap is always recycled, save or fail;
+ * it never touches [PhotoMeasureState]'s undo stack (that stack only ever holds pixel coordinates
+ * and a colour, never a [Bitmap]).
+ */
+private suspend fun performSave(
+    photo: Bitmap,
+    line: LiveLine?,
     canvasSize: IntSize,
-    onPickAnotherPhoto: () -> Unit,
-    onConfirmReference: () -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth().background(Color(0xF21C1C1E)).padding(16.dp)) {
-        if (!state.isCalibrated) {
-            Button(
-                onClick = onConfirmReference,
-                enabled = state.quad.size == 4,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Xác nhận vật tham chiếu") }
-        } else {
-            Text("Kéo 2 đầu đoạn thẳng để đo khoảng cách thật", color = Color.White, fontSize = 13.sp)
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
-                Button(onClick = onPickAnotherPhoto) { Text("Chọn ảnh khác") }
-                Button(
-                    onClick = { state.resetLine(canvasSize.width.toFloat(), canvasSize.height.toFloat()) },
-                    modifier = Modifier.padding(start = 8.dp),
-                ) { Text("Đặt lại vị trí") }
-            }
-        }
+    label: String?,
+    lineColor: Color,
+    textMeasurer: TextMeasurer,
+    density: Density,
+    imageSaver: MeasurementImageSaver,
+): Uri? = withContext(Dispatchers.Default) {
+    val exported = renderAnnotatedBitmap(photo, line, canvasSize, label, lineColor, textMeasurer, density)
+    try {
+        imageSaver.save(exported, "armeasure_${System.currentTimeMillis()}.png")
+    } finally {
+        exported.recycle()
     }
 }

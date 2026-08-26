@@ -9,8 +9,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import vn.apero.armeasure.ArMeasureConfig
 import vn.apero.armeasure.common.ui.ArMeasureTheme
 import vn.apero.armeasure.photo.data.CustomReferenceStore
+import vn.apero.armeasure.photo.data.MediaStoreImageSaver
 
 /**
  * Module-owned, full-screen photo-measure Activity — the grid/editor screens phases 07/08 build
@@ -31,8 +33,13 @@ internal class ArPhotoActivity : ComponentActivity() {
         setContent {
             ArMeasureTheme(dark = false) {
                 val store = remember { CustomReferenceStore(this) }
+                // Resolved once per screen, not installed process-wide: a host's own saver (set
+                // via ArMeasureConfig.setImageSaver) always wins, and this module's own default
+                // is only ever constructed when a host hasn't supplied one.
+                val imageSaver = remember { ArMeasureConfig.imageSaver ?: MediaStoreImageSaver(this) }
                 PhotoMeasureScreen(
                     referenceStore = store,
+                    imageSaver = imageSaver,
                     modifier = Modifier.fillMaxSize(),
                     onClose = { finish() },
                 )

@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import vn.apero.armeasure.common.domain.LengthUnit
@@ -31,6 +32,7 @@ internal data class PhotoSnapshot(
     val quad: List<Offset>,
     val homography: Homography?,
     val line: LiveLine?,
+    val lineColor: Color,
 )
 
 /**
@@ -69,6 +71,24 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
     var isDetectingQuad by mutableStateOf(false)
         private set
 
+    /**
+     * The measuring line + its label's fill colour (design `ColorPickerBar`, decision: colour
+     * choice is scoped to the photo line only, never [QuadEditorCanvas]'s semantic cyan/yellow).
+     * Seeded from the palette's own default entry.
+     */
+    var lineColor by mutableStateOf(PhotoLineColors.first())
+        private set
+
+    /**
+     * True once the user has asked to re-open the quad editor after already calibrating once —
+     * "Chỉnh sửa tỉ lệ" in SCR-23's bottom toolbar (see [beginEditQuad]). Set back to `false` by
+     * [confirmReference]. The quad and line survive the round trip untouched: dragging a corner
+     * only clears [homography] (via [moveQuadCorner]), never [line] — see the class doc's own
+     * note on why this was architecturally dead code before this flag existed.
+     */
+    var isEditingQuad by mutableStateOf(false)
+        private set
+
     val isCalibrated: Boolean get() = homography != null
 
     /**
@@ -82,12 +102,13 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
     /** Captured the moment a corner/endpoint drag begins and committed only once it ends, so undo reverts a whole drag rather than each intermediate frame — see the risk this guards against in the phase's own notes. Null between gestures. */
     private var dragStartSnapshot: PhotoSnapshot? = null
 
-    private fun snapshotNow() = PhotoSnapshot(quad, homography, line)
+    private fun snapshotNow() = PhotoSnapshot(quad, homography, line, lineColor)
 
     private fun applySnapshot(snapshot: PhotoSnapshot) {
         quad = snapshot.quad
         homography = snapshot.homography
         line = snapshot.line
+        lineColor = snapshot.lineColor
     }
 
     /** Undoes the last committed gesture, restoring the exact previous quad/homography/line. */
@@ -129,6 +150,22 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
         quad = emptyList()
         homography = null
         line = null
+        isEditingQuad = false
+    }
+
+    /**
+     * [PhotoMeasureScreen]'s "back" affordance once a photo is loaded: returns to the pick-photo
+     * step without discarding the chosen [reference]. Undo history is cleared with it — an undo
+     * across two different photos would restore quad/line coordinates that belong to a bitmap no
+     * longer loaded, which is meaningless.
+     */
+    fun discardPhoto() {
+        photo = null
+        quad = emptyList()
+        homography = null
+        line = null
+        isEditingQuad = false
+        undoRedo.clear()
     }
 
     /**
@@ -161,7 +198,6 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
             } finally {
                 isDetectingQuad = false
             }
-            android.util.Log.d("PhotoMeasure", "autoFitQuad tap=$tapInBitmap result=$detected")
             if (detected != null && quad.isEmpty()) {
                 quad = detected.map { corner ->
                     Offset(
@@ -193,10 +229,14 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
     }
 
     /**
-     * Solves the homography from the current quad to [reference]'s real-world rectangle, and —
-     * unlike the quad, which needs a tap first — places the measuring line straight away,
-     * centred on screen: ARuler's own tool starts with a line already there to drag, not an
-     * empty canvas waiting for a first tap.
+     * Solves the homography from the current quad to [reference]'s real-world rectangle.
+     *
+     * First-time confirm (no [line] yet): places the measuring line straight away, centred on
+     * screen — ARuler's own tool starts with a line already there to drag, not an empty canvas
+     * waiting for a first tap. Re-confirm after [beginEditQuad] (line already exists): the line's
+     * on-screen pixel position is left untouched — the photo and its aspect-fit letterboxing
+     * haven't moved, only the calibration quad has, so nothing needs recomputing (see the class
+     * doc's own note on why "Chỉnh sửa tỉ lệ" doesn't need to touch it).
      */
     fun confirmReference(canvasWidthPx: Float, canvasHeightPx: Float) {
         if (quad.size != 4) return
@@ -210,7 +250,31 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
             Vec2(0f, short),
         )
         homography = computeHomography(quad.map { Vec2(it.x, it.y) }, dst) ?: return
-        resetLine(canvasWidthPx, canvasHeightPx)
+        isEditingQuad = false
+        if (line == null) resetLine(canvasWidthPx, canvasHeightPx)
+    }
+
+    /**
+     * "Chỉnh sửa tỉ lệ" (Edit scale): re-opens the quad editor without discarding the photo or the
+     * line — see the class doc's note on why this was architecturally blocked before this flag
+     * existed. No-op before the first calibration, since there is nothing yet to re-edit.
+     */
+    fun beginEditQuad() {
+        if (!isCalibrated) return
+        isEditingQuad = true
+    }
+
+    /**
+     * A hard user choice like [setUnit] — pushes its own undo entry so a colour change is
+     * separately undoable/redoable (`ColorPickerBar`'s on-device check). `@JvmName` for the same
+     * reason as [setUnit]: avoids a JVM signature clash with the `var lineColor` property's own
+     * auto-generated bean setter.
+     */
+    @JvmName("setLineColorTo")
+    fun setLineColor(newColor: Color) {
+        if (newColor == lineColor) return
+        undoRedo.push(snapshotNow())
+        lineColor = newColor
     }
 
     /** Re-centres the measuring line — the "start over" action once it's been dragged somewhere unhelpful. */

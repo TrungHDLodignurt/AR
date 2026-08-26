@@ -19,8 +19,9 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import vn.apero.armeasure.photo.domain.imaging.FittedRect
 
-private val LoupeDiameter = 96.dp
+private val LoupeDiameter = 150.dp
 private const val Zoom = 2.5f
+private val LoupeRingColor = Color(0xCCFFFFFF)
 
 /**
  * A circular magnified preview of [photo] around [target], shown while dragging a quad corner —
@@ -42,7 +43,7 @@ internal fun MagnifierLoupe(photo: ImageBitmap, fit: FittedRect, target: Offset,
             .offset { IntOffset(topLeftX.roundToInt(), topLeftY.roundToInt()) }
             .size(LoupeDiameter)
             .clip(CircleShape)
-            .border(2.dp, Color.White, CircleShape),
+            .border(2.dp, LoupeRingColor, CircleShape),
     ) {
         Canvas(Modifier.size(LoupeDiameter)) {
             // Same display-space -> bitmap-pixel conversion as QuadCrop.kt, then a square crop
@@ -65,10 +66,13 @@ internal fun MagnifierLoupe(photo: ImageBitmap, fit: FittedRect, target: Offset,
                 dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
             )
 
-            // Crosshair marking the exact point being placed, at the loupe's centre.
+            // Crosshair marking the exact point being placed, at the loupe's centre — a 20dp
+            // "plus" per the design (`l6wgWg`), in the same translucent white as the ring so it
+            // reads over any photo content rather than only over a light or dark one.
             val center = Offset(size.width / 2f, size.height / 2f)
-            drawLine(Color.Red, Offset(center.x - 8.dp.toPx(), center.y), Offset(center.x + 8.dp.toPx(), center.y), 1.dp.toPx())
-            drawLine(Color.Red, Offset(center.x, center.y - 8.dp.toPx()), Offset(center.x, center.y + 8.dp.toPx()), 1.dp.toPx())
+            val armLength = 10.dp.toPx()
+            drawLine(LoupeRingColor, Offset(center.x - armLength, center.y), Offset(center.x + armLength, center.y), 1.5.dp.toPx())
+            drawLine(LoupeRingColor, Offset(center.x, center.y - armLength), Offset(center.x, center.y + armLength), 1.5.dp.toPx())
         }
     }
 }

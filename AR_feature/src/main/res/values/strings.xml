@@ -69,4 +69,33 @@
     <string name="armeasure_ar_unsupported_body">This device does not support ARCore, so camera measuring is unavailable. Picture Measure still works.</string>
     <string name="armeasure_camera_denied_title">Camera permission needed</string>
     <string name="armeasure_camera_denied_body">Measuring uses the camera to understand the room. Grant camera access in Settings to continue.</string>
+
+    <string name="armeasure_photo_instruction_place">Tap on the %1$s to mark it, then adjust its size</string>
+    <string name="armeasure_photo_instruction_adjust">Hold and drag the corners to match the %1$s</string>
+    <string name="armeasure_photo_confirm_cd">Confirm reference object</string>
+    <string name="armeasure_photo_detecting_edges">Detecting edges…</string>
+    <string name="armeasure_photo_close_cd">Close</string>
+
+    <string name="armeasure_photo_pick_sheet_title">Choose photo</string>
+    <string name="armeasure_photo_pick_camera">Take photo</string>
+    <string name="armeasure_photo_pick_gallery">Choose from gallery</string>
+
+    <string name="armeasure_photo_waiting_title">Take a photo with %1$s</string>
+    <string name="armeasure_photo_waiting_body">The photo needs to show both %1$s and the object you want to measure.</string>
+    <string name="armeasure_photo_waiting_pick_cta">Choose photo</string>
+    <string name="armeasure_photo_waiting_change_reference">Change reference object</string>
+
+    <string name="armeasure_photo_toolbar_line_segment">Line segment</string>
+    <string name="armeasure_photo_toolbar_edit_scale">Edit scale</string>
+
+    <string name="armeasure_photo_save_cta">Save</string>
+    <string name="armeasure_photo_save_success">Saved to Pictures</string>
+    <string name="armeasure_photo_save_failure">Couldn\'t save the photo</string>
+    <string name="armeasure_photo_save_unsupported">Saving needs Android 10+</string>
+
+    <string name="armeasure_color_red">Red</string>
+    <string name="armeasure_color_orange">Orange</string>
+    <string name="armeasure_color_yellow">Yellow</string>
+    <string name="armeasure_color_green">Green</string>
+    <string name="armeasure_color_purple">Purple</string>
 </resources>

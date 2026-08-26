@@ -13,9 +13,11 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import vn.apero.armeasure.R
 import vn.apero.armeasure.photo.data.rememberCameraCaptureLauncher
 
 /**
@@ -34,14 +36,14 @@ internal fun PickPhotoSheet(onPhotoPicked: (Uri) -> Unit, onDismiss: () -> Unit)
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
             Text(
-                "Chọn ảnh",
+                stringResource(R.string.armeasure_photo_pick_sheet_title),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(bottom = 12.dp),
             )
-            SheetOption(label = "Chụp ảnh", onClick = takePhoto)
+            SheetOption(label = stringResource(R.string.armeasure_photo_pick_camera), onClick = takePhoto)
             SheetOption(
-                label = "Chọn từ thư viện",
+                label = stringResource(R.string.armeasure_photo_pick_gallery),
                 onClick = {
                     pickFromGallery.launch(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
