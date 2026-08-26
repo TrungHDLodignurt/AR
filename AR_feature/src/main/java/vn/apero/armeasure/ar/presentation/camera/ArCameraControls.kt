@@ -1,16 +1,11 @@
 package vn.apero.armeasure.ar.presentation.camera
 
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.google.ar.core.Session
 import kotlin.math.abs
 import vn.apero.armeasure.ar.data.arcore.PoseProjector
@@ -21,7 +16,6 @@ import vn.apero.armeasure.ar.presentation.ruler.MeasureOverlay
 import vn.apero.armeasure.ar.presentation.ruler.MeasureState
 import vn.apero.armeasure.ar.presentation.shapes.ShapeBase
 import vn.apero.armeasure.ar.presentation.shapes.ShapeMeasureState
-import vn.apero.armeasure.ar.presentation.shared.ChromePill
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
 
@@ -105,20 +99,4 @@ internal fun DistanceOverlay(
             )
         },
     )
-}
-
-/** Debug-only tool picker for this phase — phase 06 replaces it with the design's real chrome. */
-@Composable
-internal fun ToolSwitcher(tool: MeasureTool, onSelect: (MeasureTool) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        MeasureTool.entries.forEach { candidate ->
-            ChromePill(enabled = candidate != tool, onClick = { onSelect(candidate) }) {
-                Text(
-                    text = candidate.name,
-                    color = if (candidate == tool) Color(0xFF34C759) else Color.White,
-                    fontSize = 12.sp,
-                )
-            }
-        }
-    }
 }

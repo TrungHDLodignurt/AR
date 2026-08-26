@@ -1,37 +1,13 @@
 package vn.apero.armeasure.ar.presentation.camera
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.google.ar.core.TrackingFailureReason
 import vn.apero.armeasure.R
 import vn.apero.armeasure.ar.presentation.ruler.MeasureState
 import vn.apero.armeasure.ar.presentation.shapes.ShapeKind
 import vn.apero.armeasure.ar.presentation.shapes.ShapeMeasureState
 import vn.apero.armeasure.ar.presentation.shapes.ShapePhase
-
-/** A one-line, pill-shaped hint banner — shared by every tool's overlay. */
-@Composable
-internal fun HintBanner(text: String?, modifier: Modifier = Modifier) {
-    if (text == null) return
-    Text(
-        text = text,
-        color = Color.White,
-        fontSize = 13.sp,
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0x8C000000))
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    )
-}
 
 /**
  * One line of guidance for whichever tool is active — the merge of `MeasureScreen.kt`'s and

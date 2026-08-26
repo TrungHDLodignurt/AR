@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -27,15 +26,8 @@ import androidx.compose.ui.unit.sp
 import vn.apero.armeasure.R
 import vn.apero.armeasure.ar.ArAvailability
 import vn.apero.armeasure.common.ui.ArMeasureTheme
+import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.photo.presentation.ArPhotoActivity
-
-private val BgPrimary = Color(0xFFF4F4F2)
-private val CardBorder = Color(0x241A1D1F)
-private val TitleColor = Color(0xFF1A1D1F)
-private val DescColor = Color(0xFF5C6166)
-private val BadgeBackground = Color(0x1F8A9A5B)
-private val BadgeContent = Color(0xFF8A9A5B)
-private val ChevronColor = Color(0xFF9BA1A6)
 
 /**
  * The module's one entry surface — a tab-root composable a host embeds in its own tab (design
@@ -55,20 +47,20 @@ fun ArMeasureHub(modifier: Modifier = Modifier) {
         val availability = rememberArAvailability()
 
         Column(
-            modifier = modifier.fillMaxSize().background(BgPrimary),
+            modifier = modifier.fillMaxSize().background(ArMeasureTokens.BgPrimary),
         ) {
             Column(
                 modifier = Modifier.padding(start = 20.dp, top = 24.dp, end = 20.dp, bottom = 20.dp),
             ) {
                 Text(
                     text = stringResource(R.string.armeasure_hub_title),
-                    color = TitleColor,
+                    color = ArMeasureTokens.TextPrimary,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     text = stringResource(R.string.armeasure_hub_subtitle),
-                    color = DescColor,
+                    color = ArMeasureTokens.TextSecondary,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(top = 4.dp),
                 )
@@ -113,28 +105,28 @@ private fun HubCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(Color.White)
-            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
+            .background(ArMeasureTokens.BgSurface)
+            .border(1.dp, ArMeasureTokens.BorderSoft, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Box(
-            modifier = Modifier.size(56.dp).clip(CircleShape).background(BadgeBackground),
+            modifier = Modifier.size(56.dp).clip(CircleShape).background(ArMeasureTokens.SignatureMuted),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = badgeGlyph, color = BadgeContent, fontSize = 26.sp)
+            Text(text = badgeGlyph, color = ArMeasureTokens.Signature, fontSize = 26.sp)
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = TitleColor, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(text = title, color = ArMeasureTokens.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             Text(
                 text = description,
-                color = DescColor,
+                color = ArMeasureTokens.TextSecondary,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 2.dp),
             )
         }
-        Text(text = "›", color = ChevronColor, fontSize = 20.sp)
+        Text(text = "›", color = ArMeasureTokens.TextDisabled, fontSize = 20.sp)
     }
 }

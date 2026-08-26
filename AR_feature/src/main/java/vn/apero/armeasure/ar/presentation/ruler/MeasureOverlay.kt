@@ -13,11 +13,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.common.ui.drawLabelPill
 
 private val LineColor = Color.White
-private val PillText = Color(0xFF1C1C1E)
 private val DragAccent = Color(0xFF0A84FF)
+/** 2dp halo beyond the solid endpoint dot's own radius — keeps a white point visible even over a
+ * bright/white real-world surface, where a bare white dot alone would disappear. */
+private val EndpointHaloColor = Color(0x59FFFFFF)
 
 /** How far the lifted drag preview sits above the actual point, in dp. */
 private val DragLiftHeight = 56.dp
@@ -36,9 +39,9 @@ internal fun MeasureOverlay(
 ) {
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(
-        color = PillText,
+        color = Color.White,
         fontSize = 13.sp,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Bold,
     )
 
     Canvas(modifier = modifier) {
@@ -48,14 +51,18 @@ internal fun MeasureOverlay(
         frame.committed.forEach { drawSegment(it, dashed = false) }
         frame.live?.let { drawSegment(it, dashed = true) }
 
-        // Endpoint dots after the lines, so they sit on top of the stroke ends.
-        frame.points.forEach { point ->
-            drawCircle(color = LineColor, radius = 5.dp.toPx(), center = point)
-        }
+        // Endpoint dots after the lines, so they sit on top of the stroke ends — each with a 2dp
+        // white halo (insight 7) so it stays visible over a bright real-world surface too.
+        frame.points.forEach { point -> drawEndpointDot(point) }
 
-        // Labels last — nothing should overlap a number.
-        frame.committed.forEach { drawLabelPill(textMeasurer, it.label, it.midpoint, labelStyle) }
-        frame.live?.let { drawLabelPill(textMeasurer, it.label, it.midpoint, labelStyle) }
+        // Labels last — nothing should overlap a number. AR MeasureLabel spec: ChromeDark pill,
+        // white 13/700 text (deliberately not the mock's red — see ArMeasureTokens' KDoc).
+        frame.committed.forEach {
+            drawLabelPill(textMeasurer, it.label, it.midpoint, labelStyle, backgroundColor = ArMeasureTokens.ChromeDark)
+        }
+        frame.live?.let {
+            drawLabelPill(textMeasurer, it.label, it.midpoint, labelStyle, backgroundColor = ArMeasureTokens.ChromeDark)
+        }
 
         frame.draggingPoint?.let { drawDragPreview(it) }
 
@@ -109,28 +116,35 @@ internal fun DrawScope.drawSegment(segment: Segment2D, dashed: Boolean) {
 }
 
 /**
- * The aiming reticle, fixed at the screen centre.
- *
- * Solid dot when a surface is locked, hollow ring when not — so "nothing measurable here" is
- * visible before the user taps, rather than after they read a wrong number.
+ * The aiming reticle, fixed at the screen centre — an 8dp dot per the design's crosshair, kept in
+ * two variants (insight 7): solid when a surface is locked, hollow ring when not, so "nothing
+ * measurable here" is visible before the user taps, rather than after they read a wrong number.
+ * Losing that on/off-surface signal to chase the mock's bare dot would be a regression dressed as
+ * a design fix.
  */
 internal fun DrawScope.drawReticle(center: Offset, onSurface: Boolean) {
-    val ringRadius = 11.dp.toPx()
-    val ringStroke = Stroke(width = 1.5.dp.toPx())
+    val dotRadius = 4.dp.toPx() // 8dp diameter, matching the design
     if (onSurface) {
-        drawCircle(color = LineColor, radius = 4.dp.toPx(), center = center)
+        drawCircle(color = LineColor, radius = dotRadius, center = center)
         drawCircle(
-            color = LineColor.copy(alpha = 0.35f),
-            radius = ringRadius,
+            color = Color(0x40000000),
+            radius = dotRadius,
             center = center,
-            style = ringStroke,
+            style = Stroke(width = 1.dp.toPx()),
         )
     } else {
         drawCircle(
-            color = LineColor.copy(alpha = 0.45f),
-            radius = ringRadius,
+            color = Color(0xB3FFFFFF),
+            radius = dotRadius,
             center = center,
-            style = ringStroke,
+            style = Stroke(width = 1.5.dp.toPx()),
         )
     }
+}
+
+/** A committed endpoint: a solid white dot plus a 2dp halo (insight 7) so it reads over a bright
+ * real-world surface as well as a dark one. */
+internal fun DrawScope.drawEndpointDot(point: Offset) {
+    drawCircle(color = EndpointHaloColor, radius = 7.dp.toPx(), center = point)
+    drawCircle(color = LineColor, radius = 5.dp.toPx(), center = point)
 }

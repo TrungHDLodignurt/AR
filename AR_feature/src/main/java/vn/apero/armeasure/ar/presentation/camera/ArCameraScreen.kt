@@ -1,11 +1,8 @@
 package vn.apero.armeasure.ar.presentation.camera
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,12 +37,8 @@ import vn.apero.armeasure.ar.presentation.shapes.ShapeKind
 import vn.apero.armeasure.ar.presentation.shapes.ShapeMeasureState
 import vn.apero.armeasure.ar.presentation.shapes.ShapeOverlay
 import vn.apero.armeasure.ar.presentation.shapes.onShapeFrame
-import vn.apero.armeasure.ar.presentation.shared.MeasureBottomBar
-import vn.apero.armeasure.ar.presentation.shared.MeasureTopBar
 import vn.apero.armeasure.common.data.UnitPreference
 import vn.apero.armeasure.common.domain.MeasurementResult
-import vn.apero.armeasure.common.ui.UnitBtn
-import vn.apero.armeasure.common.ui.UnitMenu
 
 /** Which of the three AR tools is currently active. Swapping never remounts the view below. */
 internal enum class MeasureTool { Distance, Box, Cylinder }
@@ -70,6 +63,10 @@ private const val CameraWatchdogPollIntervalMs = 1_000L
  * fix is a delayed first mount plus this watchdog, not a proactive remount on every resume.
  */
 private const val CameraWatchdogTimeoutMs = 10_000L
+
+/** How long the commit-confirmation [ARToast] stays up before falling back to the tool's usual
+ * coaching hint (insight 8's terminal state). */
+private const val CommitToastDurationMs = 1_500L
 
 /**
  * One `ARSceneView`, one Filament `Engine`, one ARCore `Session`, shared by Distance/Box/Cylinder.
@@ -158,9 +155,22 @@ internal fun ArCameraScreen(
         }
     }
 
+    var showModeSheet by remember { mutableStateOf(false) }
+    var showUnitMenu by remember { mutableStateOf(false) }
+    // Insight 8: the AR branch has no terminal state, so a commit is confirmed by a transient
+    // toast rather than a save flow — cleared automatically after CommitToastDurationMs.
+    var commitToast by remember { mutableStateOf<String?>(null) }
+    val commitConfirmation = stringResource(R.string.armeasure_toast_point_added)
+    LaunchedEffect(commitToast) {
+        if (commitToast != null) {
+            delay(CommitToastDurationMs)
+            commitToast = null
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize().onSizeChanged { viewSize = it }) {
         if (!isWarmedUp) {
-            HintBanner(
+            ARToast(
                 text = stringResource(R.string.armeasure_hint_warming_up),
                 modifier = Modifier.align(Alignment.Center),
             )
@@ -256,58 +266,63 @@ internal fun ArCameraScreen(
             )
         }
 
-        MeasureTopBar(
+        ArCameraTopBar(
             canUndo = actions.canUndo,
             onUndo = actions.undo,
             canRedo = actions.canRedo,
             onRedo = actions.redo,
-            onClear = actions.clear,
             onClose = onClose,
+            unit = unit,
+            onSelectUnit = { unit = it },
+            showUnitMenu = showUnitMenu,
+            onUnitClick = { showUnitMenu = true },
+            onDismissUnitMenu = { showUnitMenu = false },
+            onModeClick = { showModeSheet = true },
             modifier = Modifier.align(Alignment.TopCenter),
         )
 
-        HintBanner(
-            text = hintFor(tool, sessionState, distance, box, cylinder),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(top = 72.dp),
-        )
-
-        var showUnitMenu by remember { mutableStateOf(false) }
-        Box(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 20.dp)) {
-            UnitBtn(unit = unit, onClick = { showUnitMenu = true })
-            if (showUnitMenu) {
-                UnitMenu(
-                    selected = unit,
-                    onSelect = { unit = it },
-                    onDismiss = { showUnitMenu = false },
-                )
-            }
+        // Defect 1 of the design update: the mock's toast overlaps the sheet by 52px — hidden
+        // here while the sheet is open instead.
+        if (!showModeSheet) {
+            ARToast(
+                text = commitToast ?: hintFor(tool, sessionState, distance, box, cylinder),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 110.dp),
+            )
         }
 
-        // Temporary: phase 06 replaces this with the design's ModeBtn + MeasureModeSheet. Needed
-        // here so the swap this whole phase is about is actually testable on-device now, not only
-        // once the real UI lands.
-        ToolSwitcher(
-            tool = tool,
-            onSelect = ::selectTool,
-            modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 100.dp),
-        )
-
-        MeasureBottomBar(
+        ArCameraBottomBar(
+            clearEnabled = actions.canUndo,
+            onClear = actions.clear,
             addEnabled = actions.addEnabled,
             onAddPoint = {
                 session?.let { activeSession ->
+                    val onCommit: (MeasurementResult) -> Unit = { result ->
+                        commitToast = commitConfirmation
+                        onResult(result)
+                    }
                     when (tool) {
-                        MeasureTool.Distance -> commitDistancePoint(distance, activeSession, unit, onResult)
-                        MeasureTool.Box -> commitShapeStep(box, activeSession, unit, onResult)
-                        MeasureTool.Cylinder -> commitShapeStep(cylinder, activeSession, unit, onResult)
+                        MeasureTool.Distance -> commitDistancePoint(distance, activeSession, unit, onCommit)
+                        MeasureTool.Box -> commitShapeStep(box, activeSession, unit, onCommit)
+                        MeasureTool.Cylinder -> commitShapeStep(cylinder, activeSession, unit, onCommit)
                     }
                 }
             },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
+
+        if (showModeSheet) {
+            MeasureModeSheet(
+                selected = tool,
+                onSelect = {
+                    selectTool(it)
+                    showModeSheet = false
+                },
+                onDismiss = { showModeSheet = false },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 package vn.apero.armeasure.common.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,44 +16,43 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import vn.apero.armeasure.R
-import vn.apero.armeasure.ar.presentation.shared.ChromePill
 import vn.apero.armeasure.common.domain.LengthUnit
 
-private val MenuBackground = Color(0xFF2C2C2E)
-private val MenuRowSelectedFill = Color(0xFF48484A)
 private const val MinTouchTargetDp = 48
+private val MenuShadowColor = Color(0x33000000)
+private val MenuBorderColor = Color(0x22111111)
 
 /**
- * Compact trigger showing the currently selected unit's symbol — "cm", "m", "in" or "ft" — in
- * the same chrome-pill chip style as the rest of the AR chrome. Note the asymmetry with
- * [UnitMenu]'s rows, which spell the unit out ("Inches"): the button stays terse on purpose, the
- * menu does not need to.
+ * Compact trigger showing the currently selected unit's symbol — "cm", "m", "in" or "ft" — as a
+ * [ChromeLightButton] pill, same treatment as Back/Mode in [ArMeasureTokens]. Note the asymmetry
+ * with [UnitMenu]'s rows, which spell the unit out ("Inches"): the button stays terse on purpose
+ * (locked decision), the menu does not need to.
  */
 @Composable
 internal fun UnitBtn(unit: LengthUnit, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(modifier = modifier) {
-        ChromePill(enabled = true, onClick = onClick) {
-            Text(text = unit.symbol, color = Color.White, fontSize = 14.sp)
-        }
+    ChromeLightButton(drawnSize = 40.dp, onClick = onClick, modifier = modifier) {
+        Text(text = unit.symbol, color = ArMeasureTokens.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
 /**
  * A 4-row popup letting the user pick [LengthUnit.Cm]/[LengthUnit.M]/[LengthUnit.Inch]/
- * [LengthUnit.Ft]. A [Popup], not a bottom sheet — the design floats it near its trigger.
+ * [LengthUnit.Ft]. A [Popup], not a bottom sheet — the design floats it near its trigger (`XCFlV`).
  *
- * Each row is at least [MinTouchTargetDp]dp tall (the design's own touch-target size), and the
- * selected row is marked by both a check glyph AND a background fill — colour alone would be a
- * colour-blind failure the UI review specifically flagged.
+ * Each row is at least [MinTouchTargetDp]dp tall, and the selected row is marked by a fill AND a
+ * check glyph AND an accessible label colour — colour alone would be the colour-blind failure the
+ * UI review flagged for [MeasureModeSheet]'s cards too.
  */
 @Composable
 internal fun UnitMenu(
@@ -71,8 +71,10 @@ internal fun UnitMenu(
             modifier = modifier
                 .semantics { contentDescription = menuTitle }
                 .width(180.dp)
+                .shadow(elevation = 16.dp, shape = RoundedCornerShape(12.dp), ambientColor = MenuShadowColor, spotColor = MenuShadowColor)
                 .clip(RoundedCornerShape(12.dp))
-                .background(MenuBackground),
+                .background(ArMeasureTokens.BgSurface)
+                .border(1.dp, MenuBorderColor, RoundedCornerShape(12.dp)),
         ) {
             LengthUnit.entries.forEach { unit ->
                 UnitMenuRow(
@@ -94,19 +96,20 @@ private fun UnitMenuRow(unit: LengthUnit, isSelected: Boolean, onClick: () -> Un
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = MinTouchTargetDp.dp)
-            .background(if (isSelected) MenuRowSelectedFill else Color.Transparent)
+            .background(if (isSelected) ArMeasureTokens.SignatureMuted else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(labelRes(unit)),
-            color = Color.White,
+            color = if (isSelected) ArMeasureTokens.SignatureText else ArMeasureTokens.TextPrimary,
             fontSize = 15.sp,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
             modifier = Modifier.weight(1f),
         )
         if (isSelected) {
-            Text(text = "✓", color = Color.White, fontSize = 15.sp)
+            Text(text = "✓", color = ArMeasureTokens.SignatureText, fontSize = 20.sp)
         }
     }
 }

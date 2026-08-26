@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.sp
 import vn.apero.armeasure.ar.presentation.ruler.Segment2D
 import vn.apero.armeasure.ar.presentation.ruler.drawReticle
 import vn.apero.armeasure.ar.presentation.ruler.drawSegment
+import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.common.ui.drawLabelPill
 
 /**
@@ -38,8 +39,6 @@ internal data class ShapeOverlayFrame(
     val reticleOnSurface: Boolean = false,
 )
 
-private val PillText = Color(0xFF1C1C1E)
-
 /**
  * Wireframe overlay for the box/cylinder tools.
  *
@@ -53,10 +52,12 @@ internal fun ShapeOverlay(
     modifier: Modifier = Modifier,
 ) {
     val textMeasurer = rememberTextMeasurer()
+    // AR MeasureLabel spec: ChromeDark pill, white 13/700 — same treatment as MeasureOverlay's
+    // point-to-point labels, deliberately not the mock's red (see ArMeasureTokens' KDoc).
     val labelStyle = TextStyle(
-        color = PillText,
+        color = Color.White,
         fontSize = 13.sp,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Bold,
     )
 
     Canvas(modifier = modifier) {
@@ -68,10 +69,12 @@ internal fun ShapeOverlay(
 
         // Labels last, same as MeasureOverlay — nothing should overlap a number.
         frame.liveEdges.forEach { edge ->
-            if (edge.label.isNotEmpty()) drawLabelPill(textMeasurer, edge.label, edge.midpoint, labelStyle)
+            if (edge.label.isNotEmpty()) {
+                drawLabelPill(textMeasurer, edge.label, edge.midpoint, labelStyle, backgroundColor = ArMeasureTokens.ChromeDark)
+            }
         }
         frame.committedLabels.forEach { (anchor, label) ->
-            drawLabelPill(textMeasurer, label, anchor, labelStyle)
+            drawLabelPill(textMeasurer, label, anchor, labelStyle, backgroundColor = ArMeasureTokens.ChromeDark)
         }
 
         drawReticle(

@@ -27,6 +27,17 @@
 
     <string name="armeasure_action_undo">Undo</string>
     <string name="armeasure_action_redo">Redo</string>
+    <string name="armeasure_action_back">Back</string>
+    <string name="armeasure_action_clear">Clear</string>
+    <string name="armeasure_action_capture">Add point</string>
+    <string name="armeasure_action_open_mode_sheet">Choose measure mode</string>
+    <string name="armeasure_action_close_sheet">Close</string>
+    <string name="armeasure_toast_point_added">Point added</string>
+
+    <string name="armeasure_mode_sheet_title">Measure mode</string>
+    <string name="armeasure_mode_distance">Distance</string>
+    <string name="armeasure_mode_box">Box</string>
+    <string name="armeasure_mode_cylinder">Cylinder</string>
 
     <string name="armeasure_hub_title">Measure</string>
     <string name="armeasure_hub_subtitle">Pick a way to measure</string>
