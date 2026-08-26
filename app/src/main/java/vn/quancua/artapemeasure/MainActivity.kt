@@ -34,7 +34,6 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import vn.apero.armeasure.ar.ArAvailability
 import vn.apero.armeasure.ar.ArMeasureKit
-import vn.apero.armeasure.ar.presentation.level.LevelScreen
 import vn.apero.armeasure.ar.presentation.ruler.ArMeasureRulerScreen
 import vn.apero.armeasure.ar.presentation.shapes.ArMeasureBoxScreen
 import vn.apero.armeasure.ar.presentation.shapes.ArMeasureCylinderScreen
@@ -145,7 +144,6 @@ private fun AppRoot(
                     !cameraGranted -> CameraDenied()
                     else -> ArMeasureCylinderScreen()
                 }
-                AppTab.Level -> LevelScreen()
             }
         }
         AppTabBar(selected = tab, onSelect = { tab = it })

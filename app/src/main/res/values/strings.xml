@@ -3,5 +3,5 @@
     <string name="app_name">Tape Measure</string>
 
     <string name="ar_unsupported_title">AR not available</string>
-    <string name="ar_unsupported_body">This device does not support ARCore, so camera measuring is unavailable. The Level tab still works.</string>
+    <string name="ar_unsupported_body">This device does not support ARCore, so camera measuring is unavailable. The Photo tab still works.</string>
 </resources>

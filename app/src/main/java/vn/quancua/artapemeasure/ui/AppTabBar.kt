@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 private val ChromeContent = Color.White
 private val Disabled = Color(0x4DFFFFFF)
 
-/** Bottom tab bar: Measure | Photo | Box | Cylinder | Level. */
+/** Bottom tab bar: Measure | Photo | Box | Cylinder. */
 @Composable
 fun AppTabBar(
     selected: AppTab,
@@ -67,5 +67,4 @@ enum class AppTab(val label: String, val glyph: String) {
     PhotoMeasure("Photo", "▨"),
     Box("Box", "⬚"),
     Cylinder("Cylinder", "◯"),
-    Level("Level", "◎"),
 }

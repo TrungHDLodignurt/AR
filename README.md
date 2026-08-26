@@ -4,10 +4,9 @@ Measure real distances through the camera. Kotlin + Jetpack Compose, one Activit
 
 Replicates the UX of Apple's built-in Measure app: centred reticle, `+` to commit a point,
 dashed rubber-band line while aiming, solid line with a distance pill once committed, chained
-polyline, undo / clear. Five tabs: **Measure** (the point-to-point ruler above), **Photo**
-(calibrate against a reference object in a photo — a card or A4 sheet, no AR needed), **Box** /
-**Cylinder** (3-tap origin → freehand base → height AR shapes), and **Level** (gravity vector
-only, no AR).
+polyline, undo / clear. Four tabs: **Measure** (the point-to-point ruler above), **Photo**
+(calibrate against a reference object in a photo — a card or A4 sheet, no AR needed), and **Box** /
+**Cylinder** (3-tap origin → freehand base → height AR shapes).
 
 ## Read this before trusting a number
 
@@ -30,21 +29,17 @@ reproducible on Android; **that accuracy is not.**
 
 ## Module layout
 
-The repo is multi-module: three reusable library modules hold all feature code, `:app` is nav
-only.
+The repo is two modules: one library module holds all feature code, `:app` is nav only.
 
 | Module | Package | Contents | JVM tests |
 |---|---|---|---|
-| [`:ar-measure-common`](ar-measure-common/README.md) | `vn.apero.armeasure.common.*` | `LengthUnit`, length formatters, `LabelPill` — shared by both feature modules | 6 |
-| [`:ar-measure-ar`](ar-measure-ar/README.md) | `vn.apero.armeasure.ar.*` | Ruler/Box/Cylinder/Level + ARCore infra. Public API: `ArAvailability`, `ArMeasureKit`, `ArMeasureRulerScreen`, `ArMeasureBoxScreen`, `ArMeasureCylinderScreen`, `LevelScreen` | 54 |
-| [`:ar-measure-photo`](ar-measure-photo/README.md) | `vn.apero.armeasure.photo.*` | Canny/Hough/Homography photo-reference measuring. Public API: `PhotoMeasureScreen`, `CustomReferenceStore` (constructor only) | 7 |
-| `:app` | `vn.quancua.artapemeasure` | `MainActivity` + tab nav only, wires the three modules above | 0 |
+| [`:AR_feature`](AR_feature/README.md) | `vn.apero.armeasure.*` | `common` (LengthUnit, formatters, LabelPill) + `ar` (Ruler/Box/Cylinder + ARCore infra) + `photo` (Canny/Hough/Homography photo-reference measuring). Public API: `ArAvailability`, `ArMeasureKit`, `ArMeasureRulerScreen`, `ArMeasureBoxScreen`, `ArMeasureCylinderScreen`, `PhotoMeasureScreen`, `CustomReferenceStore` (constructor only) | 67 |
+| `:app` | `vn.quancua.artapemeasure` | `MainActivity` + tab nav only, wires `:AR_feature` | 0 |
 
-Each module's own `README.md` (linked above) is a self-contained integration guide for pulling
-that module into another app: exact `settings.gradle.kts`/`build.gradle.kts` lines, the
+`AR_feature/README.md` (linked above) is a self-contained integration guide for pulling the
+module into another app: exact `settings.gradle.kts`/`build.gradle.kts` lines, the
 `gradle/libs.versions.toml` block to append, the manifest/permission story, and every public
-signature with a copy-pasteable call example. `:ar-measure-photo` works with zero ARCore/SceneView
-on the host's classpath; take `:ar-measure-ar` only if you need live-camera AR measuring too.
+signature with a copy-pasteable call example.
 
 ## Build & run
 
@@ -53,13 +48,9 @@ gives describes the simulation, not a sensor.
 
 ```bash
 ./gradlew assembleDebug                          # whole app APK -> app/build/outputs/apk/debug/
-./gradlew testDebugUnitTest                      # all 67 pure-maths tests across the 3 modules, no device needed
+./gradlew testDebugUnitTest                      # all 67 pure-maths tests, no device needed
 ./gradlew :app:installDebug                      # to a connected device
-
-# per-module, e.g. while working on one feature module in isolation:
-./gradlew :ar-measure-common:testDebugUnitTest   # 6 tests
-./gradlew :ar-measure-ar:testDebugUnitTest       # 54 tests
-./gradlew :ar-measure-photo:testDebugUnitTest    # 7 tests
+./gradlew :AR_feature:testDebugUnitTest          # same 67 tests, feature module only
 ```
 
 Toolchain (verified working, not guessed):
@@ -92,7 +83,6 @@ MainActivity              one Activity; ARCore install gate, camera permission, 
     ├── SteadinessGate    "hold still before it counts" trust gate, shared with MeasureState
     └── ShapeMath         pure geometry — parallelogram/circle bases, hidden-edge visibility
 └── PhotoMeasureScreen    calibrate against a photographed reference object; no AR/camera-feed dependency
-└── LevelScreen           gravity vector only; no AR, works on every device
 ```
 
 ### Nothing is drawn as 3D geometry

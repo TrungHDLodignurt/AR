@@ -39,9 +39,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":ar-measure-common"))
-    implementation(project(":ar-measure-ar"))
-    implementation(project(":ar-measure-photo"))
+    implementation(project(":AR_feature"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
