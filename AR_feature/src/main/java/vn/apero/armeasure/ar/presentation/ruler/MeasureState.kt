@@ -7,14 +7,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import com.google.ar.core.Anchor
 import com.google.ar.core.Session
-import com.google.ar.core.TrackingFailureReason
 import vn.apero.armeasure.ar.data.arcore.HitSource
 import vn.apero.armeasure.ar.data.arcore.SurfaceSample
 import vn.apero.armeasure.ar.data.arcore.toVec3
 import vn.apero.armeasure.ar.domain.geometry.Vec3
 import vn.apero.armeasure.ar.domain.geometry.measurePointsMoved
 import vn.apero.armeasure.ar.domain.steadiness.SteadinessGate
-import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.UndoRedoStack
 
 /** A committed measurement point: an ARCore anchor plus how its position was obtained. */
@@ -51,7 +49,7 @@ internal data class OverlayFrame(
  * needs to survive process death — a half-finished measurement is not worth restoring, since
  * the ARCore session that gave the anchors meaning is gone anyway.
  */
-internal class MeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
+internal class MeasureState {
 
     val points = mutableStateListOf<MeasuredPoint>()
 
@@ -152,27 +150,6 @@ internal class MeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
 
     var overlay by mutableStateOf(OverlayFrame())
 
-    /**
-     * Wall-clock time of the last ARCore frame that actually arrived, seeded at construction
-     * (not left at 0) so a session that never produces a single frame is caught by the same
-     * watchdog in [MeasureScreen] as one that freezes mid-use — see that file for why this is
-     * needed: the AR library swallows `CameraNotAvailableException` from inside its own render
-     * loop with nothing but a log line, so without an external timeout the camera feed can go
-     * black forever with no path back except killing the app.
-     *
-     * Backed by Compose state (not a plain `var`) because the library's frame callback may not
-     * run on the same thread as the watchdog's polling coroutine — a plain field would risk the
-     * watchdog reading a stale value across threads.
-     */
-    var lastFrameAtMillis by mutableStateOf(System.currentTimeMillis())
-
-    var cameraReady by mutableStateOf(false)
-    var tracking by mutableStateOf(false)
-    var anyPlaneTracked by mutableStateOf(false)
-    var depthSupported by mutableStateOf(false)
-    var trackingFailure by mutableStateOf<TrackingFailureReason?>(null)
-    var unit by mutableStateOf(initialUnit)
-
     /** Last point's hit source, surfaced in the UI: a reading you cannot attribute is a reading you cannot calibrate. */
     var lastSource by mutableStateOf<HitSource?>(null)
 
@@ -248,13 +225,14 @@ internal class MeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
     }
 
     /**
-     * Replaces the display unit outright — a hard user choice, not a cycle through a fixed
-     * order. `@JvmName` avoids a JVM signature clash with the `var unit` property's own
-     * auto-generated bean setter (also `setUnit` at the bytecode level); the Kotlin-visible name
-     * stays `setUnit`.
+     * Resets the steadiness gate and clears the live reading. Call when this tool becomes the
+     * active one after a swap — with tool state holders now living across swaps instead of
+     * getting a fresh instance (and a fresh gate) per mount, a stale gate could otherwise read
+     * `liveStable == true` for one frame off samples taken before the swap, long enough to enable
+     * `+` and commit a false point the instant this tool becomes active.
      */
-    @JvmName("setUnitTo")
-    fun setUnit(newUnit: LengthUnit) {
-        unit = newUnit
+    fun onActivated() {
+        steadinessGate.reset()
+        live = null
     }
 }

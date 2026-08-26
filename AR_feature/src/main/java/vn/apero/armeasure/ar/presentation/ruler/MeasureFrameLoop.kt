@@ -11,6 +11,8 @@ import vn.apero.armeasure.ar.data.arcore.resolveSurface
 import vn.apero.armeasure.ar.data.arcore.toVec3
 import vn.apero.armeasure.ar.data.arcore.PoseProjector
 import vn.apero.armeasure.ar.domain.geometry.measureDistanceMeters
+import vn.apero.armeasure.ar.presentation.camera.ArSessionState
+import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.formatLength
 
 /**
@@ -32,14 +34,16 @@ private const val MaxOffRayPx = 12f
 
 internal fun onFrame(
     state: MeasureState,
+    sessionState: ArSessionState,
     projector: PoseProjector,
+    unit: LengthUnit,
     session: Session,
     frame: Frame,
     viewSize: IntSize,
 ) {
-    state.tracking = frame.camera.trackingState == TrackingState.TRACKING
+    sessionState.tracking = frame.camera.trackingState == TrackingState.TRACKING
 
-    if (!state.tracking || viewSize == IntSize.Zero) {
+    if (!sessionState.tracking || viewSize == IntSize.Zero) {
         state.live = null
         // Drop the graphics rather than leaving them frozen at stale screen coordinates: with
         // no camera pose there is no honest place to draw them, and a line that keeps sitting
@@ -48,7 +52,7 @@ internal fun onFrame(
         return
     }
 
-    state.anyPlaneTracked = session.getAllTrackables(Plane::class.java)
+    sessionState.anyPlaneTracked = session.getAllTrackables(Plane::class.java)
         .any { it.trackingState == TrackingState.TRACKING }
 
     // Before resolving, not after: the reticle's candidates are vetted by projecting them back
@@ -58,7 +62,7 @@ internal fun onFrame(
     // Always the screen centre: the reticle lives there, and users aim far more precisely with
     // a centred crosshair than with a fingertip.
     val centre = Offset(viewSize.width / 2f, viewSize.height / 2f)
-    state.live = resolveAt(frame, projector, viewSize, centre, state.depthSupported)
+    state.live = resolveAt(frame, projector, viewSize, centre, sessionState.depthSupported)
 
     state.noteLiveSample(
         sample = state.live,
@@ -71,13 +75,13 @@ internal fun onFrame(
     // is being dragged. Sticky in MeasureState: a momentary miss keeps the last good hit
     // rather than making the dragged point vanish for a frame.
     state.dragTouchPosition?.let { touch ->
-        state.noteDragSample(resolveAt(frame, projector, viewSize, touch, state.depthSupported))
+        state.noteDragSample(resolveAt(frame, projector, viewSize, touch, sessionState.depthSupported))
     }
 
     // Anchors drift as ARCore refines its map; re-read them, but only publish past 1 mm.
     state.refreshWorldPoints()
 
-    state.overlay = buildOverlay(state, projector, viewSize)
+    state.overlay = buildOverlay(state, projector, viewSize, unit)
 }
 
 /**
@@ -114,6 +118,7 @@ internal fun buildOverlay(
     state: MeasureState,
     projector: PoseProjector,
     viewSize: IntSize,
+    unit: LengthUnit,
 ): OverlayFrame {
     val width = viewSize.width
     val height = viewSize.height
@@ -140,7 +145,7 @@ internal fun buildOverlay(
                     start = start,
                     end = end,
                     midpoint = (start + end) / 2f,
-                    label = formatLength(measureDistanceMeters(world[i], world[i + 1]), state.unit),
+                    label = formatLength(measureDistanceMeters(world[i], world[i + 1]), unit),
                 ),
             )
         }
@@ -148,7 +153,7 @@ internal fun buildOverlay(
 
     // The rubber band only makes sense when the reticle — not an existing point — is what is
     // moving; suppress it while dragging so the two interactions never draw on top of each other.
-    val live = if (draggingIndex == null) buildLiveSegment(state, projector, width, height) else null
+    val live = if (draggingIndex == null) buildLiveSegment(state, projector, width, height, unit) else null
 
     return OverlayFrame(
         points = projected.filterNotNull(),
@@ -166,6 +171,7 @@ private fun buildLiveSegment(
     projector: PoseProjector,
     width: Int,
     height: Int,
+    unit: LengthUnit,
 ): Segment2D? {
     val sample = state.live ?: return null
     val lastWorld = state.worldPoints.lastOrNull() ?: return null
@@ -175,6 +181,6 @@ private fun buildLiveSegment(
         start = lastScreen,
         end = center,
         midpoint = (lastScreen + center) / 2f,
-        label = formatLength(measureDistanceMeters(lastWorld, sample.position), state.unit),
+        label = formatLength(measureDistanceMeters(lastWorld, sample.position), unit),
     )
 }

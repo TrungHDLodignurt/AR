@@ -20,8 +20,8 @@ internal enum class ArAvailability {
 
 /**
  * Entry point for checking AR availability and, if needed, requesting the ARCore install before
- * mounting any of this module's AR screens ([ArMeasureRulerScreen], [ArMeasureBoxScreen],
- * [ArMeasureCylinderScreen]).
+ * mounting `ArCameraScreen` — the one shared session backing all three AR tools (Distance, Box,
+ * Cylinder).
  */
 internal object ArMeasureKit {
 

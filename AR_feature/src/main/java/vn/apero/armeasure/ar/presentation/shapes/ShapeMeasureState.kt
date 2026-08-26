@@ -6,7 +6,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.google.ar.core.Anchor
 import com.google.ar.core.Session
-import com.google.ar.core.TrackingFailureReason
 import vn.apero.armeasure.ar.data.arcore.SurfaceSample
 import vn.apero.armeasure.ar.data.arcore.toVec3
 import vn.apero.armeasure.ar.domain.geometry.PlaneBasis
@@ -17,7 +16,6 @@ import vn.apero.armeasure.ar.domain.geometry.normalized
 import vn.apero.armeasure.ar.domain.geometry.planeBasis
 import vn.apero.armeasure.ar.domain.geometry.projectedEdgeVector
 import vn.apero.armeasure.ar.domain.steadiness.SteadinessGate
-import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.UndoRedoStack
 
 /** Which shape a [ShapeMeasureState] is building. Box and Cylinder share every state transition below — only which pure-math functions turn the live reading into a base differ. */
@@ -100,7 +98,7 @@ private fun ShapeStep.originAnchorOrNull(): Anchor? = when (this) {
  * (which phases exist for the base, which pure-math function turns a live reading into one) where
  * box and cylinder genuinely diverge, at the two call sites ([commitStep], [undo]) that need it.
  */
-internal class ShapeMeasureState(val kind: ShapeKind, initialUnit: LengthUnit = LengthUnit.Cm) {
+internal class ShapeMeasureState(val kind: ShapeKind) {
 
     val shapes = mutableStateListOf<MeasuredShape>()
 
@@ -116,13 +114,6 @@ internal class ShapeMeasureState(val kind: ShapeKind, initialUnit: LengthUnit = 
     val liveStable: Boolean get() = steadinessGate.stable
 
     var overlay by mutableStateOf(ShapeOverlayFrame())
-
-    var cameraReady by mutableStateOf(false)
-    var tracking by mutableStateOf(false)
-    var anyPlaneTracked by mutableStateOf(false)
-    var depthSupported by mutableStateOf(false)
-    var trackingFailure by mutableStateOf<TrackingFailureReason?>(null)
-    var unit by mutableStateOf(initialUnit)
 
     /** Feeds one frame's reading into the steadiness gate. */
     fun noteLiveSample(sample: SurfaceSample?, distanceMeters: Float?) {
@@ -282,13 +273,14 @@ internal class ShapeMeasureState(val kind: ShapeKind, initialUnit: LengthUnit = 
     }
 
     /**
-     * Replaces the display unit outright — a hard user choice, not a cycle through a fixed
-     * order. `@JvmName` avoids a JVM signature clash with the `var unit` property's own
-     * auto-generated bean setter (also `setUnit` at the bytecode level); the Kotlin-visible name
-     * stays `setUnit`.
+     * Resets the steadiness gate and clears the live reading. Call when this tool becomes the
+     * active one after a swap — see `MeasureState.onActivated`'s doc for the exact bug this
+     * closes: a gate that still held pre-swap samples could read `liveStable == true` on a stale
+     * reading for one frame, long enough to enable `+` and commit a false point. Does NOT touch
+     * [phase] or [shapes] — a half-drawn shape must survive a tool swap intact.
      */
-    @JvmName("setUnitTo")
-    fun setUnit(newUnit: LengthUnit) {
-        unit = newUnit
+    fun onActivated() {
+        steadinessGate.reset()
+        live = null
     }
 }

@@ -20,7 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import vn.apero.armeasure.ar.ArAvailability
 import vn.apero.armeasure.ar.ArMeasureKit
-import vn.apero.armeasure.ar.presentation.ruler.ArMeasureRulerScreen
+import vn.apero.armeasure.ar.presentation.camera.ArCameraScreen
 import vn.apero.armeasure.common.ui.ArMeasureTheme
 
 /**
@@ -30,13 +30,13 @@ import vn.apero.armeasure.common.ui.ArMeasureTheme
  * this Activity's own `onResume`), the CAMERA permission request, and the
  * Unsupported/permission-denied screens.
  *
- * For now the body renders today's [ArMeasureRulerScreen] verbatim — the tool-picker sheet and
- * the one shared ARCore session across Distance/Box/Cylinder are phases 05/06, out of scope here.
+ * The body renders [ArCameraScreen] — one shared ARCore session across Distance/Box/Cylinder
+ * (phase 05); the design's real tool-picker sheet replacing today's debug switcher is phase 06.
  *
  * Backing out of this Activity finishes it, which tears down the whole composition — and with it
- * `rememberEngine()`'s Filament Engine and the ARCore Session — for free. That is the entire
- * mechanism behind "entering Photo tears AR down": there is no teardown code to write as long as
- * this Activity is not `singleTask`/retained (it is not — see the manifest).
+ * the Filament Engine and the ARCore Session it owns — for free. That is the entire mechanism
+ * behind "entering Photo tears AR down": there is no teardown code to write as long as this
+ * Activity is not `singleTask`/retained (it is not — see the manifest).
  */
 internal class ArCameraActivity : ComponentActivity() {
 
@@ -73,7 +73,7 @@ internal class ArCameraActivity : ComponentActivity() {
                         // below. Same blank placeholder either way.
                         arAvailability != ArAvailability.Ready -> Box(Modifier.fillMaxSize())
                         !cameraGranted -> CameraDenied()
-                        else -> ArMeasureRulerScreen(onClose = { finish() })
+                        else -> ArCameraScreen(onClose = { finish() })
                     }
                 }
             }

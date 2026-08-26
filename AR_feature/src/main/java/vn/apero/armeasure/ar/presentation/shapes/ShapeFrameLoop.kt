@@ -29,6 +29,7 @@ import vn.apero.armeasure.ar.domain.geometry.parallelogramCorners
 import vn.apero.armeasure.ar.domain.geometry.plus
 import vn.apero.armeasure.ar.domain.geometry.projectedEdgeVector
 import vn.apero.armeasure.ar.domain.geometry.times
+import vn.apero.armeasure.ar.presentation.camera.ArSessionState
 import vn.apero.armeasure.ar.presentation.ruler.Segment2D
 import vn.apero.armeasure.ar.presentation.ruler.resolveAt
 import vn.apero.armeasure.common.domain.LengthUnit
@@ -44,20 +45,22 @@ import vn.apero.armeasure.common.domain.formatLength
  */
 internal fun onShapeFrame(
     state: ShapeMeasureState,
+    sessionState: ArSessionState,
     projector: PoseProjector,
+    unit: LengthUnit,
     session: Session,
     frame: Frame,
     viewSize: IntSize,
 ) {
-    state.tracking = frame.camera.trackingState == TrackingState.TRACKING
+    sessionState.tracking = frame.camera.trackingState == TrackingState.TRACKING
 
-    if (!state.tracking || viewSize == IntSize.Zero) {
+    if (!sessionState.tracking || viewSize == IntSize.Zero) {
         state.live = null
         state.overlay = ShapeOverlayFrame()
         return
     }
 
-    state.anyPlaneTracked = session.getAllTrackables(Plane::class.java)
+    sessionState.anyPlaneTracked = session.getAllTrackables(Plane::class.java)
         .any { it.trackingState == TrackingState.TRACKING }
 
     projector.update(frame)
@@ -67,7 +70,7 @@ internal fun onShapeFrame(
         // Height has nothing real to hit-test against — resolve it analytically instead. See
         // heightConstructionPlaneNormal's doc for why.
         is ShapePhase.SizingHeight -> resolveHeightSample(frame, projector, viewSize, centre, phase)
-        else -> resolveAt(frame, projector, viewSize, centre, state.depthSupported)
+        else -> resolveAt(frame, projector, viewSize, centre, sessionState.depthSupported)
     }
 
     state.noteLiveSample(
@@ -75,7 +78,7 @@ internal fun onShapeFrame(
         distanceMeters = sample?.let { measureDistanceMeters(it.position, frame.camera.pose.toVec3()) },
     )
 
-    state.overlay = buildShapeOverlay(state, projector, viewSize, frame.camera.pose.toVec3())
+    state.overlay = buildShapeOverlay(state, projector, viewSize, frame.camera.pose.toVec3(), unit)
 }
 
 /** A safe in-plane fallback direction for [heightConstructionPlaneNormal] — see its doc. */
@@ -134,6 +137,7 @@ internal fun buildShapeOverlay(
     projector: PoseProjector,
     viewSize: IntSize,
     cameraPosition: Vec3,
+    unit: LengthUnit,
 ): ShapeOverlayFrame {
     val width = viewSize.width
     val height = viewSize.height
@@ -156,7 +160,7 @@ internal fun buildShapeOverlay(
         }
 
         project(labelAnchor(topCorners))?.let { anchor ->
-            committedLabels += anchor to shape.base.dimensionLabel(shape.height, state.unit)
+            committedLabels += anchor to shape.base.dimensionLabel(shape.height, unit)
         }
     }
 
@@ -165,10 +169,10 @@ internal fun buildShapeOverlay(
     if (sample != null) {
         when (val phase = state.phase) {
             ShapePhase.AwaitingOrigin -> Unit
-            is ShapePhase.SizingEdgeU -> buildEdgeUSegment(phase, sample, state.unit, ::project, liveEdges)
-            is ShapePhase.SizingEdgeV -> buildEdgeVEdges(phase, sample, state.unit, ::project, liveEdges)
-            is ShapePhase.SizingCircle -> buildSizingCircleEdges(phase, sample, state.unit, ::project, liveEdges)
-            is ShapePhase.SizingHeight -> buildSizingHeightEdges(phase, sample, state.unit, ::project, liveEdges)
+            is ShapePhase.SizingEdgeU -> buildEdgeUSegment(phase, sample, unit, ::project, liveEdges)
+            is ShapePhase.SizingEdgeV -> buildEdgeVEdges(phase, sample, unit, ::project, liveEdges)
+            is ShapePhase.SizingCircle -> buildSizingCircleEdges(phase, sample, unit, ::project, liveEdges)
+            is ShapePhase.SizingHeight -> buildSizingHeightEdges(phase, sample, unit, ::project, liveEdges)
         }
     }
 
