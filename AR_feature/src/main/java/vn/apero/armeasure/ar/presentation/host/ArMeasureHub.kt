@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -47,7 +50,10 @@ fun ArMeasureHub(modifier: Modifier = Modifier) {
         val availability = rememberArAvailability()
 
         Column(
-            modifier = modifier.fillMaxSize().background(ArMeasureTokens.BgPrimary),
+            modifier = modifier
+                .fillMaxSize()
+                .background(ArMeasureTokens.BgPrimary)
+                .windowInsetsPadding(WindowInsets.statusBars),
         ) {
             Column(
                 modifier = Modifier.padding(start = 20.dp, top = 24.dp, end = 20.dp, bottom = 20.dp),

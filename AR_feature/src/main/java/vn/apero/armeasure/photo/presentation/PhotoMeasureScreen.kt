@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -60,8 +61,10 @@ import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
  * line, which also hosts "Chỉnh sửa tỉ lệ" back into the SCR-22 quad editor without losing the
  * line — see [PhotoMeasureState.beginEditQuad]).
  *
- * @param referenceStore the host constructs and owns this — the module never creates or holds
- *   its own instance, so a host app controls exactly where/how the reference objects persist.
+ * @param referenceStore passed in rather than constructed here so this composable stays
+ *   host-agnostic; in practice the only caller, [ArPhotoActivity], constructs and owns the one
+ *   instance itself (see its own KDoc for why that reverses an earlier "host always constructs
+ *   the store" decision).
  * @param imageSaver where "Lưu" writes the finished annotated photo; the caller ([ArPhotoActivity])
  *   defaults this to the module's own `MediaStoreImageSaver` when a host hasn't installed one via
  *   `ArMeasureConfig`.
@@ -186,7 +189,7 @@ internal fun PhotoMeasureScreen(
                                     state.confirmReference(canvasSize.width.toFloat(), canvasSize.height.toFloat())
                                     emitResult()
                                 },
-                                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp),
+                                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 32.dp),
                             )
                         }
                     }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -71,7 +72,7 @@ internal fun ReferencePickerScreen(
             contentPadding = PaddingValues(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).navigationBarsPadding(),
         ) {
             items(builtIns) { reference -> PresetCard(reference = reference, unit = unit, onClick = { onSelect(reference) }) }
             items(customs) { reference ->

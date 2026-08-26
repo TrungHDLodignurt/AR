@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -77,6 +78,7 @@ internal fun ReferenceEditSheet(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(ArMeasureTokens.BgSurface, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                .navigationBarsPadding()
                 .imePadding()
                 .padding(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 22.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
