@@ -47,6 +47,7 @@ internal fun QuadEditorCanvas(
     quad: List<Offset>,
     onCornerDrag: (index: Int, newPosition: Offset) -> Unit,
     modifier: Modifier = Modifier,
+    onCornerDragEnd: () -> Unit = {},
 ) {
     val textMeasurer = rememberTextMeasurer()
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
@@ -68,6 +69,7 @@ internal fun QuadEditorCanvas(
             onPointDrag = onCornerDrag,
             canvasSize = canvasSize,
             modifier = Modifier.fillMaxSize(),
+            onPointDragEnd = { onCornerDragEnd() },
         )
     }
 }

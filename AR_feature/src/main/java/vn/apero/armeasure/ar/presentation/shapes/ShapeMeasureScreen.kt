@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,6 +70,14 @@ internal fun ShapeMeasureScreen(
     LaunchedEffect(state.unit) { unitPreference.unit = state.unit }
     val projector = remember(kind) { PoseProjector() }
 
+    // Releases every anchor this state still holds (the in-progress phase, finished shapes, and
+    // anything on the redo stack) when the screen goes away — see
+    // ShapeMeasureState.releaseAll's doc for why this can no longer rely on incidental ARCore
+    // session teardown once phase 05 shares one long-lived session across tabs.
+    DisposableEffect(state) {
+        onDispose { state.releaseAll() }
+    }
+
     var session by remember { mutableStateOf<Session?>(null) }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
 
@@ -117,6 +126,8 @@ internal fun ShapeMeasureScreen(
         MeasureTopBar(
             canUndo = state.canUndo,
             onUndo = state::undo,
+            canRedo = state.canRedo,
+            onRedo = state::redo,
             onClear = state::clear,
             onClose = onClose,
             modifier = Modifier.align(Alignment.TopCenter),

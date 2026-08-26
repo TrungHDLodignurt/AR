@@ -8,6 +8,7 @@ import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import vn.apero.armeasure.common.domain.LengthUnit
+import vn.apero.armeasure.common.domain.UndoRedoStack
 import vn.apero.armeasure.photo.data.autoFitQuad
 import vn.apero.armeasure.photo.domain.imaging.Homography
 import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
@@ -19,6 +20,18 @@ import vn.apero.armeasure.photo.domain.imaging.measureRealDistanceMm
 
 /** The measuring line's two endpoints, in display-space pixels — both user-draggable. */
 internal data class LiveLine(val start: Offset, val end: Offset)
+
+/**
+ * A whole-state snapshot for [PhotoMeasureState] undo/redo — simpler and more honest than
+ * per-field undo, and it covers everything a mutating gesture can change. Deliberately excludes
+ * the photo [Bitmap] itself: snapshotting bitmaps would multiply memory by the undo depth and
+ * could OOM on a large photo, and `loadPhoto` is the only gesture that changes it anyway.
+ */
+internal data class PhotoSnapshot(
+    val quad: List<Offset>,
+    val homography: Homography?,
+    val line: LiveLine?,
+)
 
 /**
  * Mutable UI state for the photo-reference measure screen.
@@ -58,6 +71,49 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
 
     val isCalibrated: Boolean get() = homography != null
 
+    /**
+     * Pure-value history, unlike the ARCore-anchor-holding stacks in `MeasureState`/
+     * `ShapeMeasureState` — there is nothing to release, so [onEvict] stays the default no-op.
+     */
+    private val undoRedo = UndoRedoStack<PhotoSnapshot>()
+    val canUndo: Boolean get() = undoRedo.canUndo
+    val canRedo: Boolean get() = undoRedo.canRedo
+
+    /** Captured the moment a corner/endpoint drag begins and committed only once it ends, so undo reverts a whole drag rather than each intermediate frame — see the risk this guards against in the phase's own notes. Null between gestures. */
+    private var dragStartSnapshot: PhotoSnapshot? = null
+
+    private fun snapshotNow() = PhotoSnapshot(quad, homography, line)
+
+    private fun applySnapshot(snapshot: PhotoSnapshot) {
+        quad = snapshot.quad
+        homography = snapshot.homography
+        line = snapshot.line
+    }
+
+    /** Undoes the last committed gesture, restoring the exact previous quad/homography/line. */
+    fun undo() {
+        val previous = undoRedo.popUndo() ?: return
+        undoRedo.pushRedo(snapshotNow())
+        applySnapshot(previous)
+    }
+
+    /** Redoes the gesture [undo] last reverted. */
+    fun redo() {
+        val next = undoRedo.popRedo() ?: return
+        undoRedo.pushUndo(snapshotNow())
+        applySnapshot(next)
+    }
+
+    /** Marks the end of a corner/endpoint drag gesture — commits the pre-drag snapshot for undo. No-op if no drag was in progress (e.g. a tap that never moved). */
+    fun commitDrag() {
+        dragStartSnapshot?.let { undoRedo.push(it) }
+        dragStartSnapshot = null
+    }
+
+    private fun beginDragIfNeeded() {
+        if (dragStartSnapshot == null) dragStartSnapshot = snapshotNow()
+    }
+
     /** The live line's real-world length, or null before calibration/placement. */
     val currentDistanceMm: Float?
         get() {
@@ -68,6 +124,7 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
 
     /** Loads a new photo and resets everything downstream of it — a new picture is a new plane. */
     fun loadPhoto(bitmap: Bitmap) {
+        undoRedo.push(snapshotNow())
         photo = bitmap
         quad = emptyList()
         homography = null
@@ -130,6 +187,7 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
     /** Dragging a corner invalidates any prior calibration — it must be confirmed again. */
     fun moveQuadCorner(index: Int, position: Offset) {
         if (index !in quad.indices) return
+        beginDragIfNeeded()
         quad = quad.toMutableList().also { it[index] = position }
         homography = null
     }
@@ -142,6 +200,7 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
      */
     fun confirmReference(canvasWidthPx: Float, canvasHeightPx: Float) {
         if (quad.size != 4) return
+        undoRedo.push(snapshotNow())
         val long = reference.longSideMm
         val short = reference.shortSideMm
         val dst = listOf(
@@ -165,6 +224,7 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
     /** Drags one endpoint. `isStart` picks which — there are only ever these two handles. */
     fun moveLineEndpoint(isStart: Boolean, position: Offset) {
         val current = line ?: return
+        beginDragIfNeeded()
         line = if (isStart) current.copy(start = position) else current.copy(end = position)
     }
 

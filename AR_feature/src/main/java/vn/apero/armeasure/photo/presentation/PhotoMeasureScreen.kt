@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,10 +27,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import vn.apero.armeasure.R
 import vn.apero.armeasure.common.data.UnitPreference
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
@@ -160,6 +167,32 @@ fun PhotoMeasureScreen(
             )
         }
 
+        // Only meaningful once a photo is loaded — nothing is undoable on the reference-picker
+        // step. Final placement lands in phase 08's SCR-23 `UndoForwardGroup` toolbar; this is
+        // the minimal affordance so the mechanism is reachable and on-device testable now.
+        if (state.photo != null) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(16.dp),
+            ) {
+                PhotoIconButton(
+                    glyph = "↩",
+                    enabled = state.canUndo,
+                    onClick = state::undo,
+                    contentDescription = stringResource(R.string.armeasure_action_undo),
+                )
+                PhotoIconButton(
+                    glyph = "↪",
+                    enabled = state.canRedo,
+                    onClick = state::redo,
+                    contentDescription = stringResource(R.string.armeasure_action_redo),
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+            }
+        }
+
         if (onClose != null) {
             Text(
                 "✕",
@@ -167,10 +200,31 @@ fun PhotoMeasureScreen(
                 fontSize = 18.sp,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
+                    .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(16.dp)
                     .clickable(onClick = onClose),
             )
         }
+    }
+}
+
+/** A single "↩"/"↪" glyph button, same reasoning as the AR tools' `ChromePill`: one glyph is not worth the extended Material icon set as a dependency. */
+@Composable
+private fun PhotoIconButton(
+    glyph: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .background(Color(0x66000000), shape = androidx.compose.foundation.shape.CircleShape)
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
+            .semantics { this.contentDescription = contentDescription }
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Text(glyph, color = if (enabled) Color.White else Color(0x4DFFFFFF), fontSize = 18.sp)
     }
 }
 

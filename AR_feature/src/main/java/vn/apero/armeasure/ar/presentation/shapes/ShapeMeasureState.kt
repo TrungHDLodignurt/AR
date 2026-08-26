@@ -18,6 +18,7 @@ import vn.apero.armeasure.ar.domain.geometry.planeBasis
 import vn.apero.armeasure.ar.domain.geometry.projectedEdgeVector
 import vn.apero.armeasure.ar.domain.steadiness.SteadinessGate
 import vn.apero.armeasure.common.domain.LengthUnit
+import vn.apero.armeasure.common.domain.UndoRedoStack
 
 /** Which shape a [ShapeMeasureState] is building. Box and Cylinder share every state transition below — only which pure-math functions turn the live reading into a base differ. */
 internal enum class ShapeKind(val label: String) { Box("Box"), Cylinder("Cylinder") }
@@ -66,6 +67,32 @@ internal sealed class ShapePhase {
     data class SizingHeight(val originAnchor: Anchor, val normal: Vec3, val base: ShapeBase) : ShapePhase()
 }
 
+/** The origin anchor a live (not yet finished) [ShapePhase] is built on, or null for [ShapePhase.AwaitingOrigin]. */
+private fun ShapePhase.originAnchorOrNull(): Anchor? = when (this) {
+    is ShapePhase.SizingEdgeU -> originAnchor
+    is ShapePhase.SizingEdgeV -> originAnchor
+    is ShapePhase.SizingCircle -> originAnchor
+    is ShapePhase.SizingHeight -> originAnchor
+    ShapePhase.AwaitingOrigin -> null
+}
+
+/**
+ * One undo/redo entry for [ShapeMeasureState]: either a mid-shape step (stepping back from
+ * [ShapePhase.SizingEdgeV] to [ShapePhase.SizingEdgeU], say — the exact previous [ShapePhase]
+ * instance, so a value like `edgeU` that undo must not reset is simply restored, not recomputed)
+ * or a whole finished shape being undone off the end of [ShapeMeasureState.shapes].
+ */
+private sealed class ShapeStep {
+    data class Progress(val phase: ShapePhase) : ShapeStep()
+    data class Finished(val shape: MeasuredShape) : ShapeStep()
+}
+
+/** The anchor this step is keeping alive, or null if it never referenced one. */
+private fun ShapeStep.originAnchorOrNull(): Anchor? = when (this) {
+    is ShapeStep.Progress -> phase.originAnchorOrNull()
+    is ShapeStep.Finished -> shape.originAnchor
+}
+
 /**
  * Mutable UI state for the box/cylinder tools.
  *
@@ -109,6 +136,27 @@ internal class ShapeMeasureState(val kind: ShapeKind, initialUnit: LengthUnit = 
     val canUndo: Boolean get() = shapes.isNotEmpty() || phase != ShapePhase.AwaitingOrigin
 
     /**
+     * Deferred-detach redo history — same reasoning as `MeasureState`'s: a redone shape must read
+     * the exact same anchor, not a re-anchored pose that would drift independently.
+     *
+     * [isAnchorOrphaned] guards the actual detach: stepping `SizingHeight -> SizingEdgeV` reuses
+     * the *same* origin anchor in the phase it lands on, so evicting the old [ShapeStep] entry
+     * must not detach an anchor still live elsewhere.
+     */
+    private val undoRedo = UndoRedoStack<ShapeStep>(onEvict = { step ->
+        step.originAnchorOrNull()?.let { anchor -> if (isAnchorOrphaned(anchor)) anchor.detach() }
+    })
+    val canRedo: Boolean get() = undoRedo.canRedo
+
+    /** True once [anchor] is referenced by nothing live: not the current phase's origin, not held by any finished shape, and not sitting in the undo/redo history either. Only then is it safe to detach. */
+    private fun isAnchorOrphaned(anchor: Anchor): Boolean {
+        if (phase.originAnchorOrNull() === anchor) return false
+        if (shapes.any { it.originAnchor === anchor }) return false
+        if (undoRedo.any { it.originAnchorOrNull() === anchor }) return false
+        return true
+    }
+
+    /**
      * Advances the shape currently in progress by one tap. A no-op when the live reading is not
      * steady enough to trust — see [SteadinessGate] — since committing an unstable reading would
      * bake a false number into the shape permanently.
@@ -116,6 +164,8 @@ internal class ShapeMeasureState(val kind: ShapeKind, initialUnit: LengthUnit = 
     fun commitStep(session: Session) {
         val sample = live ?: return
         if (!liveStable) return
+        // A new step is a new committed action — any pending redo is now stale.
+        undoRedo.dropRedo()
         when (val current = phase) {
             is ShapePhase.AwaitingOrigin -> {
                 // No plane under the tap (a depth/feature-point-only origin) still starts a
@@ -159,38 +209,76 @@ internal class ShapeMeasureState(val kind: ShapeKind, initialUnit: LengthUnit = 
      */
     fun undo() {
         when (val current = phase) {
-            is ShapePhase.SizingHeight -> phase = when (val base = current.base) {
-                // Restore edgeU exactly as drawn — undo-then-redo must not silently reset it.
-                is ShapeBase.Rect -> ShapePhase.SizingEdgeV(current.originAnchor, current.normal, base.edgeU)
-                is ShapeBase.Circle -> ShapePhase.SizingCircle(current.originAnchor, current.normal, base.basis)
+            is ShapePhase.SizingHeight -> {
+                undoRedo.pushRedo(ShapeStep.Progress(current))
+                phase = when (val base = current.base) {
+                    // Restore edgeU exactly as drawn — undo-then-redo must not silently reset it.
+                    is ShapeBase.Rect -> ShapePhase.SizingEdgeV(current.originAnchor, current.normal, base.edgeU)
+                    is ShapeBase.Circle -> ShapePhase.SizingCircle(current.originAnchor, current.normal, base.basis)
+                }
             }
-            is ShapePhase.SizingEdgeV -> phase = ShapePhase.SizingEdgeU(current.originAnchor, current.normal)
+            is ShapePhase.SizingEdgeV -> {
+                undoRedo.pushRedo(ShapeStep.Progress(current))
+                phase = ShapePhase.SizingEdgeU(current.originAnchor, current.normal)
+            }
             is ShapePhase.SizingEdgeU -> {
-                current.originAnchor.detach()
+                // No detach — deferred until this step is actually evicted from the redo history.
+                undoRedo.pushRedo(ShapeStep.Progress(current))
                 phase = ShapePhase.AwaitingOrigin
             }
             is ShapePhase.SizingCircle -> {
-                current.originAnchor.detach()
+                undoRedo.pushRedo(ShapeStep.Progress(current))
                 phase = ShapePhase.AwaitingOrigin
             }
             ShapePhase.AwaitingOrigin -> {
                 val last = shapes.removeLastOrNull() ?: return
-                last.originAnchor.detach()
+                undoRedo.pushRedo(ShapeStep.Finished(last))
+            }
+        }
+    }
+
+    /** Restores exactly what [undo] last removed — the same anchor, so the same number. */
+    fun redo() {
+        val step = undoRedo.popRedo() ?: return
+        phase = when (step) {
+            is ShapeStep.Progress -> step.phase
+            is ShapeStep.Finished -> {
+                shapes.add(step.shape)
+                ShapePhase.AwaitingOrigin
             }
         }
     }
 
     fun clear() {
-        (phase as? ShapePhase.SizingEdgeU)?.originAnchor?.detach()
-        (phase as? ShapePhase.SizingEdgeV)?.originAnchor?.detach()
-        (phase as? ShapePhase.SizingCircle)?.originAnchor?.detach()
-        (phase as? ShapePhase.SizingHeight)?.originAnchor?.detach()
+        detachAllHeldAnchors()
         phase = ShapePhase.AwaitingOrigin
-        // Detaching matters: an undetached anchor keeps costing ARCore tracking work every
-        // frame, same reasoning as MeasureState.clear.
-        shapes.forEach { it.originAnchor.detach() }
         shapes.clear()
         overlay = ShapeOverlayFrame()
+    }
+
+    /**
+     * Detaches every anchor this state still holds — the in-progress phase's origin, every
+     * finished shape's origin, and anything sitting in the undo/redo history. Call from a
+     * `DisposableEffect` on screen dispose: today this is cleaned up incidentally by ARCore
+     * session teardown, but once the session becomes long-lived and shared across tabs, nothing
+     * else will do this.
+     */
+    fun releaseAll() {
+        detachAllHeldAnchors()
+    }
+
+    /**
+     * Collects every distinct anchor referenced anywhere in this state and detaches each exactly
+     * once — bypasses the [undoRedo] `onEvict`/[isAnchorOrphaned] path entirely, since a full wipe
+     * makes every anchor orphaned simultaneously rather than one at a time.
+     */
+    private fun detachAllHeldAnchors() {
+        val anchors = buildSet {
+            phase.originAnchorOrNull()?.let { add(it) }
+            shapes.forEach { add(it.originAnchor) }
+            undoRedo.drainWithoutEviction().forEach { step -> step.originAnchorOrNull()?.let { add(it) } }
+        }
+        anchors.forEach { it.detach() }
     }
 
     /**

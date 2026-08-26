@@ -19,10 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
+import vn.apero.armeasure.R
 
 private val ChromeBackground = Color(0x66000000)
 private val ChromeContent = Color.White
@@ -37,6 +41,8 @@ private val Disabled = Color(0x4DFFFFFF)
 internal fun MeasureTopBar(
     canUndo: Boolean,
     onUndo: () -> Unit,
+    canRedo: Boolean,
+    onRedo: () -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
     onClose: (() -> Unit)? = null,
@@ -57,10 +63,23 @@ internal fun MeasureTopBar(
                     Text("✕", color = ChromeContent, fontSize = 18.sp)
                 }
             }
-            ChromePill(enabled = canUndo, onClick = onUndo) {
+            ChromePill(
+                enabled = canUndo,
+                onClick = onUndo,
+                contentDescription = stringResource(R.string.armeasure_action_undo),
+            ) {
                 // "↩" rather than a Material icon: the extended icon set is a large dependency
                 // for one glyph, and this is the exact shape the reference app uses.
                 Text("↩", color = if (canUndo) ChromeContent else Disabled, fontSize = 20.sp)
+            }
+            ChromePill(
+                enabled = canRedo,
+                onClick = onRedo,
+                contentDescription = stringResource(R.string.armeasure_action_redo),
+            ) {
+                // "↪" pairs with "↩" above — same reasoning: one glyph is not worth the extended
+                // Material icon set as a dependency.
+                Text("↪", color = if (canRedo) ChromeContent else Disabled, fontSize = 20.sp)
             }
         }
         ChromePill(enabled = canUndo, onClick = onClear) {
@@ -78,6 +97,7 @@ internal fun MeasureTopBar(
 internal fun ChromePill(
     enabled: Boolean,
     onClick: () -> Unit,
+    contentDescription: String? = null,
     content: @Composable () -> Unit,
 ) {
     Box(
@@ -85,6 +105,13 @@ internal fun ChromePill(
             .clip(RoundedCornerShape(20.dp))
             .background(ChromeBackground)
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(
+                if (contentDescription != null) {
+                    Modifier.semantics { this.contentDescription = contentDescription }
+                } else {
+                    Modifier
+                },
+            )
             .padding(horizontal = 18.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center,
     ) { content() }

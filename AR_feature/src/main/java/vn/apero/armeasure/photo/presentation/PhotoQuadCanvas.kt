@@ -93,6 +93,7 @@ internal fun PhotoQuadCanvas(
                     quad = state.quad,
                     onCornerDrag = { index, position -> state.moveQuadCorner(index, position) },
                     modifier = Modifier.fillMaxSize(),
+                    onCornerDragEnd = { state.commitDrag() },
                 )
             }
 
@@ -120,7 +121,10 @@ internal fun PhotoQuadCanvas(
                         onPointDrag = { index, position -> state.moveLineEndpoint(index == 0, position) },
                         canvasSize = canvasSize,
                         modifier = Modifier.fillMaxSize(),
-                        onPointDragEnd = { onLineDragEnd() },
+                        onPointDragEnd = {
+                            state.commitDrag()
+                            onLineDragEnd()
+                        },
                     )
                 }
             }

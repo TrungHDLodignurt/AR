@@ -161,6 +161,14 @@ fun ArMeasureRulerScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    // Releases every anchor this state still holds (committed points plus anything on the redo
+    // stack) when the screen goes away — see MeasureState.releaseAll's doc for why this can no
+    // longer rely on incidental ARCore session teardown once phase 05 shares one long-lived
+    // session across tabs.
+    DisposableEffect(state) {
+        onDispose { state.releaseAll() }
+    }
+
     val isWarmedUp = ArWarmupGate.rememberArWarmedUp()
 
     Box(modifier = modifier.fillMaxSize().onSizeChanged { viewSize = it }) {
@@ -269,6 +277,8 @@ fun ArMeasureRulerScreen(
         MeasureTopBar(
             canUndo = state.canUndo,
             onUndo = state::undo,
+            canRedo = state.canRedo,
+            onRedo = state::redo,
             onClear = state::clear,
             onClose = onClose,
             modifier = Modifier.align(Alignment.TopCenter),

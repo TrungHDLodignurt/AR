@@ -15,6 +15,7 @@ import vn.apero.armeasure.ar.domain.geometry.Vec3
 import vn.apero.armeasure.ar.domain.geometry.measurePointsMoved
 import vn.apero.armeasure.ar.domain.steadiness.SteadinessGate
 import vn.apero.armeasure.common.domain.LengthUnit
+import vn.apero.armeasure.common.domain.UndoRedoStack
 
 /** A committed measurement point: an ARCore anchor plus how its position was obtained. */
 internal class MeasuredPoint(val anchor: Anchor, val source: HitSource)
@@ -132,6 +133,9 @@ internal class MeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
         val index = draggingIndex
         val sample = dragSample
         if (index != null && sample != null) {
+            // A drag is a new committed action too — any pending redo refers to points that no
+            // longer describe the current picture once one of them has moved.
+            undoRedo.dropRedo()
             points[index].anchor.detach()
             points[index] = MeasuredPoint(sample.commit(session), sample.source)
             worldPoints = points.map { it.anchor.pose.toVec3() }
@@ -172,12 +176,24 @@ internal class MeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
     /** Last point's hit source, surfaced in the UI: a reading you cannot attribute is a reading you cannot calibrate. */
     var lastSource by mutableStateOf<HitSource?>(null)
 
+    /**
+     * Holds points that [undo] removed, so [redo] can restore the exact same ARCore anchor — a
+     * re-anchored pose would drift independently and could read a different number than it did
+     * before the undo, which is a correctness defect in a measuring tool. Detaching is deferred
+     * to [UndoRedoStack]'s `onEvict`, fired only once an entry is truly discarded (a new commit,
+     * [clear], overflow past the depth cap, or [releaseAll]).
+     */
+    private val undoRedo = UndoRedoStack<MeasuredPoint>(onEvict = { it.anchor.detach() })
+
     val canUndo: Boolean get() = points.isNotEmpty()
+    val canRedo: Boolean get() = undoRedo.canRedo
     val isDrawing: Boolean get() = points.isNotEmpty()
 
     /** Commits the current live reading as a new point. No-op when off-surface. */
     fun commitLivePoint(session: Session): Boolean {
         val sample = live ?: return false
+        // A new point is a new committed action — any pending redo is now stale.
+        undoRedo.dropRedo()
         points.add(MeasuredPoint(sample.commit(session), sample.source))
         lastSource = sample.source
         worldPoints = points.map { it.anchor.pose.toVec3() }
@@ -188,9 +204,16 @@ internal class MeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
         // A stale draggingIndex pointing past the shrunk list is a crash waiting to happen.
         cancelDrag()
         val last = points.removeLastOrNull() ?: return
-        last.anchor.detach()
+        undoRedo.pushRedo(last)
         worldPoints = points.map { it.anchor.pose.toVec3() }
         lastSource = points.lastOrNull()?.source
+    }
+
+    fun redo() {
+        val restored = undoRedo.popRedo() ?: return
+        points.add(restored)
+        worldPoints = points.map { it.anchor.pose.toVec3() }
+        lastSource = restored.source
     }
 
     fun clear() {
@@ -199,9 +222,22 @@ internal class MeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
         // frame, so a session of measure-and-clear slowly starves the frame budget.
         points.forEach { it.anchor.detach() }
         points.clear()
+        undoRedo.clear()
         worldPoints = emptyList()
         lastSource = null
         overlay = OverlayFrame()
+    }
+
+    /**
+     * Detaches every anchor this state still holds — the committed points plus anything sitting
+     * on the redo stack. Call from a `DisposableEffect` on screen dispose: today a half-drawn
+     * measurement's anchors are cleaned up incidentally by ARCore session teardown, but once the
+     * session becomes long-lived and shared across tabs, nothing else will do this.
+     */
+    fun releaseAll() {
+        cancelDrag()
+        points.forEach { it.anchor.detach() }
+        undoRedo.clear()
     }
 
     /** Re-reads anchor poses, writing state only past the 1 mm dead-band. */
