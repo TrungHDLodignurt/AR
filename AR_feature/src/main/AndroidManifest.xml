@@ -34,7 +34,17 @@
             android:name="vn.apero.armeasure.photo.data.ArMeasurePhotoFileProvider"
             android:authorities="${applicationId}.armeasure.fileprovider"
             android:exported="false"
-            android:grantUriPermissions="true" />
+            android:grantUriPermissions="true">
+
+            <!-- The constructor-based FileProvider(R.xml.armeasure_file_paths) only wires up
+                 this provider's own instance; the static FileProvider.getUriForFile(...) call in
+                 CameraCapture.kt always re-resolves the path spec via PackageManager metadata,
+                 crashing with "Missing android.support.FILE_PROVIDER_PATHS meta-data" without
+                 this declaration too. -->
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/armeasure_file_paths" />
+        </provider>
 
         <!-- Both Activities are internal classes — Kotlin `internal` is still public at the
              bytecode level, so the manifest resolves them fine (verified via assembleDebug) while

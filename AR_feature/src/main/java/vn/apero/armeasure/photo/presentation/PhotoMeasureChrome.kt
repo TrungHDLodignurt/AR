@@ -78,7 +78,7 @@ internal fun PhotoTopNav(
             } else {
                 Text(
                     text = stringResource(R.string.armeasure_photo_save_unsupported),
-                    color = Color.White,
+                    color = ArMeasureTokens.TextSecondary,
                     fontSize = 11.sp,
                     textAlign = TextAlign.End,
                     modifier = Modifier.defaultMinSize(minWidth = 48.dp).padding(start = 8.dp),

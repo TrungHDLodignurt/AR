@@ -46,6 +46,7 @@ import vn.apero.armeasure.common.data.UnitPreference
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
 import vn.apero.armeasure.common.domain.formatLength
+import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.photo.data.CustomReferenceStore
 import vn.apero.armeasure.photo.data.loadRotatedBitmap
 import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
@@ -123,7 +124,7 @@ internal fun PhotoMeasureScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(Color(0xFF1C1C1E))) {
+    Box(modifier = modifier.fillMaxSize()) {
         when {
             !referenceChosen -> {
                 ReferencePickerScreen(
@@ -138,12 +139,14 @@ internal fun PhotoMeasureScreen(
             }
 
             state.photo == null -> {
-                WaitingForPhoto(
-                    referenceLabel = state.reference.label,
-                    onPickPhoto = { showPickPhotoSheet = true },
-                    onChangeReference = { referenceChosen = false },
-                    onClose = onClose,
-                )
+                Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1C1C1E))) {
+                    WaitingForPhoto(
+                        referenceLabel = state.reference.label,
+                        onPickPhoto = { showPickPhotoSheet = true },
+                        onChangeReference = { referenceChosen = false },
+                        onClose = onClose,
+                    )
+                }
             }
 
             else -> {
@@ -152,7 +155,9 @@ internal fun PhotoMeasureScreen(
                 val awaitingQuadConfirm = state.quad.size == 4 && (!state.isCalibrated || state.isEditingQuad)
                 val saveSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
-                Column(modifier = Modifier.fillMaxSize()) {
+                // BgPrimary, not the old screen-wide 0xFF1C1C1E — SCR-21/22/23 all show the
+                // cream app background around the aspect-fit photo, not a black letterbox.
+                Column(modifier = Modifier.fillMaxSize().background(ArMeasureTokens.BgPrimary)) {
                     PhotoTopNav(
                         onBack = { state.discardPhoto() },
                         canUndo = state.canUndo,
