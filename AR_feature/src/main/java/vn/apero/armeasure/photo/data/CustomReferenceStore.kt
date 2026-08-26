@@ -2,9 +2,10 @@ package vn.apero.armeasure.photo.data
 
 import android.content.Context
 import androidx.core.content.edit
-import org.json.JSONArray
-import org.json.JSONObject
+import java.util.UUID
 import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
+import vn.apero.armeasure.photo.domain.imaging.decodeReferences
+import vn.apero.armeasure.photo.domain.imaging.encodeReferences
 
 // Namespaced (rather than the generic "custom_reference_objects") so a host app that has its
 // own unrelated prefs file of that name never collides with this module's storage.
@@ -12,44 +13,54 @@ private const val PrefsName = "vn.apero.armeasure.photo.custom_reference_objects
 private const val KeyObjects = "objects"
 
 /**
- * Persists user-created reference objects — name plus the two real-world side lengths in mm.
- * Confirmed against ARuler's actual "Đối tượng tham chiếu mới" dialog: name, length, width, an
- * "Add" button — no photo, no thumbnail, nothing else. `org.json` is part of the Android
- * platform (no Gradle dependency needed); SharedPreferences is plenty for a handful of these.
+ * Persists user-created reference objects — name plus the two real-world side lengths in mm, now
+ * keyed by a stable [ReferenceObject.id] so two objects sharing a label (the design shows two
+ * "điện thoại" cards) can still be addressed distinctly for [update]/[delete]. `org.json` is part
+ * of the Android platform (no Gradle dependency needed); SharedPreferences is plenty for a
+ * handful of these.
  */
 internal class CustomReferenceStore(private val context: Context) {
 
+    /**
+     * Decoding mints an id for any legacy entry that predates [ReferenceObject.id]. When that
+     * happens the re-encoded JSON differs from what is stored, so it is written back once here —
+     * a one-time migration, not a per-launch rewrite.
+     */
     internal fun loadAll(): List<ReferenceObject> {
-        val json = prefs().getString(KeyObjects, null) ?: return emptyList()
-        val array = JSONArray(json)
-        return (0 until array.length()).map { i ->
-            val obj = array.getJSONObject(i)
-            ReferenceObject(
-                label = obj.getString("label"),
-                shortSideMm = obj.getDouble("shortSideMm").toFloat(),
-                longSideMm = obj.getDouble("longSideMm").toFloat(),
-            )
+        val stored = prefs().getString(KeyObjects, null)
+        val decoded = decodeReferences(stored)
+        if (stored != null) {
+            val reEncoded = encodeReferences(decoded)
+            if (reEncoded != stored) prefs().edit { putString(KeyObjects, reEncoded) }
         }
+        return decoded
     }
 
     internal fun add(label: String, shortSideMm: Float, longSideMm: Float): ReferenceObject {
-        val newObject = ReferenceObject(label, shortSideMm, longSideMm)
+        val newObject = ReferenceObject(id = UUID.randomUUID().toString(), label = label, shortSideMm = shortSideMm, longSideMm = longSideMm)
         saveAll(loadAll() + newObject)
         return newObject
     }
 
+    /** Null (and no write) if [id] is unknown — built-in ids are never in this store's list, so this is already a safe no-op for them. */
+    internal fun update(id: String, label: String, shortSideMm: Float, longSideMm: Float): ReferenceObject? {
+        val current = loadAll()
+        val target = current.firstOrNull { it.id == id } ?: return null
+        val updated = target.copy(label = label, shortSideMm = shortSideMm, longSideMm = longSideMm)
+        saveAll(current.map { if (it.id == id) updated else it })
+        return updated
+    }
+
+    /** False if [id] is unknown, including any built-in id — same reasoning as [update]. */
+    internal fun delete(id: String): Boolean {
+        val current = loadAll()
+        if (current.none { it.id == id }) return false
+        saveAll(current.filterNot { it.id == id })
+        return true
+    }
+
     private fun saveAll(objects: List<ReferenceObject>) {
-        val array = JSONArray()
-        objects.forEach { o ->
-            array.put(
-                JSONObject().apply {
-                    put("label", o.label)
-                    put("shortSideMm", o.shortSideMm.toDouble())
-                    put("longSideMm", o.longSideMm.toDouble())
-                },
-            )
-        }
-        prefs().edit { putString(KeyObjects, array.toString()) }
+        prefs().edit { putString(KeyObjects, encodeReferences(objects)) }
     }
 
     private fun prefs() = context.getSharedPreferences(PrefsName, Context.MODE_PRIVATE)

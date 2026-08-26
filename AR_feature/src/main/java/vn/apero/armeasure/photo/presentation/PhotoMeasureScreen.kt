@@ -42,7 +42,6 @@ import vn.apero.armeasure.photo.data.CustomReferenceStore
 import vn.apero.armeasure.photo.data.loadRotatedBitmap
 import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
 import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
-import vn.apero.armeasure.photo.domain.imaging.customReferenceObject
 
 /**
  * "Measure from a photo" — no ARCore, no camera-ar feature, no depth. A rectangle of known size
@@ -88,7 +87,8 @@ internal fun PhotoMeasureScreen(
 
     var referenceChosen by remember { mutableStateOf(false) }
     var showPickPhotoSheet by remember { mutableStateOf(false) }
-    var showAddReferenceFlow by remember { mutableStateOf(false) }
+    var showReferenceSheet by remember { mutableStateOf(false) }
+    var editingReference by remember { mutableStateOf<ReferenceObject?>(null) }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
     fun selectReference(reference: ReferenceObject) {
@@ -108,8 +108,11 @@ internal fun PhotoMeasureScreen(
                 ReferencePickerScreen(
                     builtIns = builtInReferenceObjects,
                     customs = customReferences,
+                    unit = state.unit,
                     onSelect = { selectReference(it) },
-                    onAddNew = { showAddReferenceFlow = true },
+                    onAddNew = { editingReference = null; showReferenceSheet = true },
+                    onEdit = { editingReference = it; showReferenceSheet = true },
+                    onBack = { onClose?.invoke() },
                 )
             }
 
@@ -152,18 +155,31 @@ internal fun PhotoMeasureScreen(
                 onDismiss = { showPickPhotoSheet = false },
             )
         }
-        if (showAddReferenceFlow) {
-            NameReferenceDialog(
-                onConfirm = { label, shortSideMm, longSideMm ->
-                    // Normalises short/long ordering in case the two fields got swapped —
-                    // see customReferenceObject()'s doc for why that matters.
-                    val validated = customReferenceObject(label, shortSideMm, longSideMm) ?: return@NameReferenceDialog
-                    val newReference = referenceStore.add(validated.label, validated.shortSideMm, validated.longSideMm)
-                    customReferences.add(newReference)
-                    showAddReferenceFlow = false
-                    selectReference(newReference)
+        if (showReferenceSheet) {
+            val target = editingReference
+            ReferenceEditSheet(
+                editing = target,
+                unit = state.unit,
+                onDismiss = { showReferenceSheet = false },
+                onSubmit = { label, shortSideMm, longSideMm ->
+                    if (target == null) {
+                        val newReference = referenceStore.add(label, shortSideMm, longSideMm)
+                        customReferences.add(newReference)
+                        selectReference(newReference)
+                    } else {
+                        val updated = referenceStore.update(target.id, label, shortSideMm, longSideMm)
+                        if (updated != null) {
+                            val index = customReferences.indexOfFirst { it.id == target.id }
+                            if (index >= 0) customReferences[index] = updated
+                            if (state.reference.id == target.id) state.reference = updated
+                        }
+                    }
                 },
-                onCancel = { showAddReferenceFlow = false },
+                onDelete = target?.let {
+                    {
+                        if (referenceStore.delete(it.id)) customReferences.removeAll { r -> r.id == it.id }
+                    }
+                },
             )
         }
 
@@ -193,7 +209,9 @@ internal fun PhotoMeasureScreen(
             }
         }
 
-        if (onClose != null) {
+        // Hidden on the reference-picker step: ReferencePickerScreen's own TopNav already
+        // supplies a back affordance wired to the same onClose, so this would be a second one.
+        if (onClose != null && referenceChosen) {
             Text(
                 "✕",
                 color = Color.White,

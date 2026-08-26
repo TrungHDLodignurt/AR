@@ -43,4 +43,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
 
     testImplementation(libs.junit)
+    // Unit tests run against android.jar's stub org.json (throws "not mocked"), not a real
+    // parser — this pulls in the real implementation so ReferenceObjectJsonTest can run as
+    // plain JUnit with no Robolectric, per this phase's requirement.
+    testImplementation(libs.json)
 }
