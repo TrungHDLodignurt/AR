@@ -179,7 +179,7 @@ internal fun ShapeMeasureScreen(
  * @param onClose when non-null, shows a "✕" pill in the top bar that invokes it.
  */
 @Composable
-fun ArMeasureBoxScreen(
+internal fun ArMeasureBoxScreen(
     modifier: Modifier = Modifier,
     unit: LengthUnit = LengthUnit.Cm,
     onResult: (MeasurementResult.Box) -> Unit = {},
@@ -207,7 +207,7 @@ fun ArMeasureBoxScreen(
  * @param onClose when non-null, shows a "✕" pill in the top bar that invokes it.
  */
 @Composable
-fun ArMeasureCylinderScreen(
+internal fun ArMeasureCylinderScreen(
     modifier: Modifier = Modifier,
     unit: LengthUnit = LengthUnit.Cm,
     onResult: (MeasurementResult.Cylinder) -> Unit = {},

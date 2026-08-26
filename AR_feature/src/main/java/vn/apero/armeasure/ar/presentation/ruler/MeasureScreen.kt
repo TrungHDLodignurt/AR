@@ -108,7 +108,7 @@ private const val CameraWatchdogTimeoutMs = 10_000L
  * @param onClose when non-null, shows a "✕" pill in the top bar that invokes it.
  */
 @Composable
-fun ArMeasureRulerScreen(
+internal fun ArMeasureRulerScreen(
     modifier: Modifier = Modifier,
     unit: LengthUnit = LengthUnit.Cm,
     onResult: (MeasurementResult.Distance) -> Unit = {},

@@ -22,7 +22,7 @@ import java.util.Locale
  * than centimetre precision (0.1 ft ≈ 3 cm). That is intentional — matches the design's own
  * `2.6 ft` example — not a rounding bug to "improve".
  */
-enum class LengthUnit(val metersPerUnit: Float, val symbol: String, val maxFractionDigits: Int) {
+internal enum class LengthUnit(val metersPerUnit: Float, val symbol: String, val maxFractionDigits: Int) {
     Cm(0.01f, "cm", 0),
     M(1f, "m", 2),
     Inch(0.0254f, "in", 1),
@@ -48,7 +48,7 @@ private fun formatterFor(unit: LengthUnit, locale: Locale): NumberFormat =
  * (possible from a signed height) renders with a single leading `-`; an exact zero never renders
  * with one.
  */
-fun formatLength(meters: Float, unit: LengthUnit, locale: Locale = Locale.getDefault()): String {
+internal fun formatLength(meters: Float, unit: LengthUnit, locale: Locale = Locale.getDefault()): String {
     val value = meters / unit.metersPerUnit
     // value == 0f is true for both +0.0f and -0.0f in Kotlin, so this also normalises -0.0f to
     // +0.0f — otherwise some NumberFormat/locale combinations would render "-0".

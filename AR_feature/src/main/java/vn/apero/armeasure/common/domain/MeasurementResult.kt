@@ -7,7 +7,7 @@ package vn.apero.armeasure.common.domain
  * preference for how the host should render the number, never a conversion already applied
  * to the field.
  */
-sealed interface MeasurementResult {
+internal sealed interface MeasurementResult {
     /** Two-point distance from the ruler tool. */
     data class Distance(val meters: Float, val unit: LengthUnit) : MeasurementResult
 

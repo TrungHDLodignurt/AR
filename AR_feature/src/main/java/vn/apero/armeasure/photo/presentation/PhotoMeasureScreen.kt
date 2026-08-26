@@ -71,7 +71,7 @@ import vn.apero.armeasure.photo.domain.imaging.customReferenceObject
  *   a "✕" the host can wire to its own navigation.
  */
 @Composable
-fun PhotoMeasureScreen(
+internal fun PhotoMeasureScreen(
     referenceStore: CustomReferenceStore,
     modifier: Modifier = Modifier,
     unit: LengthUnit = LengthUnit.Cm,

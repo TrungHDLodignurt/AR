@@ -20,7 +20,7 @@ private val PillBackground = Color.White
  * camera distance — shared between the AR measure overlay and the photo-reference measure
  * screen, which both draw the same kind of distance readout.
  */
-fun DrawScope.drawLabelPill(
+internal fun DrawScope.drawLabelPill(
     textMeasurer: TextMeasurer,
     label: String,
     center: Offset,

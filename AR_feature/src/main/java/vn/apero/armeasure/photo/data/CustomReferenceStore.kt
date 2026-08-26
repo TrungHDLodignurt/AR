@@ -17,7 +17,7 @@ private const val KeyObjects = "objects"
  * "Add" button — no photo, no thumbnail, nothing else. `org.json` is part of the Android
  * platform (no Gradle dependency needed); SharedPreferences is plenty for a handful of these.
  */
-class CustomReferenceStore(private val context: Context) {
+internal class CustomReferenceStore(private val context: Context) {
 
     internal fun loadAll(): List<ReferenceObject> {
         val json = prefs().getString(KeyObjects, null) ?: return emptyList()

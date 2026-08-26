@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Tape Measure</string>
-
-    <string name="ar_unsupported_title">AR not available</string>
-    <string name="ar_unsupported_body">This device does not support ARCore, so camera measuring is unavailable. The Photo tab still works.</string>
 </resources>

@@ -6,7 +6,7 @@ import com.google.ar.core.ArCoreApk
 import com.google.ar.core.exceptions.UnavailableException
 
 /** Whether AR can run at all on this device+install. */
-enum class ArAvailability {
+internal enum class ArAvailability {
     /**
      * ARCore's own async first-call state: the availability check has not resolved yet. Not a
      * final answer — the caller should re-poll [ArMeasureKit.checkAvailability] shortly rather
@@ -23,7 +23,7 @@ enum class ArAvailability {
  * mounting any of this module's AR screens ([ArMeasureRulerScreen], [ArMeasureBoxScreen],
  * [ArMeasureCylinderScreen]).
  */
-object ArMeasureKit {
+internal object ArMeasureKit {
 
     /**
      * ARCore ships as a separate APK (Google Play Services for AR), so a first run may need to

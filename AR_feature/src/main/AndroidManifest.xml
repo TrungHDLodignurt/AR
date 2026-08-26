@@ -36,5 +36,24 @@
             android:exported="false"
             android:grantUriPermissions="true" />
 
+        <!-- Both Activities are internal classes — Kotlin `internal` is still public at the
+             bytecode level, so the manifest resolves them fine (verified via assembleDebug) while
+             they stay out of the module's documented API. No intent-filter on either: neither is
+             meant to be launched from outside this module, so android:exported defaults to
+             false. -->
+        <activity
+            android:name="vn.apero.armeasure.ar.presentation.host.ArCameraActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.ArMeasure" />
+
+        <activity
+            android:name="vn.apero.armeasure.photo.presentation.ArPhotoActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.ArMeasure" />
+
     </application>
 </manifest>
