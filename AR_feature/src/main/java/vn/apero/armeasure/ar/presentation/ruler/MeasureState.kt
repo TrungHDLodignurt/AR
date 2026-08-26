@@ -50,7 +50,7 @@ internal data class OverlayFrame(
  * needs to survive process death — a half-finished measurement is not worth restoring, since
  * the ARCore session that gave the anchors meaning is gone anyway.
  */
-internal class MeasureState(initialUnit: LengthUnit = LengthUnit.Metric) {
+internal class MeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
 
     val points = mutableStateListOf<MeasuredPoint>()
 
@@ -211,7 +211,14 @@ internal class MeasureState(initialUnit: LengthUnit = LengthUnit.Metric) {
         if (measurePointsMoved(worldPoints, next)) worldPoints = next
     }
 
-    fun toggleUnit() {
-        unit = if (unit == LengthUnit.Metric) LengthUnit.Imperial else LengthUnit.Metric
+    /**
+     * Replaces the display unit outright — a hard user choice, not a cycle through a fixed
+     * order. `@JvmName` avoids a JVM signature clash with the `var unit` property's own
+     * auto-generated bean setter (also `setUnit` at the bytecode level); the Kotlin-visible name
+     * stays `setUnit`.
+     */
+    @JvmName("setUnitTo")
+    fun setUnit(newUnit: LengthUnit) {
+        unit = newUnit
     }
 }

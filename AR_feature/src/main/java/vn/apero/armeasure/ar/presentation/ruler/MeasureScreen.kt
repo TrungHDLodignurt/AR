@@ -1,7 +1,6 @@
 package vn.apero.armeasure.ar.presentation.ruler
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -26,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -47,8 +47,11 @@ import vn.apero.armeasure.ar.domain.geometry.measureDistanceMeters
 import vn.apero.armeasure.ar.domain.geometry.nearestIndexWithin
 import vn.apero.armeasure.ar.presentation.shared.MeasureBottomBar
 import vn.apero.armeasure.ar.presentation.shared.MeasureTopBar
+import vn.apero.armeasure.common.data.UnitPreference
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
+import vn.apero.armeasure.common.ui.UnitBtn
+import vn.apero.armeasure.common.ui.UnitMenu
 
 /**
  * How often the watchdog below checks whether ARCore frames are still arriving.
@@ -97,7 +100,9 @@ private const val CameraWatchdogTimeoutMs = 10_000L
  * projected anchors is exact, not an approximation — and dashed strokes plus screen-constant
  * label pills, both of which the reference app has, are trivial in Canvas and awkward in 3D.
  *
- * @param unit initial display unit; the in-screen m/ft toggle overrides it at runtime.
+ * @param unit fallback display unit for the very first launch, before any [UnitPreference] value
+ *   has ever been written; the persisted, process-wide choice (read on enter, written back on
+ *   every change via [UnitBtn]/[UnitMenu]) takes over from then on — see decision 8.
  * @param onResult fires once per committed segment (a new point that forms a pair with the
  *   previous one), never per frame.
  * @param onClose when non-null, shows a "✕" pill in the top bar that invokes it.
@@ -105,11 +110,16 @@ private const val CameraWatchdogTimeoutMs = 10_000L
 @Composable
 fun ArMeasureRulerScreen(
     modifier: Modifier = Modifier,
-    unit: LengthUnit = LengthUnit.Metric,
+    unit: LengthUnit = LengthUnit.Cm,
     onResult: (MeasurementResult.Distance) -> Unit = {},
     onClose: (() -> Unit)? = null,
 ) {
-    val state = remember { MeasureState(unit) }
+    val context = LocalContext.current
+    val unitPreference = remember { UnitPreference(context) }
+    // unitPreference.unit already falls back to LengthUnit.Cm on a first-ever launch — same
+    // value as the unit param's own default, so the persisted store is the single seed.
+    val state = remember { MeasureState(unitPreference.unit) }
+    LaunchedEffect(state.unit) { unitPreference.unit = state.unit }
     val projector = remember { PoseProjector() }
 
     // Created ONCE for the screen's whole lifetime — this is how every other ARSceneView usage
@@ -276,19 +286,19 @@ fun ArMeasureRulerScreen(
         )
 
 
-        // Tapping the unit chip switches metric/imperial. Imperial is not optional for US users.
-        Text(
-            text = if (state.unit == LengthUnit.Metric) "m" else "ft",
-            color = Color.White,
-            fontSize = 14.sp,
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 20.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0x66000000))
-                .clickable { state.toggleUnit() }
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-        )
+        // Tapping the unit button opens the 4-unit menu; picking a row updates state.unit,
+        // which the LaunchedEffect above persists.
+        var showUnitMenu by remember { mutableStateOf(false) }
+        Box(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 20.dp)) {
+            UnitBtn(unit = state.unit, onClick = { showUnitMenu = true })
+            if (showUnitMenu) {
+                UnitMenu(
+                    selected = state.unit,
+                    onSelect = state::setUnit,
+                    onDismiss = { showUnitMenu = false },
+                )
+            }
+        }
 
         MeasureBottomBar(
             // Gated on draggingIndex too: a second finger tapping + mid-drag would add a point

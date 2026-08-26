@@ -73,7 +73,7 @@ internal sealed class ShapePhase {
  * (which phases exist for the base, which pure-math function turns a live reading into one) where
  * box and cylinder genuinely diverge, at the two call sites ([commitStep], [undo]) that need it.
  */
-internal class ShapeMeasureState(val kind: ShapeKind, initialUnit: LengthUnit = LengthUnit.Metric) {
+internal class ShapeMeasureState(val kind: ShapeKind, initialUnit: LengthUnit = LengthUnit.Cm) {
 
     val shapes = mutableStateListOf<MeasuredShape>()
 
@@ -193,7 +193,14 @@ internal class ShapeMeasureState(val kind: ShapeKind, initialUnit: LengthUnit = 
         overlay = ShapeOverlayFrame()
     }
 
-    fun toggleUnit() {
-        unit = if (unit == LengthUnit.Metric) LengthUnit.Imperial else LengthUnit.Metric
+    /**
+     * Replaces the display unit outright — a hard user choice, not a cycle through a fixed
+     * order. `@JvmName` avoids a JVM signature clash with the `var unit` property's own
+     * auto-generated bean setter (also `setUnit` at the bytecode level); the Kotlin-visible name
+     * stays `setUnit`.
+     */
+    @JvmName("setUnitTo")
+    fun setUnit(newUnit: LengthUnit) {
+        unit = newUnit
     }
 }

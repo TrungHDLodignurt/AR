@@ -26,7 +26,7 @@ internal data class LiveLine(val start: Offset, val end: Offset)
  * A plain state holder rather than a ViewModel — same reasoning as `MeasureState`: nothing
  * here needs to survive process death, and a half-finished calibration is not worth restoring.
  */
-internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Metric) {
+internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
 
     var photo by mutableStateOf<Bitmap?>(null)
         private set
@@ -168,7 +168,14 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Metric) {
         line = if (isStart) current.copy(start = position) else current.copy(end = position)
     }
 
-    fun toggleUnit() {
-        unit = if (unit == LengthUnit.Metric) LengthUnit.Imperial else LengthUnit.Metric
+    /**
+     * Replaces the display unit outright — a hard user choice, not a cycle through a fixed
+     * order. `@JvmName` avoids a JVM signature clash with the `var unit` property's own
+     * auto-generated bean setter (also `setUnit` at the bytecode level); the Kotlin-visible name
+     * stays `setUnit`.
+     */
+    @JvmName("setUnitTo")
+    fun setUnit(newUnit: LengthUnit) {
+        unit = newUnit
     }
 }

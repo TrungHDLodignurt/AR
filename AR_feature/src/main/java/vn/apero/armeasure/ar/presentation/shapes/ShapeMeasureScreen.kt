@@ -1,29 +1,24 @@
 package vn.apero.armeasure.ar.presentation.shapes
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.google.ar.core.Config
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
@@ -38,8 +33,11 @@ import vn.apero.armeasure.ar.domain.geometry.length
 import vn.apero.armeasure.ar.presentation.ruler.HintBanner
 import vn.apero.armeasure.ar.presentation.shared.MeasureBottomBar
 import vn.apero.armeasure.ar.presentation.shared.MeasureTopBar
+import vn.apero.armeasure.common.data.UnitPreference
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
+import vn.apero.armeasure.common.ui.UnitBtn
+import vn.apero.armeasure.common.ui.UnitMenu
 
 /**
  * The box/cylinder tab, shared by both shapes (see [ShapeMeasureState]).
@@ -56,14 +54,19 @@ import vn.apero.armeasure.common.domain.MeasurementResult
 internal fun ShapeMeasureScreen(
     kind: ShapeKind,
     modifier: Modifier = Modifier,
-    unit: LengthUnit = LengthUnit.Metric,
+    unit: LengthUnit = LengthUnit.Cm,
     onShapeCommitted: (MeasuredShape, LengthUnit) -> Unit = { _, _ -> },
     onClose: (() -> Unit)? = null,
 ) {
     val engine = rememberEngine()
     val materialLoader = rememberMaterialLoader(engine)
 
-    val state = remember(kind) { ShapeMeasureState(kind, unit) }
+    val context = LocalContext.current
+    val unitPreference = remember { UnitPreference(context) }
+    // unitPreference.unit already falls back to LengthUnit.Cm on a first-ever launch — same
+    // value as the unit param's own default, so the persisted store is the single seed.
+    val state = remember(kind) { ShapeMeasureState(kind, unitPreference.unit) }
+    LaunchedEffect(state.unit) { unitPreference.unit = state.unit }
     val projector = remember(kind) { PoseProjector() }
 
     var session by remember { mutableStateOf<Session?>(null) }
@@ -127,18 +130,19 @@ internal fun ShapeMeasureScreen(
                 .padding(top = 72.dp),
         )
 
-        Text(
-            text = if (state.unit == LengthUnit.Metric) "m" else "ft",
-            color = Color.White,
-            fontSize = 14.sp,
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 20.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0x66000000))
-                .clickable { state.toggleUnit() }
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-        )
+        // Tapping the unit button opens the 4-unit menu; picking a row updates state.unit,
+        // which the LaunchedEffect above persists.
+        var showUnitMenu by remember { mutableStateOf(false) }
+        Box(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 20.dp)) {
+            UnitBtn(unit = state.unit, onClick = { showUnitMenu = true })
+            if (showUnitMenu) {
+                UnitMenu(
+                    selected = state.unit,
+                    onSelect = state::setUnit,
+                    onDismiss = { showUnitMenu = false },
+                )
+            }
+        }
 
         MeasureBottomBar(
             addEnabled = state.canCommitStep,
@@ -158,14 +162,15 @@ internal fun ShapeMeasureScreen(
  * Public entry for the Box tool: same AR scaffolding as [ArMeasureCylinderScreen], the free-hand
  * two-edge box tool.
  *
- * @param unit initial display unit; the in-screen m/ft toggle overrides it at runtime.
+ * @param unit fallback display unit for the very first launch, before [UnitPreference] holds any
+ *   value; the persisted, process-wide unit choice takes over from then on — see decision 8.
  * @param onResult fires once per finished box, never per frame.
  * @param onClose when non-null, shows a "✕" pill in the top bar that invokes it.
  */
 @Composable
 fun ArMeasureBoxScreen(
     modifier: Modifier = Modifier,
-    unit: LengthUnit = LengthUnit.Metric,
+    unit: LengthUnit = LengthUnit.Cm,
     onResult: (MeasurementResult.Box) -> Unit = {},
     onClose: (() -> Unit)? = null,
 ) {
@@ -185,14 +190,15 @@ fun ArMeasureBoxScreen(
  * Public entry for the Cylinder tool: same AR scaffolding as [ArMeasureBoxScreen], the
  * center-to-edge circular-base tool.
  *
- * @param unit initial display unit; the in-screen m/ft toggle overrides it at runtime.
+ * @param unit fallback display unit for the very first launch, before [UnitPreference] holds any
+ *   value; the persisted, process-wide unit choice takes over from then on — see decision 8.
  * @param onResult fires once per finished cylinder, never per frame.
  * @param onClose when non-null, shows a "✕" pill in the top bar that invokes it.
  */
 @Composable
 fun ArMeasureCylinderScreen(
     modifier: Modifier = Modifier,
-    unit: LengthUnit = LengthUnit.Metric,
+    unit: LengthUnit = LengthUnit.Cm,
     onResult: (MeasurementResult.Cylinder) -> Unit = {},
     onClose: (() -> Unit)? = null,
 ) {

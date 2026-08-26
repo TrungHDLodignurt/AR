@@ -192,19 +192,19 @@ class ShapeMathTest {
 
     @Test
     fun `box dimension label formats length, width and height in order`() {
-        assertEquals("2 m x 1.5 m x 0.5 m", formatBoxDimensions(2f, 1.5f, 0.5f, LengthUnit.Metric, Locale.US))
+        assertEquals("2 m x 1.5 m x 0.5 m", formatBoxDimensions(2f, 1.5f, 0.5f, LengthUnit.M, Locale.US))
     }
 
     @Test
     fun `box dimension label takes the absolute value of a negative edge`() {
         // A rectangle dragged toward the opposite quadrant has a negative signed lengthU —
         // the label must still read as a positive size.
-        assertEquals("2 m x 1.5 m x 0.5 m", formatBoxDimensions(-2f, 1.5f, 0.5f, LengthUnit.Metric, Locale.US))
+        assertEquals("2 m x 1.5 m x 0.5 m", formatBoxDimensions(-2f, 1.5f, 0.5f, LengthUnit.M, Locale.US))
     }
 
     @Test
     fun `cylinder dimension label shows diameter, not radius`() {
-        assertEquals("⌀1 m x 0.8 m", formatCylinderDimensions(0.5f, 0.8f, LengthUnit.Metric, Locale.US))
+        assertEquals("⌀1 m x 0.8 m", formatCylinderDimensions(0.5f, 0.8f, LengthUnit.M, Locale.US))
     }
 
     @Test

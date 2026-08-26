@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import vn.apero.armeasure.common.data.UnitPreference
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
 import vn.apero.armeasure.photo.data.CustomReferenceStore
@@ -51,6 +53,11 @@ import vn.apero.armeasure.photo.domain.imaging.customReferenceObject
  *
  * @param referenceStore the host constructs and owns this — the module never creates or holds
  *   its own instance, so a host app controls exactly where/how the reference objects persist.
+ * @param unit fallback display unit for the very first launch, before [UnitPreference] holds any
+ *   value; the persisted, process-wide unit choice (shared with the AR tools) takes over from
+ *   then on — see decision 8. This screen has no unit control of its own yet (that lands in
+ *   phase 08's `ColorPickerBar` `cm` badge); it still reads/writes the shared preference so a
+ *   unit picked on an AR tab is honoured here too.
  * @param onResult emitted once per completed measurement gesture (drag-end or first placement),
  *   never per drag frame.
  * @param onClose null renders no close affordance (today's chrome, unchanged); non-null renders
@@ -60,12 +67,16 @@ import vn.apero.armeasure.photo.domain.imaging.customReferenceObject
 fun PhotoMeasureScreen(
     referenceStore: CustomReferenceStore,
     modifier: Modifier = Modifier,
-    unit: LengthUnit = LengthUnit.Metric,
+    unit: LengthUnit = LengthUnit.Cm,
     onResult: (MeasurementResult.Photo) -> Unit = {},
     onClose: (() -> Unit)? = null,
 ) {
-    val state = remember { PhotoMeasureState(initialUnit = unit) }
     val context = LocalContext.current
+    val unitPreference = remember { UnitPreference(context) }
+    // unitPreference.unit already falls back to LengthUnit.Cm on a first-ever launch — same
+    // value as the unit param's own default, so the persisted store is the single seed.
+    val state = remember { PhotoMeasureState(initialUnit = unitPreference.unit) }
+    LaunchedEffect(state.unit) { unitPreference.unit = state.unit }
     val customReferences = remember { mutableStateListOf<ReferenceObject>().apply { addAll(referenceStore.loadAll()) } }
 
     var referenceChosen by remember { mutableStateOf(false) }
