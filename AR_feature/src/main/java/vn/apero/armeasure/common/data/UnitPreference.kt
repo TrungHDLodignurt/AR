@@ -10,7 +10,7 @@ private const val PrefsName = "vn.apero.armeasure.unit"
 private const val KeyUnit = "length_unit"
 
 /** The unit a user sees before ever choosing one. Change here — nothing else hardcodes a default. */
-internal val DefaultUnit = LengthUnit.M
+internal val DefaultUnit = LengthUnit.Cm
 
 /**
  * Persists the user's chosen [LengthUnit] across screens and across process restarts.
