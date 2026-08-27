@@ -481,8 +481,8 @@ Both are about event rate, both are documented at the code:
 
 The Joy_4 is why both exist: release cold start there is 648 ms against 2.7 s for a debug build, and
 there is no headroom to spend on a coroutine hop per frame. **Neither exception has been profiled** —
-they are reasoned from the call sites. `plans/260827-1910-mvi-alignment/final-verification-round.md`
-section C carries the measurement that is still owed.
+they are reasoned from the call sites. `plans/260827-1910-mvi-alignment/regression-test-scenario.md`
+item X8 carries the measurement that is still owed.
 
 ### Coordinates
 
@@ -507,12 +507,12 @@ final verification pass):
 | # | Check | Command |
 |---|---|---|
 | 1 | No string literals in Kotlin | `git grep -nE 'Text\(\s*"|text = "|label = "' AR_feature/src/main` → only glyphs |
-| 2 | No Vietnamese literals | `git grep -nP '"[^"]*[àáảãạăâđèéẻêềếệìíỉòóỏôồốơớùúủưứỳýỵ]' AR_feature/src/main --include=*.kt` → only the documented `QuadEditorCanvas` exception (§17) |
+| 2 | No Vietnamese literals in code | `grep -rnP '"[^"]*[àáảãạăâđèéẻêềếệìíỉòóỏôồốơớùúủưứỳýỵ]' AR_feature/src/main --include=*.kt` → every hit must be inside a comment. The pattern cannot tell a KDoc quotation from a UI string, and several KDocs legitimately quote the Vietnamese design (`"điện thoại"`, `"Chỉnh sửa tỉ lệ"`, `"Lưu"`), so read the hits rather than counting them. A hit in a `stringResource`, `Text(` or any non-comment line is a real failure |
 | 3 | English-only locale | `ls AR_feature/src/main/res/ | grep values-` → nothing |
 | 4 | Resource prefix intact | every `<string name=` starts with `armeasure_` |
 | 5 | No `ar` ↔ `photo` cross-import | `git grep -n 'import vn.apero.armeasure.ar\.' AR_feature/src/main/java/vn/apero/armeasure/photo` and the mirror → both empty (Kotlin `internal` no longer enforces this boundary post-merge — it is convention only) |
 | 6 | Public API is 3 symbols | re-run the grep in §4 |
-| 7 | No debug logging of user content | `git grep -n 'Log\.' AR_feature/src/main` → empty |
+| 7 | No debug logging of user content | `grep -rn 'Log\.' AR_feature/src/main --include=*.kt` → only the six deliberate lines in `SegmentQuad.kt` and `CameraCapture.kt`, none of which logs user content. They are kept because both are silent-fallback paths: without them an unavailable segmentation model is indistinguishable from one that ran and found nothing, and a lost camera destination Uri looks identical to a cancelled capture. Any other hit, or any of these gaining a filename, Uri or measurement, is a failure |
 | 8 | One Engine, one `ARSceneView` | `git grep -c 'rememberEngine\|ARSceneView(' AR_feature/src/main` → 1 each |
 | 9 | Reflection sweep | `git grep -n '::class.java\|Class.forName\|reflect\|Gson\|kotlinx.serialization\|getIdentifier' AR_feature/src/main` → only the two documented `Plane::class.java` lookups |
 | 10 | R8 clean | re-run §13/§14 after any dependency bump |

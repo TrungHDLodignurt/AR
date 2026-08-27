@@ -46,7 +46,7 @@ Modify: `photo/presentation/PhotoMeasureState.kt`, `PhotoQuadCanvas.kt`, `QuadEd
 ## Gate
 
 Compile plus the 172 JVM tests. The device checks below moved to
-[final-verification-round.md](final-verification-round.md) — see the note in plan.md.
+[regression-test-scenario.md](regression-test-scenario.md) — see the note in plan.md.
 
 ### Deferred to the final round
 

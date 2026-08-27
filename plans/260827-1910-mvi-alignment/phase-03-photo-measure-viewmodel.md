@@ -80,7 +80,7 @@ undo history. Same gap as today.
 
 Compile clean, `:AR_feature:testDebugUnitTest` **185 tests, 0 failures, 2 pre-existing skips**
 (174 after phase 02, +11 here: 3 new segment/drag invariants and 8 restoration tests). The device checks below moved to
-[final-verification-round.md](final-verification-round.md) — see the note in plan.md.
+[regression-test-scenario.md](regression-test-scenario.md) — see the note in plan.md.
 
 ### Deferred to the final round
 

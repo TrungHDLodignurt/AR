@@ -46,22 +46,26 @@ Adding `SavedStateHandle` there is therefore free and touches nothing shared. Al
 | # | Phase | Est | Gate |
 |---|---|---|---|
 | 01 | [Local MVI base + decide the DI seam](phase-01-mvi-base-and-di-seam.md) | 1h | **done** — compiles, 172 tests green |
-| 02 | [Coordinates to bitmap space](phase-02-bitmap-space-coordinates.md) | 3h | `onCanvasResized` deleted, compiles, tests green |
-| 03 | [Picture Measure -> ViewModel](phase-03-photo-measure-viewmodel.md) | 4h | compiles, tests green |
-| 04 | [AR screens -> ViewModel, frame stream outside State](phase-04-ar-screens-viewmodel.md) | 4h | compiles, tests green |
+| 02 | [Coordinates to bitmap space](phase-02-bitmap-space-coordinates.md) | 3h | **code done** — `onCanvasResized` deleted, compiles, tests green; device gate outstanding |
+| 03 | [Picture Measure -> ViewModel](phase-03-photo-measure-viewmodel.md) | 4h | **code done** — compiles, 185 tests green; device gate outstanding |
+| 04 | [AR screens -> ViewModel, frame stream outside State](phase-04-ar-screens-viewmodel.md) | 4h | **code done** — compiles, tests green, release APK builds; the frame measurement is outstanding |
 | 05 | [Docs + apply skill](phase-05-docs-and-apply-skill.md) | 1h | README §15 rewritten; skill matches |
-| — | [Final verification round](final-verification-round.md) | 1h user | the only device gate, run once at the end |
+| — | [Regression test scenario](regression-test-scenario.md) | 2h user | the only device gate — known regressions first, then refactor risks. **Not yet run** |
 
 ### Verification is deferred to one round at the end
 
 Decided by the user 2026-08-27: no per-phase manual runs. Each phase's own gate is now compile plus
-the 172 JVM tests; everything requiring a human at a device is collected into
-[final-verification-round.md](final-verification-round.md) and run once.
+the JVM tests (185 / 0 / 2 as of phase 03); everything requiring a human at a device is collected
+into **[regression-test-scenario.md](regression-test-scenario.md)** and run once. That document
+replaces the earlier `final-verification-round.md`, which has been deleted: it is organised
+**known-shipped-bug first**, then the risks this refactor introduces, then smoke — because a refactor
+this size is how the module's already-fixed bugs come back. It also tags every item **[Pixel]** /
+**[needs Joy_4]** / **[either]**, since only the Pixel is attached today.
 
 The cost of that, stated plainly: bugs from four phases surface together, so a failure will not point
-at the phase that caused it. The mitigation is that the final checklist is organised **by phase**, so
-a failing item still names its suspect. It is not as good as gating each phase, and it is the right
-trade only because the alternative is four interruptions.
+at the phase that caused it. The mitigation is the scenario's closing "If something fails" section,
+which maps each item id back to the phase that most likely caused it. It is not as good as gating each
+phase, and it is the right trade only because the alternative is four interruptions.
 
 Phase 02 comes before any conversion on purpose: it changes the shape of the state, and freezing the
 wrong shape into a `data class State` costs twice.

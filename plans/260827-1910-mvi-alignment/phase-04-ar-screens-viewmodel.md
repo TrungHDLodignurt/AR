@@ -29,7 +29,7 @@ whole-state invalidation. Transient render state is not UI state.
 ## Gate
 
 Compile plus the 172 JVM tests. The measurement below moved to
-[final-verification-round.md](final-verification-round.md) — it is still required before this phase
+[regression-test-scenario.md](regression-test-scenario.md) (item X8) — it is still required before this phase
 can be called proven, just not before the next phase starts.
 
 ### Deferred to the final round — measured, not assumed
