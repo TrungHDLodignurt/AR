@@ -252,9 +252,20 @@ in this repo), not the module's own source, since that is what a host actually i
 
 ## 7. AR availability — module-owned, host does nothing
 
-`ArMeasureHub` reads a read-only `rememberArAvailability()` internally: `ArCameraActivity`'s
-"AR Measure" card is **hidden** (not shown as disabled/errored) when the device resolves to
-`Unsupported`; "Picture Measure" has no ARCore dependency and always shows regardless.
+`ArMeasureHub` reads a read-only `rememberArAvailability()` internally. Both cards always show,
+including on a device that resolves to `Unsupported` — tapping "AR Measure" there opens
+`ArUnsupportedDialog` rather than the camera. The card used to hide itself, which left the tab
+looking like the module only ever had one feature: the user never learned the other existed, nor why
+they could not have it. "Picture Measure" has no ARCore dependency and works regardless.
+
+The dialog offers two actions. "Use Picture Measure" starts the same Activity the Picture Measure
+card does, so the advice it gives is one tap rather than an instruction. "Details" opens Google Play
+Services for AR in the Play Store — worth being clear that on a device reporting
+`UNSUPPORTED_DEVICE_NOT_CAPABLE` installing it will **not** make AR work, since the gate is Google's
+certification list, not a missing APK. It does help the other case that maps to the same
+`Unsupported` state, where `UNKNOWN_ERROR`/`UNKNOWN_TIMED_OUT` means the services really are absent
+or stale. Splitting those two into distinct states, so the button only appears where it can help,
+is an open improvement.
 
 - ARCore's first `checkAvailability` call can return a transient "checking" state with no further
   `onResume` to notice it settle. Both the hub and `ArCameraActivity` re-poll every 200 ms for up

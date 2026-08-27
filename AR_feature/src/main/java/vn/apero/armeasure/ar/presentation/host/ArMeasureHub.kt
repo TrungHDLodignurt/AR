@@ -18,6 +18,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,15 +43,18 @@ import vn.apero.armeasure.photo.presentation.ArPhotoActivity
  * would force this module to know the host's tabs, icons and selected state — exactly the
  * coupling a portable module must not have.
  *
- * The AR Measure card hides itself when [ArAvailability.Unsupported] (decision: ARCore
- * unavailable hides the AR tools, never the whole module); Picture Measure has no ARCore
- * dependency at all and always shows.
+ * Both cards always show, including on a device ARCore cannot run on. The AR card used to hide
+ * itself there, which left the tab looking like the module only ever had one feature — the user
+ * never learned the other one existed, nor why they could not have it. Tapping it on such a device
+ * opens [ArUnsupportedDialog] instead of the camera. Picture Measure has no ARCore dependency at
+ * all and works everywhere.
  */
 @Composable
 fun ArMeasureHub(modifier: Modifier = Modifier) {
     ArMeasureTheme(dark = false) {
         val context = LocalContext.current
         val availability = rememberArAvailability()
+        var showUnsupportedDialog by remember { mutableStateOf(false) }
 
         Column(
             modifier = modifier
@@ -76,15 +83,22 @@ fun ArMeasureHub(modifier: Modifier = Modifier) {
                 modifier = Modifier.weight(1f).padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                if (availability != ArAvailability.Unsupported) {
-                    HubCard(
-                        badgeGlyph = "▬",
-                        title = stringResource(R.string.armeasure_hub_ar_card_title),
-                        description = stringResource(R.string.armeasure_hub_ar_card_desc),
-                        onClick = { ArCameraActivity.start(context) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                HubCard(
+                    badgeGlyph = "▬",
+                    title = stringResource(R.string.armeasure_hub_ar_card_title),
+                    description = stringResource(R.string.armeasure_hub_ar_card_desc),
+                    // Checking is not a final answer, so it is treated as available and the
+                    // Activity re-resolves — sending the user to the dialog on a state that is
+                    // about to become Ready would be wrong.
+                    onClick = {
+                        if (availability == ArAvailability.Unsupported) {
+                            showUnsupportedDialog = true
+                        } else {
+                            ArCameraActivity.start(context)
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                )
                 HubCard(
                     badgeGlyph = "▨",
                     title = stringResource(R.string.armeasure_hub_photo_card_title),
@@ -93,6 +107,22 @@ fun ArMeasureHub(modifier: Modifier = Modifier) {
                     modifier = Modifier.weight(1f),
                 )
             }
+        }
+
+        if (showUnsupportedDialog) {
+            ArUnsupportedDialog(
+                onOpenPlayStore = {
+                    showUnsupportedDialog = false
+                    openArCoreInPlayStore(context)
+                },
+                // Same destination as the Picture Measure card, so the dialog's advice is one tap
+                // rather than an instruction to go and find the other card.
+                onUsePictureMeasure = {
+                    showUnsupportedDialog = false
+                    ArPhotoActivity.start(context)
+                },
+                onDismiss = { showUnsupportedDialog = false },
+            )
         }
     }
 }

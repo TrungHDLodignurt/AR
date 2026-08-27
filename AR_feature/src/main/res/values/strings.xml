@@ -70,6 +70,8 @@
 
     <string name="armeasure_ar_unsupported_title">AR not available</string>
     <string name="armeasure_ar_unsupported_body">This device does not support ARCore, so camera measuring is unavailable. Picture Measure still works.</string>
+    <string name="armeasure_ar_unsupported_details">Details</string>
+    <string name="armeasure_ar_unsupported_use_photo">Use Picture Measure</string>
     <string name="armeasure_camera_denied_title">Camera permission needed</string>
     <string name="armeasure_camera_denied_body">Measuring uses the camera to understand the room. Grant camera access in Settings to continue.</string>
 
