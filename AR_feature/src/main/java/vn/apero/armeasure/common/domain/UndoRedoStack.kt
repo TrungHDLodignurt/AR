@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 
 /**
  * A bounded undo/redo history, generic over the entry type so all three measure tools' state
- * holders (`MeasureState`, `ShapeMeasureState`, `PhotoMeasureState`) share one tested
+ * ViewModels for the AR ruler, the shapes and the photo screen share one tested
  * implementation instead of three bespoke ones.
  *
  * Pure Kotlin — the only non-JVM dependency is [mutableStateOf] for [canUndo]/[canRedo], so the
@@ -16,11 +16,11 @@ import androidx.compose.runtime.setValue
  * [push]/[undo]/[redo]/[clear] are the self-contained, textbook pair-of-deques operations most
  * callers want. The lower-level [pushUndo]/[popUndo]/[pushRedo]/[popRedo]/[dropRedo] exist for two
  * different callers that cannot use the textbook four directly:
- *  - `MeasureState`/`ShapeMeasureState` keep their own unbounded "currently active" list
+ *  - the AR ruler and shape ViewModels keep their own unbounded "currently active" list
  *    (`points`, `shapes`) rather than mirroring it a second time in here — for them only the redo
  *    side (bounded by [maxDepth], normally empty) belongs in this stack, so an overflow eviction
  *    can never detach something still on screen.
- *  - `PhotoMeasureState` undoes by restoring a whole-state snapshot, which needs the *current*
+ *  - the photo screen undoes by restoring a whole-state snapshot, which needs the *current*
  *    state captured into the opposite side at undo/redo time — something the textbook [undo]/
  *    [redo] (which just relocates the same entry it was given) cannot do on its own.
  *

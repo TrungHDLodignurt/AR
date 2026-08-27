@@ -7,8 +7,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The one generic undo/redo implementation shared by `MeasureState`, `ShapeMeasureState` and
- * `PhotoMeasureState` — see [UndoRedoStack]'s own doc for why it needs both the textbook
+ * The one generic undo/redo implementation shared by the AR ruler, shape and photo ViewModels —
+ * see [UndoRedoStack]'s own doc for why it needs both the textbook
  * push/undo/redo/clear surface and the lower-level primitives.
  */
 class UndoRedoStackTest {

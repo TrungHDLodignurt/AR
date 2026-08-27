@@ -23,9 +23,19 @@ import kotlinx.coroutines.launch
  */
 internal abstract class MviViewModel<S : MviState, I : MviIntent, E : MviEffect> : ViewModel() {
 
-    private val _state = MutableStateFlow(createInitialState())
-    val state: StateFlow<S> = _state.asStateFlow()
-    val stateValue: S get() = state.value
+    /**
+     * Lazy, and that is load-bearing rather than a style choice.
+     *
+     * As a plain initializer this runs during *this* class's construction, i.e. before a subclass's
+     * own constructor properties have been assigned — so any `createInitialState()` that reads a
+     * constructor argument silently sees the type default (null, 0, false) instead of the value
+     * passed in. It compiles, it does not warn, and the screen simply starts in the wrong state.
+     * The shared base in `core` has this trap; deferring the first read until something actually
+     * collects `state` removes it, by which point the subclass is fully built.
+     */
+    private val _state: MutableStateFlow<S> by lazy { MutableStateFlow(createInitialState()) }
+    val state: StateFlow<S> get() = _state.asStateFlow()
+    val stateValue: S get() = _state.value
 
     private val _effect = Channel<E>(Channel.Factory.BUFFERED)
     val effect = _effect.receiveAsFlow()
