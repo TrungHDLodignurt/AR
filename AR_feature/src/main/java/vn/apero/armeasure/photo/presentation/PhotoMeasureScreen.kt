@@ -44,6 +44,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import vn.apero.armeasure.MeasurementImageSaver
 import vn.apero.armeasure.R
+import vn.apero.armeasure.common.data.DefaultUnit
 import vn.apero.armeasure.common.data.UnitPreference
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
@@ -84,7 +85,7 @@ internal fun PhotoMeasureScreen(
     referenceStore: CustomReferenceStore,
     imageSaver: MeasurementImageSaver,
     modifier: Modifier = Modifier,
-    unit: LengthUnit = LengthUnit.Cm,
+    unit: LengthUnit = DefaultUnit,
     onResult: (MeasurementResult.Photo) -> Unit = {},
     onClose: (() -> Unit)? = null,
 ) {
@@ -93,8 +94,8 @@ internal fun PhotoMeasureScreen(
     val textMeasurer = rememberTextMeasurer()
     val coroutineScope = rememberCoroutineScope()
     val unitPreference = remember { UnitPreference(context) }
-    // unitPreference.unit already falls back to LengthUnit.Cm on a first-ever launch — same
-    // value as the unit param's own default, so the persisted store is the single seed.
+    // unitPreference.unit already falls back to DefaultUnit on a first-ever launch — same value as
+    // the unit param's own default, so the persisted store is the single seed.
     val state = remember { PhotoMeasureState(initialUnit = unitPreference.unit) }
     LaunchedEffect(state.unit) { unitPreference.unit = state.unit }
     val customReferences = remember { mutableStateListOf<ReferenceObject>().apply { addAll(referenceStore.loadAll()) } }

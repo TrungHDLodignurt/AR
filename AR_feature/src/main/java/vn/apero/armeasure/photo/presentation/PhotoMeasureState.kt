@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import vn.apero.armeasure.common.data.DefaultUnit
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.UndoRedoStack
 import vn.apero.armeasure.photo.data.autoFitQuad
@@ -58,7 +59,7 @@ internal data class PhotoSnapshot(
  * A plain state holder rather than a ViewModel — same reasoning as `MeasureState`: nothing
  * here needs to survive process death, and a half-finished calibration is not worth restoring.
  */
-internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
+internal class PhotoMeasureState(initialUnit: LengthUnit = DefaultUnit) {
 
     var photo by mutableStateOf<Bitmap?>(null)
         private set
