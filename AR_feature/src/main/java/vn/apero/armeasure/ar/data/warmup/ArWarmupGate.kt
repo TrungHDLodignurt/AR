@@ -1,6 +1,5 @@
 package vn.apero.armeasure.ar.data.warmup
 
-import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -11,65 +10,54 @@ import kotlinx.coroutines.delay
 
 /**
  * Warm-up gate for `ArCameraScreen`'s one shared `ARSceneView` (Distance/Box/Cylinder alike):
- * `true` once it is safe to mount it, `false` while the one-time warm-up delay is still running.
+ * `true` once it is safe to mount it, `false` while the warm-up delay is still running.
  *
- * Was only ever implemented in the old, separate ruler screen originally — the old, separate
- * shape screen mounted its own `ARSceneView` immediately with no equivalent guard, so a cold
- * launch straight into Box or Cylinder was exposed to the identical race unmitigated. Extracted
- * here once that gap was found, rather than duplicating the flag and delay a second time (the
- * exact bug class fixed in commit `6a5cb50`) — kept as a single `object` rather than per-file
- * `private var`s for the same reason. Phase 05's merge into one shared mount point makes that bug
- * class structurally impossible going forward, but the gate itself is unchanged.
+ * The race it guards: ARCore's `Session.update()` can beat the GPU/camera driver's own init and be
+ * called before `setCameraTextureNames(...)` has completed, throwing `TextureNotSetException` on
+ * every frame thereafter with no recovery short of a remount. Confirmed by hand on-device (Pixel 6
+ * and POCO X7 both affected, a Samsung device not), and matches a long-standing open ARCore SDK
+ * issue rather than anything specific to this app. Delaying the first mount reproduces the gap that
+ * a manual navigate-away-and-back was found to create, which reliably cleared a live repro.
  */
 internal object ArWarmupGate {
 
     /**
-     * How long to wait before ever mounting an `ARSceneView` for the first time in this process.
+     * How long to wait before mounting an `ARSceneView`.
      *
-     * Confirmed by hand on-device (Pixel 6 + POCO X7, both affected; a Samsung device was not): on a
-     * cold app launch, ARCore's `Session.update()` races the GPU/camera driver's own init and can call
-     * it before `setCameraTextureNames(...)` has actually completed, throwing `TextureNotSetException`
-     * on every frame thereafter with no way back short of a remount. Switching away from an AR tab and
-     * back — which fully unmounts and remounts everything, Engine included, with a couple seconds'
-     * gap in between — reliably cleared it in testing, with no code change at all. This reproduces
-     * that same gap on the very first AR mount instead of requiring the user to discover the
-     * workaround themselves. Device-dependent (a fast enough driver never hits the race regardless),
-     * so this is a blunt, generous margin, not a measured minimum.
+     * **Tune here.** This is a blunt, generous margin, not a measured minimum — the race window's
+     * width depends on how fast each vendor's GPU/camera driver initialises, so a value measured on
+     * one device does not transfer. Lowering it needs repeated trials (the race is probabilistic: one
+     * clean run at a shorter delay proves nothing) on more than one affected device.
      */
     private const val ArWarmupDelayMs = 2_000L
 
     /**
-     * Set once this process has attempted the warm-up delay above — never reset except by a fresh
-     * process (kill + relaunch), which is exactly the boundary that needs it: switching tabs back to
-     * an AR screen later in the same process is already past the cold-start race window.
+     * `true` once it is safe to mount `ARSceneView`, `false` while the delay runs.
      *
-     * Deliberately process-global (not per-screen state): the race is about the GPU/camera driver's
-     * own readiness at process cold-start, not about which specific AR tab happens to mount first —
-     * whichever of Measure/Box/Cylinder the user opens first pays the delay once, and the other two
-     * never pay it again in the same process.
-     */
-    private var hasAttemptedArWarmup = false
-
-    /**
-     * Shared by every AR screen: `true` once it is safe to mount `ARSceneView`, `false` while the
-     * one-time warm-up delay is still running.
+     * **The delay runs on every entry to the AR screen, deliberately — not once per process.**
+     *
+     * It used to be gated behind a process-global `hasAttemptedArWarmup` flag, on the reasoning that
+     * the race belonged to process cold-start and that returning to an AR *tab* later in the same
+     * process was already past the danger window. That reasoning was correct when AR was one tab in a
+     * long-lived Activity whose ARCore session persisted. Two later changes invalidated it:
+     *
+     * 1. AR became its own Activity (`ArCameraActivity`), so leaving the screen destroys the session.
+     * 2. Entering the photo path deliberately tears the AR session down, since photo measuring needs
+     *    no ARCore and the session's depth + two-orientation plane finding is the app's main heat
+     *    source.
+     *
+     * So every entry now builds a brand-new `Session` and `Engine` — exactly the cold-start condition
+     * this gate exists for — while the one-shot flag was still reporting "already warmed up" and
+     * mounting immediately. The first entry was protected and every subsequent one was not, which
+     * surfaced as the camera failing to initialise after a photo → AR round trip.
      */
     @Composable
     fun rememberArWarmedUp(): Boolean {
-        var isWarmedUp by remember { mutableStateOf(hasAttemptedArWarmup) }
+        var isWarmedUp by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
-            if (!hasAttemptedArWarmup) {
-                hasAttemptedArWarmup = true
-                delay(ArWarmupDelayMs)
-                isWarmedUp = true
-            }
+            delay(ArWarmupDelayMs)
+            isWarmedUp = true
         }
         return isWarmedUp
-    }
-
-    /** Resets the process-global flag — test-only, so each test starts from a cold-launch state. */
-    @VisibleForTesting
-    internal fun reset() {
-        hasAttemptedArWarmup = false
     }
 }

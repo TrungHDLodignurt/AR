@@ -84,8 +84,10 @@ private const val CommitToastDurationMs = 1_500L
  *    every plain resume (a much rarer event than a tool swap would be) already regressed the
  *    common case: closing and immediately reopening the camera is a *more frequent* failure than
  *    the rare stale-texture bug either fix was trying to prevent.
- * 3. [ArWarmupGate] is called once, before the view ever mounts, so a cold launch straight into
- *    any tool pays the same one-shot warm-up delay Distance always has.
+ * 3. [ArWarmupGate] is consulted before the view ever mounts, so entering on any tool pays the same
+ *    warm-up delay. It runs on **every** entry, not once per process: this screen is its own
+ *    Activity and the photo path tears the AR session down, so each entry builds a fresh
+ *    `Session`/`Engine` and faces the cold-start race again — see that gate's own KDoc.
  */
 @Composable
 internal fun ArCameraScreen(

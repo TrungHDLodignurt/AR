@@ -18,8 +18,10 @@ import androidx.core.view.WindowInsetsControllerCompat
  * hint/toast row near the top, matching the design's status-bar row.
  *
  * Kept as a single base class rather than duplicating the same `onResume`/`onWindowFocusChanged`
- * overrides in both Activities — this module has already shipped that exact bug once (a guard
- * implemented twice with one copy missing; see `ArWarmupGate`'s KDoc for the precedent). Call
+ * overrides in both Activities — this module has already shipped that exact bug once, in commit
+ * `6a5cb50`: the AR cold-start warm-up guard existed only in the ruler screen while the shape screen
+ * mounted its own `ARSceneView` unguarded, so launching straight into Box or Cylinder hit the race
+ * with no mitigation at all. Call
  * [hideNavigationBar] once more from `onCreate`, right after `enableEdgeToEdge()`, so the bar is
  * already hidden before the first frame; [onResume] always runs right after `onCreate`, so this is
  * a belt-and-braces call, not a required one.
