@@ -29,7 +29,7 @@ internal object ArWarmupGate {
      * one device does not transfer. Lowering it needs repeated trials (the race is probabilistic: one
      * clean run at a shorter delay proves nothing) on more than one affected device.
      */
-    private const val ArWarmupDelayMs = 2_000L
+    private const val ArWarmupDelayMs = 200L
 
     /**
      * `true` once it is safe to mount `ARSceneView`, `false` while the delay runs.
