@@ -24,7 +24,13 @@ Reason, to be written into the KDoc so it is not re-litigated: routing 60 Hz thr
 dispatch and a full state allocation per frame, and replaces Compose's per-field invalidation with
 whole-state invalidation. Transient render state is not UI state.
 
-## Gate — measured, not assumed
+## Gate
+
+Compile plus the 172 JVM tests. The measurement below moved to
+[final-verification-round.md](final-verification-round.md) — it is still required before this phase
+can be called proven, just not before the next phase starts.
+
+### Deferred to the final round — measured, not assumed
 
 The performance claim above is inferred from the call site and from today's frame-drop numbers. It has
 never been profiled. Phase 04 is not done until it is:

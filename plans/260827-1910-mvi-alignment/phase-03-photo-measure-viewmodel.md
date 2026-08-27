@@ -52,7 +52,12 @@ The six cases that broke today, each of which must be re-tested by hand:
 
 Not persisted, and say so in KDoc: the photo bitmap, the quad, the segments. Same gap as today.
 
-## Gate — on device, Joy_4 and Pixel
+## Gate
+
+Compile plus the 172 JVM tests. The device checks below moved to
+[final-verification-round.md](final-verification-round.md) — see the note in plan.md.
+
+### Deferred to the final round
 
 `always_finish_activities` does **not** reproduce recreation-with-restore: it destroys the Activity
 outright. Use:

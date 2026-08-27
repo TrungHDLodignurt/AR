@@ -42,7 +42,12 @@ Modify: `photo/presentation/PhotoMeasureState.kt`, `PhotoQuadCanvas.kt`, `QuadEd
 - [ ] Check the save path (`renderAnnotatedBitmap`) still lands annotations correctly
 - [ ] `compileDebugKotlin` + `testDebugUnitTest`
 
-## Gate — on device, both handsets
+## Gate
+
+Compile plus the 172 JVM tests. The device checks below moved to
+[final-verification-round.md](final-verification-round.md) — see the note in plan.md.
+
+### Deferred to the final round
 
 1. Measure a known length: card as reference, ruler in frame, read 50/100/200 mm. Record the numbers;
    they must not get worse than the pre-change reading.

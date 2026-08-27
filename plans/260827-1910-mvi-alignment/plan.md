@@ -45,11 +45,23 @@ Adding `SavedStateHandle` there is therefore free and touches nothing shared. Al
 
 | # | Phase | Est | Gate |
 |---|---|---|---|
-| 01 | [Local MVI base + decide the DI seam](phase-01-mvi-base-and-di-seam.md) | 1h | compiles, 172 tests green |
-| 02 | [Coordinates to bitmap space](phase-02-bitmap-space-coordinates.md) | 3h | `onCanvasResized` deleted; measure a photo on device and compare to a ruler |
-| 03 | [Picture Measure -> ViewModel](phase-03-photo-measure-viewmodel.md) | 4h | every lifecycle case from today re-tested by hand |
-| 04 | [AR screens -> ViewModel, frame stream outside State](phase-04-ar-screens-viewmodel.md) | 4h | frame-drop count before/after on Joy_4 |
+| 01 | [Local MVI base + decide the DI seam](phase-01-mvi-base-and-di-seam.md) | 1h | **done** — compiles, 172 tests green |
+| 02 | [Coordinates to bitmap space](phase-02-bitmap-space-coordinates.md) | 3h | `onCanvasResized` deleted, compiles, tests green |
+| 03 | [Picture Measure -> ViewModel](phase-03-photo-measure-viewmodel.md) | 4h | compiles, tests green |
+| 04 | [AR screens -> ViewModel, frame stream outside State](phase-04-ar-screens-viewmodel.md) | 4h | compiles, tests green |
 | 05 | [Docs + apply skill](phase-05-docs-and-apply-skill.md) | 1h | README §15 rewritten; skill matches |
+| — | [Final verification round](final-verification-round.md) | 1h user | the only device gate, run once at the end |
+
+### Verification is deferred to one round at the end
+
+Decided by the user 2026-08-27: no per-phase manual runs. Each phase's own gate is now compile plus
+the 172 JVM tests; everything requiring a human at a device is collected into
+[final-verification-round.md](final-verification-round.md) and run once.
+
+The cost of that, stated plainly: bugs from four phases surface together, so a failure will not point
+at the phase that caused it. The mitigation is that the final checklist is organised **by phase**, so
+a failing item still names its suspect. It is not as good as gating each phase, and it is the right
+trade only because the alternative is four interruptions.
 
 Phase 02 comes before any conversion on purpose: it changes the shape of the state, and freezing the
 wrong shape into a `data class State` costs twice.
