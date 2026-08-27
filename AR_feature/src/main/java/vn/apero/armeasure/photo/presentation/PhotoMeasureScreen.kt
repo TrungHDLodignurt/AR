@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -195,20 +197,39 @@ internal fun PhotoMeasureScreen(
                     }
 
                     // The weighted Box below takes exactly the space left between the top nav and
-                    // the bottom toolbar; PhotoQuadCanvas/PhotoQuadCanvas's own aspect-fit always
-                    // centres the photo within whatever box it is given, so the photo is centred
-                    // between those two — no hardcoded offset needed for either edge.
+                    // the bottom slot/toolbar; PhotoQuadCanvas's own aspect-fit always centres the
+                    // photo within whatever box it is given, so the photo is centred between those
+                    // two — no hardcoded offset needed for either edge.
                     Box(modifier = Modifier.weight(1f).fillMaxSize()) {
                         PhotoQuadCanvas(
                             photo = imageBitmap,
                             state = state,
                             modifier = Modifier.fillMaxSize().onSizeChanged { canvasSize = it },
                         )
-                        if (awaitingQuadConfirm) {
+                        if (awaitingQuadConfirm && hasEverCalibrated) {
+                            // Re-editing the quad from SCR-23 (state.beginEditQuad): the confirm
+                            // affordance stays an overlay here, exactly as before, so SCR-23/24's
+                            // already-verified layout below is untouched by this change.
                             CheckmarkBtn(
                                 onClick = { state.confirmReference() },
                                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 32.dp),
                             )
+                        }
+                    }
+
+                    if (!hasEverCalibrated) {
+                        // SCR-21 (no button yet) and SCR-22 (button confirmed) reserve this exact
+                        // same height regardless of awaitingQuadConfirm — only the button's own
+                        // visibility toggles inside it — so the weighted photo box above never
+                        // resizes between the two states and the photo does not jump when the
+                        // user finishes adjusting the quad.
+                        Box(
+                            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 32.dp).height(100.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (awaitingQuadConfirm) {
+                                CheckmarkBtn(onClick = { state.confirmReference() })
+                            }
                         }
                     }
 
