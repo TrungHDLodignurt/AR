@@ -73,7 +73,10 @@ internal fun ArCameraTopBar(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        // Top-aligned, not centred: the design pins BackBtn and ModeUnitStack to the same y (both
+        // at 12 in the mock's TopBar). Centring would push the shorter Back/Undo buttons down by
+        // half of ModeUnitStack's extra height (it's taller — two stacked buttons vs one).
+        verticalAlignment = Alignment.Top,
     ) {
         if (onClose != null) {
             ChromeLightButton(

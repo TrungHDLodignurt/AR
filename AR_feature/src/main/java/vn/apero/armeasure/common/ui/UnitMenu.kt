@@ -3,6 +3,7 @@ package vn.apero.armeasure.common.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -81,7 +82,9 @@ internal fun UnitMenu(
                 .shadow(elevation = 16.dp, shape = RoundedCornerShape(12.dp), ambientColor = MenuShadowColor, spotColor = MenuShadowColor)
                 .clip(RoundedCornerShape(12.dp))
                 .background(ArMeasureTokens.BgSurface)
-                .border(1.dp, MenuBorderColor, RoundedCornerShape(12.dp)),
+                .border(1.dp, MenuBorderColor, RoundedCornerShape(12.dp))
+                .padding(4.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             LengthUnit.entries.forEach { unit ->
                 UnitMenuRow(
@@ -103,6 +106,7 @@ private fun UnitMenuRow(unit: LengthUnit, isSelected: Boolean, onClick: () -> Un
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = MinTouchTargetDp.dp)
+            .clip(RoundedCornerShape(8.dp))
             .background(if (isSelected) ArMeasureTokens.SignatureMuted else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
