@@ -36,7 +36,7 @@ module would be needless ceremony.
 |---|---|---|
 | SceneView/Filament 4.31.0 JNI | covered by the AARs themselves | both `arsceneview`/`sceneview` AARs ship root `proguard.txt` (Filament JNI, kotlin-math, collision, GMS FusedLocation keeps). Their exact rule text found in `app/build/outputs/mapping/release/configuration.txt` → AGP auto-merges them |
 | ARCore `Plane::class.java` class-token lookup (`MeasureFrameLoop.kt:51`, `ShapeFrameLoop.kt:60`) | safe | `com.google.ar:core` 1.54.0 AAR ships a whole-package `-keep public class com.google.ar.core.** {*;}`. `mapping.txt` shows `com.google.ar.core.Plane -> com.google.ar.core.Plane:` (unrenamed) |
-| `isShrinkResources` vs the 11 `armeasure_*` strings | none shrunk | `resources.txt` lists all 11 + `xml/armeasure_file_paths` as reachable — all referenced via static `R.string.armeasure_*`, which the shrinker's reachability analysis detects |
+| `isShrinkResources` vs the `armeasure_*` strings (85 at audit time, re-verify per checkout) | none shrunk | `resources.txt` lists all of them + `xml/armeasure_file_paths` as reachable — all referenced via static `R.string.armeasure_*`, which the shrinker's reachability analysis detects |
 | `ArMeasurePhotoFileProvider` | kept | manifest-declared → R8 auto-keeps by name. Unrenamed in `mapping.txt`; on-device `dumpsys package providers` shows authority `…armeasure.fileprovider` |
 | `CustomReferenceStore` serialization | **no keep rule needed** | hand-rolled `org.json` `JSONObject`/`JSONArray`. No Gson, no kotlinx.serialization, no reflection. R8 renamed the class (`CustomReferenceStore -> ct`) harmlessly since nothing references it by name |
 
@@ -44,13 +44,20 @@ Grepped all 3 modules for `Class.java` / `::class.java` / `reflect` / `Gson` /
 `kotlinx.serialization` / `getIdentifier` — no other risk surface. R8 generated **no**
 `missing_rules.txt`; that absence is itself a signal.
 
+The string-count verdict is **count-independent**: the mechanism is static `R.string.*`
+reachability, which the shrinker checks per-symbol regardless of how many `armeasure_*` keys exist —
+the module growing from 11 strings (at first audit) to 85 (current) changes nothing about why the
+conclusion holds.
+
 ## Device verification (Pixel 6, Android 16)
 
 Release build, zipaligned + debug-keystore-signed purely to be installable (no signing config added
 to any gradle file, no credential committed):
 
 - launches, no crash; `libfilament-jni.so` / `libgltfio-jni.so` / `libfilament-utils-jni.so` all load
-- all 5 tabs tapped: no `FATAL EXCEPTION`, no `TextureNotSetException`, process survives
+- both of `:app`'s tabs tapped (Home, Measure — this repo's `:app` is a 2-tab shell, not the 5-tab
+  shape an earlier iteration had): no `FATAL EXCEPTION`, no `TextureNotSetException`, process
+  survives
 - ARCore native frame loop live and continuous
 - Photo reference picker renders its Vietnamese strings + built-in entries (A4 paper 21x30cm,
   Payment card 5x9cm) **under R8** — exercises photo module resources + store

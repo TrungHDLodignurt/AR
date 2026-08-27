@@ -120,7 +120,9 @@ before assuming compatibility, do not just take the version number on faith.
 
 Everything else in the module is `internal` (verified: `git grep` for top-level
 non-`internal` declarations under `AR_feature/src/main` returns only these three, plus the two
-manifest-declared Activities below).
+manifest-declared Activities below). `ArMeasureHub` lives at
+`vn.apero.armeasure.ar.presentation.host.ArMeasureHub` — import that full path, not the package
+root (see §5 for the exact `import` line).
 
 ```kotlin
 @Composable
@@ -142,26 +144,51 @@ they are not part of the contract and may be renamed or restructured without not
 
 ## 5. Host wiring
 
+```kotlin
+import vn.apero.armeasure.ar.presentation.host.ArMeasureHub
+```
+`ArMeasureHub` sits deep in `ar.presentation.host`, not at the package root as the name suggests —
+add the import above, do not guess a shorter path.
+
 `ArMeasureHub()` is a **composable the host embeds as one of its own tab bodies** — it is a tab
 **root**: it draws no bottom navigation bar of its own and has no back button, because the host's
 own tab bar already owns that chrome. Concretely, for a host shaped like `AIP936-AIHomeDesign`
-(**documentation only** — this repo does not modify that project):
+(**documentation only, a paper dry-run against that repo's real files — this repo has never
+modified that project, and nothing described here has been built or run there**):
 
-`app/.../ui/feature/main/MainContract.kt` currently defines:
-```kotlin
-enum class Tab { HOME, EXPLORE }
-```
-add one entry:
-```kotlin
-enum class Tab { HOME, EXPLORE, MEASURE }
-```
+That host's `when (tab)` slot architecture makes adding a tab a **four-file** change, not two —
+verified against AIP936's actual files, not assumed from a generic bottom-nav shape:
 
-Wherever the tab body is rendered by `when (tab)` (and in
-`app/.../ui/feature/main/components/aip-bottom-nav.kt`, which owns the bottom nav item list), add
-one branch:
-```kotlin
-Tab.MEASURE -> ArMeasureHub()
-```
+1. `app/.../ui/feature/main/MainContract.kt` — add `MEASURE` to the `Tab` enum:
+   ```kotlin
+   enum class Tab { HOME, EXPLORE, MEASURE }
+   ```
+2. `app/.../ui/feature/main/components/main-tab.kt` — this is the file that actually holds the nav
+   item list (`val MainTabs: List<MainTabItem>`, plus `typealias MainTab = MainContract.Tab`), not
+   `aip-bottom-nav.kt` (that file only renders whatever list it's given). Add a `MainTabItem`:
+   ```kotlin
+   MainTabItem(tab = MainContract.Tab.MEASURE, labelRes = R.string.nav_measure, icon = R.drawable.ic_tab_measure)
+   ```
+   **`nav_measure` and `ic_tab_measure` do not exist in AIP936 today** — the host must add both
+   (a string resource and a drawable) or this step fails on a missing-resource error.
+3. `app/.../ui/feature/main/MainScreen.kt` — its `when(selectedTab)` dispatches through **slot
+   lambda parameters** (`homeContent`/`exploreContent`), not a self-contained branch. Add a
+   `measureContent: @Composable () -> Unit` parameter and its branch:
+   ```kotlin
+   MainContract.Tab.MEASURE -> measureContent()
+   ```
+   `MainScreen`'s bottom nav floats over the body in a `Box(BottomCenter)`; every existing tab page
+   reserves `Aip.sizes.bottomNavOverlayInset` (96.dp) at its own bottom so content can't run under
+   the capsule. `ArMeasureHub` does not reserve this itself — see the modifier note below.
+4. `app/.../ui/feature/main/MainActivity.kt` (its `MainScreen(...)` call site) — pass the new slot:
+   ```kotlin
+   measureContent = { ArMeasureHub(Modifier.padding(bottom = Aip.sizes.bottomNavOverlayInset)) }
+   ```
+   The inset is a host-side responsibility, applied through the `modifier` parameter
+   `ArMeasureHub` already exposes — the module deliberately does not reserve it internally, since
+   that would hardcode "the host's nav bar floats over content," which is false for a host whose
+   nav bar takes a real row in a `Column` (this repo's own `:app`/`AppTabBar` is exactly that
+   shape).
 
 No DI wiring is needed — the module takes no dependency on the host's DI graph (verified: zero
 Koin/Hilt references anywhere in `AR_feature`). The one optional line is in
