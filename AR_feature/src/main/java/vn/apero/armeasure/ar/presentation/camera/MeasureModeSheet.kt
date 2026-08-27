@@ -132,7 +132,8 @@ private fun ModeCard(
             .clickable(onClick = { onSelect(tool) })
             .semantics { contentDescription = label },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        // Design's card stack: icon above label with a 4dp gap, centred as a group.
+        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
     ) {
         Text(text = glyph, fontSize = 22.sp, color = iconColor, modifier = Modifier.clearAndSetSemantics {})
         Text(
