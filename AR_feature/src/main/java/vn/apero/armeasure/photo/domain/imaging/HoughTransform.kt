@@ -4,6 +4,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.hypot
+import kotlin.math.min
 import kotlin.math.sin
 
 /** A detected straight line in `rho`/`theta` (normal-form) parametrisation: `x·cosθ + y·sinθ = ρ`. */
@@ -14,16 +15,29 @@ internal data class HoughLine(val rho: Float, val thetaRadians: Float, val votes
  * pass through it; peaks in the vote accumulator are the dominant straight lines in the image —
  * exactly the reference object's 4 edges, if Canny found them cleanly.
  *
- * [minVotesFraction] is relative to the strongest line found, not an absolute vote count —
- * same reasoning as the adaptive thresholds in `CannyEdgeDetector.kt`: a fixed number tuned for
- * one photo's edge density is wrong for the next.
+ * [minVotesFloor]/[minVotesPerWindowFraction] together form an ABSOLUTE floor, not a threshold
+ * relative to the strongest line found. A relative fraction is anchored to whichever line happens
+ * to be strongest — on a real photo that's often a table edge or a shadow, not the object itself,
+ * and one such dominant line raises the bar high enough to delete the object's own weaker edges
+ * entirely. Instrumented case: a 480x480 window with 426 votes on its strongest line and only 134
+ * on the object's real edge — a 0.3 relative fraction (cutoff 128) barely let it through by luck,
+ * and a slightly busier photo would not be so lucky. [minVotesFloor] is deliberately NOT tiny:
+ * Canny's own corner-diagonal artifacts (short oblique segments where two perpendicular edges
+ * meet, tied to the blur kernel size — they do not grow with window size) reliably produce
+ * 20-30 votes on a clean synthetic rectangle; too low a floor lets them into `quadFromLines`,
+ * where they can out-compete the real edges for "closest line to the tap" and return a distorted
+ * quad instead of the true one (see QuadFromEdgesTest). [minVotesPerWindowFraction] additionally
+ * scales the floor up a little for bigger detection windows, on the same reasoning as
+ * `CannyEdgeDetector`'s percentile thresholds: a bigger ROI has proportionally more edge pixels
+ * voting for every genuine line, so its noise floor should rise too.
  */
 internal fun houghLines(
     edges: BooleanArray,
     width: Int,
     height: Int,
     thetaStepDegrees: Float = 1f,
-    minVotesFraction: Float = 0.3f,
+    minVotesPerWindowFraction: Float = 0.08f,
+    minVotesFloor: Int = 40,
     // A real photo's background (fabric weave, printed logos, shadows) generates plenty of its
     // own strong lines — on a real test photo the reference object's own right edge ranked
     // outside the top 12 entirely, crowded out by mousepad-texture lines, so quadFromLines never
@@ -56,7 +70,7 @@ internal fun houghLines(
 
     val maxVotes = accumulator.maxOrNull() ?: 0
     if (maxVotes == 0) return emptyList()
-    val minVotes = (maxVotes * minVotesFraction).toInt().coerceAtLeast(1)
+    val minVotes = maxOf(minVotesFloor, (min(width, height) * minVotesPerWindowFraction).toInt())
 
     val candidates = mutableListOf<Triple<Int, Int, Int>>() // theta index, rho index, votes
     for (t in 0 until thetaSteps) {
@@ -65,7 +79,6 @@ internal fun houghLines(
             if (votes >= minVotes) candidates.add(Triple(t, r, votes))
         }
     }
-    candidates.sortByDescending { it.third }
 
     // Greedy pick strongest-first, suppressing anything too close to a line already chosen —
     // otherwise one thick edge fills the top of the list with near-duplicates. Done in actual
@@ -79,7 +92,7 @@ internal fun houghLines(
     val thetaSuppressRadius = 10f * PI.toFloat() / 180f
     val rhoSuppressRadius = maxRho * 0.03f
     val chosen = mutableListOf<Triple<Int, Int, Int>>()
-    for (candidate in candidates) {
+    for (candidate in candidates.sortedByDescending { it.third }) {
         if (chosen.size >= maxLines) break
         val candidateTheta = candidate.first * thetaStepDegrees * PI.toFloat() / 180f
         val candidateRho = candidate.second - maxRho

@@ -214,6 +214,17 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = DefaultUnit) {
     }
 
     /**
+     * TEMPORARY (real-photo detection tuning only, revert before merging): clears whatever the
+     * last [revealQuadAt] attempt produced, keeping the loaded [photo], so the same photo can be
+     * tapped again for another detection attempt without reloading it from the gallery.
+     */
+    fun resetDetection() {
+        quad = emptyList()
+        homography = null
+        segments = emptyList()
+    }
+
+    /**
      * Drops a quad near [tapPoint] — nothing is shown until the user taps roughly where the
      * reference object is in the photo, matching ARuler's own flow ("Nhấp vào ... để đánh dấu
      * nó"): a quad that just appears pre-placed on every fresh photo would sit somewhere
@@ -228,7 +239,9 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = DefaultUnit) {
      * always drag the corners from there, same as before this existed.
      */
     suspend fun revealQuadAt(tapPoint: Offset, canvasWidthPx: Float, canvasHeightPx: Float) {
-        if (quad.isNotEmpty()) return
+        // TEMPORARY (real-photo detection tuning only, revert before merging): a second tap
+        // should re-run detection instead of being ignored, so multiple attempts against the same
+        // loaded photo are possible without reloading it.
         val bitmap = photo
 
         if (bitmap != null) {
@@ -238,12 +251,15 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = DefaultUnit) {
                 (tapPoint.y - fit.offsetY) / fit.height * bitmap.height,
             )
             isDetectingQuad = true
+            val expectedAspectRatio = reference.longSideMm / reference.shortSideMm
             val detected = try {
-                withContext(Dispatchers.Default) { autoFitQuad(bitmap, tapInBitmap) }
+                withContext(Dispatchers.Default) {
+                    autoFitQuad(bitmap, tapInBitmap, expectedAspectRatio = expectedAspectRatio)
+                }
             } finally {
                 isDetectingQuad = false
             }
-            if (detected != null && quad.isEmpty()) {
+            if (detected != null) {
                 quad = detected.map { corner ->
                     Offset(
                         fit.offsetX + corner.x / bitmap.width * fit.width,
@@ -254,7 +270,7 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = DefaultUnit) {
             }
         }
 
-        if (quad.isNotEmpty()) return // a drag or a second tap could have raced ahead while detecting
+        if (quad.isNotEmpty()) return // a drag could have raced ahead while detecting
         val halfWidth = canvasWidthPx * 0.22f
         val halfHeight = canvasHeightPx * 0.14f
         quad = listOf(

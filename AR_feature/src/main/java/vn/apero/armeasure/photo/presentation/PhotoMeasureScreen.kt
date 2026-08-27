@@ -195,6 +195,17 @@ internal fun PhotoMeasureScreen(
                             },
                             modifier = Modifier.align(Alignment.CenterHorizontally),
                         )
+                        // TEMPORARY (real-photo detection tuning only, revert before merging):
+                        // re-run detection against the same loaded photo without reloading it.
+                        if (state.quad.isNotEmpty()) {
+                            androidx.compose.material3.Text(
+                                "Detect again",
+                                modifier = Modifier
+                                    .align(Alignment.CenterHorizontally)
+                                    .clickable { state.resetDetection() }
+                                    .padding(8.dp),
+                            )
+                        }
                     }
 
                     // The weighted Box below takes exactly the space left between the top nav and
