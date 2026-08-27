@@ -37,7 +37,7 @@ internal fun hintFor(
         if (res != null) return stringResource(res)
     }
     return when (tool) {
-        MeasureTool.Distance -> hintForDistance(sessionState, distance)
+        MeasureTool.DistanceChain -> hintForDistance(sessionState, distance)
         MeasureTool.Box -> hintForShape(sessionState, box)
         MeasureTool.Cylinder -> hintForShape(sessionState, cylinder)
     }

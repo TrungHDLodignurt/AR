@@ -41,7 +41,7 @@ import vn.apero.armeasure.common.data.UnitPreference
 import vn.apero.armeasure.common.domain.MeasurementResult
 
 /** Which of the three AR tools is currently active. Swapping never remounts the view below. */
-internal enum class MeasureTool { Distance, Box, Cylinder }
+internal enum class MeasureTool { DistanceChain, Box, Cylinder }
 
 /** The active tool's chrome bindings — [MeasureState] and [ShapeMeasureState] share no supertype, so this is picked once per recomposition rather than re-`when`-ed at every call site below. */
 private data class ToolActions(
@@ -109,7 +109,7 @@ internal fun ArCameraScreen(
     // so there is never any interleaving that would make sharing this unsafe (insight 9).
     val projector = remember { PoseProjector() }
 
-    var tool by remember { mutableStateOf(MeasureTool.Distance) }
+    var tool by remember { mutableStateOf(MeasureTool.DistanceChain) }
     // Live for the screen's whole lifetime: a swap must not lose tracked points, a half-drawn
     // shape, or force a fresh holder (which would also mean a fresh, cold steadiness gate).
     val distance = remember { MeasureState() }
@@ -121,7 +121,7 @@ internal fun ArCameraScreen(
         // Insight 6: reset the gate and clear the live reading of the tool becoming active, so a
         // sample taken before the swap can never read as an already-steady one right after it.
         when (next) {
-            MeasureTool.Distance -> distance.onActivated()
+            MeasureTool.DistanceChain -> distance.onActivated()
             MeasureTool.Box -> box.onActivated()
             MeasureTool.Cylinder -> cylinder.onActivated()
         }
@@ -200,7 +200,7 @@ internal fun ArCameraScreen(
                     sessionState.noteFrame()
                     // Only the active tool's frame loop runs — an inactive tool costs nothing.
                     when (tool) {
-                        MeasureTool.Distance ->
+                        MeasureTool.DistanceChain ->
                             onFrame(distance, sessionState, projector, unit, updatedSession, frame, viewSize)
                         MeasureTool.Box ->
                             onShapeFrame(box, sessionState, projector, unit, updatedSession, frame, viewSize)
@@ -239,7 +239,7 @@ internal fun ArCameraScreen(
         }
 
         when (tool) {
-            MeasureTool.Distance ->
+            MeasureTool.DistanceChain ->
                 DistanceOverlay(distance, projector, session, viewSize, Modifier.fillMaxSize())
             MeasureTool.Box -> ShapeOverlay(frameProvider = { box.overlay }, modifier = Modifier.fillMaxSize())
             MeasureTool.Cylinder ->
@@ -250,7 +250,7 @@ internal fun ArCameraScreen(
         // holders don't share a supertype (kept that way to avoid a one-off interface for three
         // call sites), so this is the single place that reads which one is active right now.
         val actions = when (tool) {
-            MeasureTool.Distance -> ToolActions(
+            MeasureTool.DistanceChain -> ToolActions(
                 canUndo = distance.canUndo, undo = distance::undo,
                 canRedo = distance.canRedo, redo = distance::redo,
                 clear = distance::clear,
@@ -305,7 +305,7 @@ internal fun ArCameraScreen(
                         onResult(result)
                     }
                     when (tool) {
-                        MeasureTool.Distance -> commitDistancePoint(distance, activeSession, unit, onCommit)
+                        MeasureTool.DistanceChain -> commitDistancePoint(distance, activeSession, unit, onCommit)
                         MeasureTool.Box -> commitShapeStep(box, activeSession, unit, onCommit)
                         MeasureTool.Cylinder -> commitShapeStep(cylinder, activeSession, unit, onCommit)
                     }

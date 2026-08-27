@@ -111,6 +111,80 @@ class QuadFromEdgesTest {
         assertNull(quadFromLines(lines, Vec2(50f, 50f)))
     }
 
+    @Test
+    fun `rejects a trapezoid whose opposite sides are badly imbalanced`() {
+        // A real rectangle under perspective still has roughly-matched opposite sides. A quad
+        // built from two lines that AREN'T actually parallel (allowed into the same "primary"
+        // group by angleToleranceDegrees's tolerance, e.g. one edge partly occluded/misread as a
+        // tilted line) produces a lopsided trapezoid instead — one side ~32% longer than its
+        // "opposite". Real case that motivated this: sides 56px vs 89px on an otherwise
+        // plausible-looking candidate.
+        val tiltRadians = 19f * (Math.PI / 180.0).toFloat()
+        val left = HoughLine(rho = 0f, thetaRadians = 0f, votes = 100) // x = 0
+        val right = HoughLine(rho = 100f, thetaRadians = tiltRadians, votes = 100) // tilted "right" edge
+        val top = HoughLine(rho = 0f, thetaRadians = (Math.PI / 2).toFloat(), votes = 100) // y = 0
+        val bottom = HoughLine(rho = 100f, thetaRadians = (Math.PI / 2).toFloat(), votes = 100) // y = 100
+        val tap = Vec2(40f, 50f)
+
+        assertNull(quadFromLines(listOf(left, right, top, bottom), tap))
+    }
+
+    @Test
+    fun `rejects a candidate quad whose corners fall far outside the image bounds`() {
+        // Real 1542x2048-photo bug: two lines with very different rho (a nearby object edge and
+        // an unrelated distant one) can intersect at a point nowhere near the actual photo, yet
+        // still "contain" the tap point under the loose point-in-quad check alone. Handcrafted so
+        // the ONLY candidate quad the 4 lines can form has 2 corners at y=9999, far past the
+        // 200x200 image these lines claim to describe.
+        val tap = Vec2(100f, 100f)
+        val lines = listOf(
+            HoughLine(rho = 40f, thetaRadians = 0f, votes = 100), // x=40
+            HoughLine(rho = 160f, thetaRadians = 0f, votes = 100), // x=160
+            HoughLine(rho = 30f, thetaRadians = (Math.PI / 2).toFloat(), votes = 100), // y=30
+            HoughLine(rho = 9999f, thetaRadians = (Math.PI / 2).toFloat(), votes = 50), // y=9999 (bogus/distant)
+        )
+
+        assertNull(quadFromLines(lines, tap, imageWidth = 200f, imageHeight = 200f))
+    }
+
+    @Test
+    fun `a known aspect ratio close to the true rectangle still finds the quad`() {
+        val width = 200
+        val height = 160
+        val rectLeft = 40
+        val rectTop = 30
+        val rectRight = 160 // 120px long side
+        val rectBottom = 120 // 90px short side -> true ratio 120/90 = 1.333
+        val image = syntheticRectangle(width, height, rectLeft, rectTop, rectRight, rectBottom)
+
+        val edges = cannyEdges(image)
+        val lines = houghLines(edges, width, height)
+        val tapPoint = Vec2((rectLeft + rectRight) / 2f, (rectTop + rectBottom) / 2f)
+        val quad = quadFromLines(lines, tapPoint, expectedAspectRatio = 1.333f)
+
+        requireNotNull(quad) { "a correct aspect-ratio hint should not reject the true rectangle" }
+    }
+
+    @Test
+    fun `a known aspect ratio far from the true rectangle rejects the candidate`() {
+        val width = 200
+        val height = 160
+        val rectLeft = 40
+        val rectTop = 30
+        val rectRight = 160 // true ratio 120/90 = 1.333
+        val rectBottom = 120
+        val image = syntheticRectangle(width, height, rectLeft, rectTop, rectRight, rectBottom)
+
+        val edges = cannyEdges(image)
+        val lines = houghLines(edges, width, height)
+        val tapPoint = Vec2((rectLeft + rectRight) / 2f, (rectTop + rectBottom) / 2f)
+        // Known object is a 5:1 sliver — nothing like the 1.33 square-ish rectangle actually
+        // drawn, so the aspect-ratio constraint should reject the only candidate outright.
+        val quad = quadFromLines(lines, tapPoint, expectedAspectRatio = 5f)
+
+        assertNull(quad)
+    }
+
     private fun syntheticRectangle(width: Int, height: Int, left: Int, top: Int, right: Int, bottom: Int): GrayscaleImage {
         val pixels = FloatArray(width * height) { 250f }
         for (y in top until bottom) {

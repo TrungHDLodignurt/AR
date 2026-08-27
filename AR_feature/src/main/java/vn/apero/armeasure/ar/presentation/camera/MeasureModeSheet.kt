@@ -102,7 +102,7 @@ internal fun MeasureModeSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                ModeCard(MeasureTool.Distance, "↔", selected, onSelect, Modifier.weight(1f))
+                ModeCard(MeasureTool.DistanceChain, "↔", selected, onSelect, Modifier.weight(1f))
                 ModeCard(MeasureTool.Box, "□", selected, onSelect, Modifier.weight(1f))
                 ModeCard(MeasureTool.Cylinder, "○", selected, onSelect, Modifier.weight(1f))
             }
@@ -150,7 +150,7 @@ private fun ModeCard(
 }
 
 private fun modeLabelRes(tool: MeasureTool): Int = when (tool) {
-    MeasureTool.Distance -> R.string.armeasure_mode_distance
+    MeasureTool.DistanceChain -> R.string.armeasure_mode_distance
     MeasureTool.Box -> R.string.armeasure_mode_box
     MeasureTool.Cylinder -> R.string.armeasure_mode_cylinder
 }
