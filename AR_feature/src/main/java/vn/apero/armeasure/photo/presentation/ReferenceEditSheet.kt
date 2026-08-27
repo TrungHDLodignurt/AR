@@ -2,6 +2,7 @@ package vn.apero.armeasure.photo.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,6 +62,14 @@ internal fun ReferenceEditSheet(
     var widthText by remember(editing) { mutableStateOf(editing?.let { plainNumber(it.shortSideMm / mmPerUnit(unit)) } ?: "") }
     var showUnitMenu by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    // Parking spot for focus while the unit menu is open: the popup that lists Cm/M/Inch/Ft is
+    // focusable (so the system back button can dismiss it), which means it takes window focus
+    // while open and hands it back to this sheet when it closes. If a Length/Width field were
+    // still the focused element at that point, Compose would treat the window regaining focus as
+    // that field regaining focus too and restart its input connection, popping the keyboard back
+    // up — the exact defect this sheet used to have. Moving focus here first (a plain,
+    // non-text-input target) means there is nothing text-related left to "come back" to.
+    val unitMenuFocusParker = remember { FocusRequester() }
 
     val lengthValue = lengthText.toFloatOrNull()
     val widthValue = widthText.toFloatOrNull()
@@ -95,7 +106,9 @@ internal fun ReferenceEditSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 20.dp, end = 20.dp, bottom = 22.dp),
+                .padding(start = 20.dp, end = 20.dp, bottom = 22.dp)
+                .focusRequester(unitMenuFocusParker)
+                .focusable(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             SheetHeader(isEditing = editing != null, onClose = onDismiss)
@@ -140,8 +153,14 @@ internal fun ReferenceEditSheet(
                     unit = fieldUnit,
                     showMenu = showUnitMenu,
                     onClick = { showUnitMenu = true },
-                    onSelect = { fieldUnit = it; showUnitMenu = false },
-                    onDismissMenu = { showUnitMenu = false },
+                    // Move focus off whatever Length/Width field is focused *before* the popup's
+                    // window actually hands focus back — moving it up front (in onClick) instead
+                    // would fire this same transfer while the field's real InputConnection is
+                    // still live, doubling the hide transition on open (own dummy-InputConnection
+                    // race, verified via logcat). Doing it here means the parker, not the field,
+                    // is what the window finds focused once it regains focus.
+                    onSelect = { unitMenuFocusParker.requestFocus(); fieldUnit = it; showUnitMenu = false },
+                    onDismissMenu = { unitMenuFocusParker.requestFocus(); showUnitMenu = false },
                 )
             }
 
