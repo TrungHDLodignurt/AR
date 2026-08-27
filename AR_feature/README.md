@@ -63,6 +63,10 @@ activityCompose = "1.11.0"
 arsceneview = "4.31.0"
 junit = "4.13.2"
 json = "20240303"
+# Unbundled: the model arrives through Play Services, so this adds no APK weight. Beta upstream —
+# Google warns of backward-incompatible change, which is why the Canny+Hough detector is kept as a
+# fallback rather than deleted.
+mlkitSubjectSegmentation = "16.0.0-beta1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -225,6 +229,11 @@ in this repo), not the module's own source, since that is what a host actually i
 - `<meta-data android:name="com.google.ar.core" android:value="optional" />` — ARCore ships as a
   separate Play-Services-for-AR APK; the module gates the feature itself instead of asking Play to
   gate the install.
+- `<meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="subject_segment" />`
+  — asks Play Services to fetch the subject-segmentation model at install time rather than on the
+  first tap, so Picture Measure's auto-fit is not dead the first time a user reaches it. The code
+  treats a missing model as an ordinary failure and falls back, so this is an optimisation, not a
+  requirement.
 - A module-owned `<provider>`: `vn.apero.armeasure.photo.data.ArMeasurePhotoFileProvider`,
   authority `${applicationId}.armeasure.fileprovider`, `exported="false"`, exposing only its own
   `cache/camera-capture/` subdirectory (`armeasure_file_paths.xml`) — used only to hand the system
@@ -375,6 +384,15 @@ the R8 release-hardening audit report dated 2026-08-26 in this repo's `plans/rep
 - `CustomReferenceStore` uses hand-rolled `org.json` (`JSONObject`/`JSONArray`), **not** Gson or
   `kotlinx.serialization` — no speculative keep rule is needed for it, and none should be added
   "just in case."
+- `play-services-mlkit-subject-segmentation` needed no keep rule: this module's call sites
+  (`SubjectSegmentation.getClient`, `SubjectSegmenterOptions.Builder`, `InputImage.fromBitmap`) are
+  reflection-free and the GMS AARs ship their own consumer rules. `assembleRelease` passes.
+  `mapping.txt` shows `SubjectSegmenter`, `SubjectSegmenterOptions`, `SubjectSegmenterOptions$Builder`
+  and `SubjectSegmentationResult` all present-and-renamed, while the `SubjectSegmentation` holder
+  class itself reads `R8$$REMOVED$$CLASS$$` — expected, since its only member is a static factory
+  that R8 inlines into the caller. **Still worth one release-build smoke test on a device before
+  shipping**: the model is fetched through Play Services' optional-module machinery, which is the
+  part of this dependency least likely to be exercised by a compile alone.
 
 **Revisit trigger**: a `com.google.ar:core` or `io.github.sceneview:*` version bump that drops
 that AAR's bundled `proguard.txt`. Re-verify by unzipping the new AAR and checking for
@@ -383,7 +401,7 @@ that AAR's bundled `proguard.txt`. Re-verify by unzipping the new AAR and checki
 ## 14. Verify the integration
 
 ```bash
-./gradlew :AR_feature:compileDebugKotlin :AR_feature:testDebugUnitTest   # 102 tests, no device
+./gradlew :AR_feature:compileDebugKotlin :AR_feature:testDebugUnitTest   # 172 tests, no device
 ./gradlew :app:assembleDebug
 ./gradlew :app:assembleRelease      # mandatory — see below
 ```
@@ -458,16 +476,28 @@ Stated plainly, not buried:
   necessarily the heaviest union any single tool needs — `DepthMode.AUTOMATIC` (§12) is pure heat
   for Box/Cylinder's height step, which never reads a depth image.
 - **Picture Measure needs the reference object visible in the same photo** as whatever is being
-  measured — the app cannot infer scale otherwise. `autoFitQuad`'s automatic corner detection has
-  at least one confirmed real-photo failure (a bright, cluttered desk scene returned `null`),
-  falling back to manual four-corner placement; this is a genuinely open accuracy gap, not just
-  unverified-safe.
-- **8 `.kt` files exceed this repo's own ~200-line guideline** — each carries KDoc stating why it
-  was kept whole rather than split (e.g. `ArCameraScreen.kt`'s "structural rules" section, §12,
+  measured — the app cannot infer scale otherwise. Auto-fit is a convenience on top of that, and it
+  is allowed to decline: anything it produces that fails `isPlausibleReferenceQuad` is dropped in
+  favour of the manual four-corner box, because a wrong quad is worse than none (the user trusts it,
+  confirms, and every measurement afterwards is miscalibrated with nothing on screen to say so).
+- **Auto-fit's remaining accuracy gap is unquantified, not closed.** The plausibility bounds reject
+  only the obviously implausible; a quad of the right size and right proportion locked onto the wrong
+  object passes every one of them, and no threshold will catch that — only the user seeing the box
+  before confirming. The bounds themselves are reasoned from geometry and synthetic tests, not
+  validated against real photos: the one real-photo fixture's ground truth is known to be wrong (see
+  `RealPhotoAutoFitTest`) and both its assertions are disabled until a clean capture replaces it.
+- **Subject segmentation is unbundled and beta.** `play-services-mlkit-subject-segmentation` adds no
+  APK weight (the model arrives through Play Services) but is simply absent on a device without them,
+  and Google warns the API may change incompatibly. Both are why the Canny+Hough path is kept rather
+  than deleted — it is the only detector on a non-GMS device, and it is more precise than a mask
+  boundary wherever the object's edges do have contrast.
+- **Several `.kt` files exceed this repo's own ~200-line guideline** — each carries KDoc stating why
+  it was kept whole rather than split (e.g. `ArCameraScreen.kt`'s "structural rules" section, §12,
   explains why splitting it would fight the single-mount-point design it documents):
-  `ShapeMath.kt` (218), `MeasureState.kt` (238), `ArCameraChrome.kt` (285),
-  `ShapeMeasureState.kt` (286), `ShapeFrameLoop.kt` (302), `PhotoMeasureState.kt` (305),
-  `PhotoMeasureScreen.kt` (323), `ArCameraScreen.kt` (328).
+  `HullQuadFit.kt` (205), `QuadFromEdges.kt` (212), `ShapeMath.kt` (218), `MeasureState.kt` (238),
+  `ArCameraChrome.kt` (285), `ShapeMeasureState.kt` (286), `ShapeFrameLoop.kt` (302),
+  `PhotoMeasureScreen.kt` (410), `PhotoMeasureState.kt` (436), `ArCameraScreen.kt` (328).
+  `PhotoMeasureState.kt` and `PhotoMeasureScreen.kt` grew most and are the ones worth splitting next.
 
 ### Note for the host team (not this module's work)
 
