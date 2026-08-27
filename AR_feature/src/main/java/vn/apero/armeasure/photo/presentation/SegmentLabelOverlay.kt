@@ -95,12 +95,12 @@ private fun SegmentLabelPill(label: String, color: Color, onDelete: () -> Unit) 
         )
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(32.dp)
                 .clickable(onClick = onDelete)
                 .semantics { contentDescription = deleteDescription },
             contentAlignment = Alignment.Center,
         ) {
-            Text("🗑", fontSize = 30.sp)
+            Text("🗑", fontSize = 13.sp)
         }
     }
 }
