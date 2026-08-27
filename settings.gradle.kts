@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "ar-tape-measure"
 include(":app")
+include(":AR_feature")

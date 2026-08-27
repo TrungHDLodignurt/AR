@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="armeasure_hint_warming_up">Getting the camera ready…</string>
+    <string name="armeasure_hint_move_to_find_surface">Move your phone to find a surface</string>
+    <string name="armeasure_hint_aim_at_surface">Aim at a surface</string>
+    <string name="armeasure_hint_tap_to_start">Tap + to add a point</string>
+    <string name="armeasure_hint_reading_unsteady">Can\'t lock this surface — too shiny or plain to measure</string>
+    <string name="armeasure_hint_dragging_point">Move over a surface, then release to reposition</string>
+    <string name="armeasure_hint_point_on_surface">Point %1$d on %2$s</string>
+    <string name="armeasure_hint_segment_awaiting_end">Start on %1$s — tap + to set the end</string>
+    <string name="armeasure_hint_segment_done">End on %1$s — tap + to start a new segment</string>
+    <string name="armeasure_hint_shape_awaiting_origin">Tap + to place the %1$s\'s %2$s</string>
+    <string name="armeasure_hint_shape_sizing_edge_u">Move to draw the first edge, tap + to fix it</string>
+    <string name="armeasure_hint_shape_sizing_edge_v">Move to draw the second edge, tap + to fix it</string>
+    <string name="armeasure_hint_shape_sizing_circle">Move to size the base, tap + to fix it</string>
+    <string name="armeasure_hint_shape_sizing_height">Tilt up to set height, tap + to finish the %1$s</string>
+
+    <string name="armeasure_tracking_bad_state">AR session error — try restarting</string>
+    <string name="armeasure_tracking_insufficient_light">Not enough light — try a brighter area</string>
+    <string name="armeasure_tracking_excessive_motion">Moving too fast — slow down</string>
+    <string name="armeasure_tracking_insufficient_features">Not enough detail — point at a more textured surface</string>
+    <string name="armeasure_tracking_camera_unavailable">Camera unavailable — close other camera apps</string>
+
+    <string name="armeasure_unit_cm">Centimeters</string>
+    <string name="armeasure_unit_m">Meters</string>
+    <string name="armeasure_unit_inch">Inches</string>
+    <string name="armeasure_unit_ft">Feet</string>
+    <string name="armeasure_unit_menu_title">Length unit</string>
+
+    <string name="armeasure_action_undo">Undo</string>
+    <string name="armeasure_action_redo">Redo</string>
+    <string name="armeasure_action_back">Back</string>
+    <string name="armeasure_action_clear">Clear</string>
+    <string name="armeasure_action_capture">Add point</string>
+    <string name="armeasure_action_open_mode_sheet">Choose measure mode</string>
+    <string name="armeasure_action_close_sheet">Close</string>
+    <string name="armeasure_action_cancel">Cancel</string>
+    <string name="armeasure_toast_point_added">Point added</string>
+
+    <string name="armeasure_reference_title">Choose reference object</string>
+    <string name="armeasure_reference_subtitle">Choose a reference object you can photograph together with what you want to measure.</string>
+    <string name="armeasure_reference_add_card_label">Add new object</string>
+    <string name="armeasure_reference_edit_cd">Edit %1$s</string>
+    <string name="armeasure_reference_sheet_title_add">New reference object</string>
+    <string name="armeasure_reference_sheet_title_edit">Edit reference object</string>
+    <string name="armeasure_reference_name_label">Name</string>
+    <string name="armeasure_reference_name_placeholder">e.g. Phone</string>
+    <string name="armeasure_reference_length_label">Length</string>
+    <string name="armeasure_reference_width_label">Width</string>
+    <string name="armeasure_reference_unit_selector_cd">Change unit</string>
+    <string name="armeasure_reference_delete">Delete</string>
+    <string name="armeasure_reference_delete_confirm_title">Delete this object?</string>
+    <string name="armeasure_reference_delete_confirm_body">This can\'t be undone.</string>
+    <string name="armeasure_reference_delete_confirm_action">Delete</string>
+    <string name="armeasure_reference_cta_add">Add</string>
+    <string name="armeasure_reference_cta_save">Save</string>
+
+    <string name="armeasure_mode_sheet_title">Measure mode</string>
+    <string name="armeasure_mode_distance">Distance</string>
+    <string name="armeasure_mode_distance_chain">Distance chain</string>
+    <string name="armeasure_mode_box">Box</string>
+    <string name="armeasure_mode_cylinder">Cylinder</string>
+
+    <string name="armeasure_hub_title">Measure</string>
+    <string name="armeasure_hub_subtitle">Pick a way to measure</string>
+    <string name="armeasure_hub_ar_card_title">AR Measure</string>
+    <string name="armeasure_hub_ar_card_desc">Point your camera and measure in real space</string>
+    <string name="armeasure_hub_photo_card_title">Picture Measure</string>
+    <string name="armeasure_hub_photo_card_desc">Measure from a photo using a reference object</string>
+
+    <string name="armeasure_ar_unsupported_title">AR not available</string>
+    <string name="armeasure_ar_unsupported_body">This device does not support ARCore, so camera measuring is unavailable. Picture Measure still works.</string>
+    <string name="armeasure_camera_denied_title">Camera permission needed</string>
+    <string name="armeasure_camera_denied_body">Measuring uses the camera to understand the room. Grant camera access in Settings to continue.</string>
+
+    <string name="armeasure_photo_instruction_place">Tap on the %1$s to mark it, then adjust its size</string>
+    <string name="armeasure_photo_instruction_adjust">Hold and drag the corners to match the %1$s</string>
+    <string name="armeasure_photo_confirm_cd">Confirm reference object</string>
+    <string name="armeasure_photo_detecting_edges">Detecting edges…</string>
+    <string name="armeasure_photo_close_cd">Close</string>
+
+    <string name="armeasure_photo_pick_sheet_title">Choose photo</string>
+    <string name="armeasure_photo_pick_camera">Take photo</string>
+    <string name="armeasure_photo_pick_gallery">Choose from gallery</string>
+
+    <string name="armeasure_photo_waiting_title">Take a photo with %1$s</string>
+    <string name="armeasure_photo_waiting_body">The photo needs to show both %1$s and the object you want to measure.</string>
+    <string name="armeasure_photo_waiting_pick_cta">Choose photo</string>
+    <string name="armeasure_photo_waiting_change_reference">Change reference object</string>
+
+    <string name="armeasure_photo_toolbar_line_segment">Line segment</string>
+    <string name="armeasure_photo_toolbar_edit_scale">Edit scale</string>
+
+    <string name="armeasure_photo_line_draw_title">Length</string>
+    <string name="armeasure_photo_segment_discard_cd">Discard segment</string>
+    <string name="armeasure_photo_segment_confirm_cd">Confirm segment</string>
+    <string name="armeasure_photo_segment_delete_cd">Delete segment</string>
+
+    <string name="armeasure_photo_save_cta">Save</string>
+    <string name="armeasure_photo_save_success">Saved to Pictures</string>
+    <string name="armeasure_photo_save_failure">Couldn\'t save the photo</string>
+    <string name="armeasure_photo_save_unsupported">Saving needs Android 10+</string>
+
+    <string name="armeasure_color_red">Red</string>
+    <string name="armeasure_color_orange">Orange</string>
+    <string name="armeasure_color_yellow">Yellow</string>
+    <string name="armeasure_color_green">Green</string>
+    <string name="armeasure_color_purple">Purple</string>
+</resources>

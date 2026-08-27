@@ -11,6 +11,10 @@ lifecycle = "2.9.4"
 activityCompose = "1.11.0"
 arsceneview = "4.31.0"
 junit = "4.13.2"
+json = "20240303"
+# Unbundled (downloaded via Play Services), so this adds no APK weight. Still beta upstream:
+# Google warns of backward-incompatible change, which is why the Canny+Hough path stays as fallback.
+mlkitSubjectSegmentation = "16.0.0-beta1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -23,8 +27,12 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 sceneview-ar = { group = "io.github.sceneview", name = "arsceneview", version.ref = "arsceneview" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+json = { group = "org.json", name = "json", version.ref = "json" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+mlkit-subject-segmentation = { group = "com.google.android.gms", name = "play-services-mlkit-subject-segmentation", version.ref = "mlkitSubjectSegmentation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Backs both module-owned Activities (ArCameraActivity, ArPhotoActivity). Declared in the
+         module itself rather than reusing a host's theme resource name — a portable module
+         cannot assume what a host calls its own theme; "manifest-declared, host declares
+         nothing" (see the house-module pattern report). The AR camera feed is the background for
+         one of the two Activities, so the window must not paint over it either way. -->
+    <style name="Theme.ArMeasure" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+    </style>
+</resources>

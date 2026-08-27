@@ -1,33 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.CAMERA" />
-
-    <!-- Play treats the CAMERA permission as an implied hard camera requirement, which would
-         undo the required=false below. Declared explicitly to keep the install surface open. -->
-    <uses-feature
-        android:name="android.hardware.camera"
-        android:required="false" />
-
-    <!-- required=false so the app installs on non-AR devices; the Level tab still works
-         there and the Measure tab shows an explicit unsupported screen. Flipping this to
-         true would make Play Store filter the listing out of search results on those
-         devices, costing impressions and not just installs. -->
-    <uses-feature
-        android:name="android.hardware.camera.ar"
-        android:required="false" />
+    <!-- Camera permission, both camera uses-feature entries, and the AR-runtime meta-data are
+         all declared by the AR library module and merge in from there (verified via
+         app/build/outputs/logs/manifest-merger-debug-report.txt); declaring them again here
+         would just be an identical duplicate, not a real fix. -->
 
     <application
         android:allowBackup="false"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.ArTapeMeasure">
-
-        <!-- "optional": ARCore ships as a separate APK (Google Play Services for AR).
-             The app gates the feature itself via ArCoreApk. -->
-        <meta-data
-            android:name="com.google.ar.core"
-            android:value="optional" />
 
         <activity
             android:name=".MainActivity"

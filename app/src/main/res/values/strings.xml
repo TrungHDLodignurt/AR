@@ -1,28 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Tape Measure</string>
-
-    <string name="tab_measure">Measure</string>
-    <string name="tab_level">Level</string>
-
-    <string name="action_clear">Clear</string>
-    <string name="action_undo">Undo</string>
-    <string name="action_add_point">Add a point</string>
-
-    <string name="hint_move_to_find_surface">Move your phone to find a surface</string>
-    <string name="hint_aim_at_surface">Aim at a surface</string>
-    <string name="hint_tap_to_start">Tap + to add a point</string>
-    <string name="hint_no_surface">No surface there — aim at a detected surface</string>
-    <string name="hint_reading_unsteady">Can\'t lock this surface — too shiny or plain to measure</string>
-
-    <string name="tracking_bad_state">AR session error — try restarting</string>
-    <string name="tracking_insufficient_light">Not enough light — try a brighter area</string>
-    <string name="tracking_excessive_motion">Moving too fast — slow down</string>
-    <string name="tracking_insufficient_features">Not enough detail — point at a more textured surface</string>
-    <string name="tracking_camera_unavailable">Camera unavailable — close other camera apps</string>
-
-    <string name="ar_unsupported_title">AR not available</string>
-    <string name="ar_unsupported_body">This device does not support ARCore, so camera measuring is unavailable. The Level tab still works.</string>
-
-    <string name="level_flat">Flat</string>
 </resources>

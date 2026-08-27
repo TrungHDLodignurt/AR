@@ -1,16 +1,14 @@
 package vn.quancua.artapemeasure
 
-import android.Manifest
-import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -21,125 +19,69 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
-import com.google.ar.core.ArCoreApk
-import com.google.ar.core.exceptions.UnavailableException
-import vn.quancua.artapemeasure.level.LevelScreen
-import vn.quancua.artapemeasure.measure.MeasureScreen
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import vn.apero.armeasure.ar.presentation.host.ArMeasureHub
 import vn.quancua.artapemeasure.ui.AppTab
 import vn.quancua.artapemeasure.ui.AppTabBar
 
-/** Whether AR can run at all on this device+install. */
-private enum class ArAvailability { Checking, Ready, Unsupported }
-
+/** `:app` is a demo host proving the module's integration contract: a Measure tab whose body is
+ * just [ArMeasureHub] — every AR/availability/permission concern now lives inside the module. */
 class MainActivity : ComponentActivity() {
-
-    /**
-     * ARCore ships as a separate APK (Google Play Services for AR), so a first run may need to
-     * send the user to the Play Store. After that redirect this must become false, otherwise
-     * every return to the app re-opens the install dialog and the user can never get in.
-     */
-    private var userRequestedInstall = true
-    private var arAvailability by mutableStateOf(ArAvailability.Checking)
-    private var cameraGranted by mutableStateOf(false)
-
-    private val requestCamera = registerForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> cameraGranted = granted }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        cameraGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
-            PackageManager.PERMISSION_GRANTED
-        if (!cameraGranted) requestCamera.launch(Manifest.permission.CAMERA)
-
+        // enableEdgeToEdge()'s default nav bar style is SystemBarStyle.auto(...), which leaves
+        // Window.isNavigationBarContrastEnforced = true — on 3-button nav mode that makes the
+        // platform itself paint a translucent contrast scrim behind the buttons, so the bar still
+        // reads as "visibly painted" even though window.navigationBarColor is transparent. A
+        // non-auto style (dark/light) sets that flag false, giving a genuinely transparent bar so
+        // the app's own capsule nav (AppTabBar) reads as the visual bottom, per design.
+        enableEdgeToEdge(navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
+        hideNavigationBar()
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                AppRoot(
-                    arAvailability = arAvailability,
-                    cameraGranted = cameraGranted,
-                )
-            }
+            MaterialTheme(colorScheme = darkColorScheme()) { AppRoot() }
         }
     }
 
-    /**
-     * Availability is resolved here, not in onCreate: `requestInstall` can navigate away and
-     * come back, and the return trip is another onResume — which is when the install has
-     * actually completed.
-     */
+    // Mirrors the module's own ArNavBarHidingActivity (AR_feature is a separate module, so this
+    // is intentionally a small, standalone duplicate rather than a shared dependency): this demo
+    // host hides the navigation bar so it is a faithful reference integration matching the design
+    // mock (no nav bar on any screen) and the module's own ArCameraActivity/ArPhotoActivity. The
+    // transparent SystemBarStyle above is kept — it only stops the platform's contrast scrim, it
+    // does not hide the bar by itself. Re-applied on onResume/onWindowFocusChanged because a
+    // hidden bar returns after user interaction.
+    private fun hideNavigationBar() {
+        runCatching {
+            val controller = WindowInsetsControllerCompat(window, window.decorView)
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.navigationBars())
+        }
+    }
+
     override fun onResume() {
         super.onResume()
-        try {
-            when (ArCoreApk.getInstance().requestInstall(this, userRequestedInstall)) {
-                ArCoreApk.InstallStatus.INSTALLED -> arAvailability = ArAvailability.Ready
-                ArCoreApk.InstallStatus.INSTALL_REQUESTED -> userRequestedInstall = false
-            }
-        } catch (_: UnavailableException) {
-            // Device not capable, user declined the install, SDK too old, and so on. The Level
-            // tab still works, so this is a degraded app rather than a dead one.
-            arAvailability = ArAvailability.Unsupported
-        }
+        hideNavigationBar()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideNavigationBar()
     }
 }
 
 @Composable
-private fun AppRoot(arAvailability: ArAvailability, cameraGranted: Boolean) {
+private fun AppRoot() {
     var tab by remember { mutableStateOf(AppTab.Measure) }
-
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f).fillMaxSize()) {
             when (tab) {
-                AppTab.Measure -> when {
-                    arAvailability == ArAvailability.Unsupported -> ArUnsupported()
-                    arAvailability == ArAvailability.Checking -> Box(Modifier.fillMaxSize())
-                    !cameraGranted -> CameraDenied()
-                    else -> MeasureScreen()
+                AppTab.Home -> Box(Modifier.fillMaxSize()) {
+                    Text("Home", modifier = Modifier.align(Alignment.Center))
                 }
-                AppTab.Level -> LevelScreen()
+                AppTab.Measure -> ArMeasureHub()
             }
         }
         AppTabBar(selected = tab, onSelect = { tab = it })
-    }
-}
-
-@Composable
-private fun ArUnsupported() {
-    CenteredMessage(
-        title = stringResource(R.string.ar_unsupported_title),
-        body = stringResource(R.string.ar_unsupported_body),
-    )
-}
-
-@Composable
-private fun CameraDenied() {
-    CenteredMessage(
-        title = "Camera permission needed",
-        body = "Measuring uses the camera to understand the room. Grant camera access in Settings to continue.",
-    )
-}
-
-@Composable
-private fun CenteredMessage(title: String, body: String) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Medium)
-        Text(
-            body,
-            color = Color(0xB3FFFFFF),
-            fontSize = 14.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 12.dp),
-        )
     }
 }
