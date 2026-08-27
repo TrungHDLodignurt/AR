@@ -1,6 +1,8 @@
 # Phase 04 — AR screens -> ViewModel, frame stream outside State
 
-Context: [plan.md](plan.md) · depends on phase 01. Status: not started.
+Context: [plan.md](plan.md) · depends on phase 01. Status: **code done** 2026-08-27; the frame
+measurement is outstanding by instruction (one consolidated device round after all phases land).
+Report: [`../reports/fullstack-260827-1926-phase04-ar-mvi.md`](../reports/fullstack-260827-1926-phase04-ar-mvi.md)
 
 ## Goal
 
@@ -47,14 +49,43 @@ Signing a release APK for on-device measurement: `zipalign` then `apksigner` wit
 
 ## Todo
 
-- [ ] `MeasureContract` + `MeasureViewModel` (Distance and DistanceChain share it; `chained` is a ctor arg today)
-- [ ] `ShapeMeasureContract` + `ShapeMeasureViewModel` (Box and Cylinder, `kind` is a ctor arg)
-- [ ] Frame-stream holder, owned by the ViewModel, outside `State`
-- [ ] `ArSessionState` — decide whether it becomes part of the frame holder rather than its own screen
-- [ ] One shared ARCore session must still serve all four tools; the tool identity must not appear in
-      a `key(...)` around `ARSceneView` (README §12)
-- [ ] `compileDebugKotlin` + `testDebugUnitTest`
-- [ ] The frame measurement above
+- [x] `MeasureContract` + `MeasureViewModel` (Distance and DistanceChain share it; `chained` stays a
+      ctor arg — see the decisions below for why it is NOT a `State` field)
+- [x] `ShapeContract` + `ShapeMeasureViewModel` (Box and Cylinder, `kind` same treatment)
+- [x] Frame-stream holder, owned by the ViewModel, outside `State` — `MeasureFrameStream`,
+      `ShapeFrameStream`
+- [x] `ArSessionState` — decided: it **is** the session-level frame stream, renamed
+      `ArSessionFrameStream`, no Contract/ViewModel of its own, still `remember`ed by the screen
+- [x] One shared ARCore session still serves all four tools; `tool` appears in no `key(...)`
+- [x] `compileDebugKotlin` + `testDebugUnitTest` (174 tests / 0 failures / 2 skipped — 174 not 172
+      because phase 02 added two photo tests in parallel)
+- [ ] The frame measurement above — **outstanding by instruction**, procedure written out verbatim in
+      the report so it can be run cold
+
+## Decisions taken while building it
+
+1. **`ArSessionState` -> `ArSessionFrameStream`.** Every field is written from an ARCore callback, so
+   it is frame stream, not state, and it is not a screen. Kept in the screen's `remember` rather than
+   a ViewModel: it describes the session this composition owns, and a ViewModel-scoped copy would
+   outlive that session and open with the previous one's tracking flags.
+2. **A third pair, `ArCameraContract` + `ArCameraViewModel`,** beyond the two the todo listed. The
+   spec's in-`State` list names "selected tool, unit"; those belong to the screen, not to a tool. It
+   also earns the only genuine `persist` in this phase: the active tool goes into the
+   `SavedStateHandle` (the unit is already process-wide in `UnitPreference`; anchors cannot survive
+   at all).
+3. **`chained`/`kind` are ViewModel config, not `State` fields.** Two reasons: they never change, and
+   the base builds its initial state from a field initializer that runs before a subclass's
+   constructor-parameter fields are guaranteed assigned — so any `createInitialState()` reading a
+   ctor arg is a trap. `ArCameraViewModel` seeds from its ctor args in an `init` block instead, which
+   is ordering-safe. Worth knowing for phase 03.
+4. **The drag gesture is a direct ViewModel API, not intents.** Deviates from the spec's "whether a
+   gesture is in progress" living in `State`: the position arrives at touch-event rate, is resolved
+   against a surface inside the frame loop, and `onDragStart` must be visible to the very next
+   `onDrag` — which a `SharedFlow` round trip cannot promise. `draggingIndex` therefore lives in the
+   frame stream, single source of truth, and the chrome asks it the yes/no question directly.
+5. **`releaseAll()` is called from both the screen's `DisposableEffect` and `onCleared()`.** New
+   hazard the conversion introduces: a ViewModel outlives the composition, so without `onCleared`
+   an Activity recreation would leave anchors from a dead session attached.
 
 ## Risk
 

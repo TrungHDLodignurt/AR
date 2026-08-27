@@ -1,7 +1,8 @@
 # Phase 02 — quad/segments/homography in bitmap space
 
 Context: [plan.md](plan.md) · README §15
-Priority: before any conversion. Status: not started.
+Priority: before any conversion. Status: code complete, compile+tests green, device verification outstanding.
+Report: [../reports/fullstack-260827-1926-phase02-bitmap-space.md](../reports/fullstack-260827-1926-phase02-bitmap-space.md)
 
 ## Why first
 
@@ -35,12 +36,12 @@ Modify: `photo/presentation/PhotoMeasureState.kt`, `PhotoQuadCanvas.kt`, `QuadEd
 
 ## Todo
 
-- [ ] Convert `quad` to bitmap space; fix every reader
-- [ ] Convert `Segment` and the draft line
-- [ ] Solve the homography from bitmap-space corners
-- [ ] Delete `onCanvasResized`, `displayCanvas`, and the remap helper if unused
-- [ ] Check the save path (`renderAnnotatedBitmap`) still lands annotations correctly
-- [ ] `compileDebugKotlin` + `testDebugUnitTest`
+- [x] Convert `quad` to bitmap space; fix every reader
+- [x] Convert `Segment` and the draft line
+- [x] Solve the homography from bitmap-space corners
+- [x] Delete `onCanvasResized`, `displayCanvas`, and the remap helper if unused (plus `PhotoAnnotations.toBitmapSpaceSegment`, which became a double conversion)
+- [x] Check the save path (`renderAnnotatedBitmap`) — now draws stored coordinates unconverted, since `toDisplaySpace` is the identity at the photo's own resolution. Needs an eyeball on device (see report)
+- [x] `compileDebugKotlin` + `testDebugUnitTest` — green in an isolated worktree at HEAD (174 tests, 0 failures, 2 pre-existing skips). The main tree cannot compile until the parallel `ar/**` session lands; zero errors under `photo/**`
 
 ## Gate
 

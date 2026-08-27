@@ -412,7 +412,7 @@ that AAR's bundled `proguard.txt`. Re-verify by unzipping the new AAR and checki
 ## 14. Verify the integration
 
 ```bash
-./gradlew :AR_feature:compileDebugKotlin :AR_feature:testDebugUnitTest   # 172 tests, no device
+./gradlew :AR_feature:compileDebugKotlin :AR_feature:testDebugUnitTest   # 185 tests, no device
 ./gradlew :app:assembleDebug
 ./gradlew :app:assembleRelease      # mandatory — see below
 ```
@@ -438,44 +438,66 @@ adb -s <device-serial> install -r app/build/outputs/apk/release/app-release.apk
 human aiming a real phone at a real textured surface — there is no way to script ARCore's camera
 input. Budget for this explicitly; a green build is not evidence the AR tools work.
 
-## 15. Architecture — plain Compose state holders, not MVVM or MVI
+## 15. Architecture — MVI, matching the Apero apps
 
-Stated explicitly because the package layout suggests otherwise. `data/ domain/ presentation/` looks
-like Clean Architecture, but the presentation layer is **not** MVVM or MVI:
+`data/ domain/ presentation/` layering, and the presentation layer is MVI in the same shape as the
+Apero/VSL apps' `core` module: per screen a `XContract.kt` (immutable `data class State`, plus
+`sealed interface Intent` and `Effect`) and a `XViewModel.kt` extending
 
-- **No ViewModel.** Four plain classes hold screen state — `PhotoMeasureState`, `MeasureState`,
-  `ShapeMeasureState`, `ArSessionState` — created in `remember {}` and mutated directly through
-  their own methods (`state.moveQuadCorner(...)`). 31 properties are `by mutableStateOf`.
-- **No Flow, no Intent, no reducer.** Zero `StateFlow`, zero `sealed interface Intent/Effect`, zero
-  `reduce`/`dispatch`. The UI calls a method; Compose's snapshot system invalidates only the
-  composables that read the field that changed.
-- **No DI.** No Koin, no Hilt. `MeasurementImageSaver` is the single injected seam, passed as a plain
-  interface through `ArMeasureConfig`.
+    MviViewModel<S : MviState, I : MviIntent, E : MviEffect>
 
-This is the state-holder pattern Google documents for UI logic that does not need to outlive the
-screen, and for the AR tools it is a deliberate fit: `onFrame` writes tracking state and the live
-measurement on **every ARCore frame**, and a direct `mutableStateOf` write with fine-grained
-invalidation is much cheaper there than rebuilding an immutable state object per frame.
+with `state: StateFlow<S>`, `effect`, `processIntent`, `updateState { copy(...) }` and `sendEffect`.
+Screens are `PhotoMeasure*`, `ArCamera*`, `Measure*` (Distance and the chained variant) and `Shape*`
+(Box and Cylinder).
 
-**Where the choice costs, and it is not theoretical.** "Nothing outlives the screen" is false for
-Picture Measure: it hands the foreground to the OEM camera or the photo picker, so the Activity is
-routinely recreated mid-flow. Everything that must survive that is patched one variable at a time
-with `rememberSaveable` — `chosenReferenceId`, `showPickPhotoSheet`, `showReferenceSheet`,
-`editingReferenceId`, `canvasSize`, and the camera capture's `pendingUri` — plus a `LaunchedEffect`
-that re-resolves the chosen reference once the custom list has loaded. Each of those was a shipped
-bug before it was a fix, and the same class of bug will recur with the next piece of state added.
+The base lives here, in `common/presentation/mvi/`, rather than being reused: this module is
+standalone and cannot depend on another project's `core`. It is `internal`, so a host that already has
+its own `MviState` never sees a second one. Two deliberate differences from the shared version, both
+load-bearing:
 
-The photo bitmap, quad and segments still do **not** survive process death; only the reference choice
-does.
+- **`persist(state)`**, called after every state change. A ViewModel survives a configuration change
+  but dies with the process, so without a single hook every screen that hands the foreground to
+  another app has to remember which individual fields to save. This module previously accumulated six
+  separate `rememberSaveable` patches that way, each shipped as a bug first.
+- **`_state` is `by lazy`.** As a plain field initializer it runs during the *base* class's
+  construction, before a subclass's constructor properties are assigned — so a `createInitialState()`
+  reading a constructor argument silently sees the type default. It compiles and does not warn; the
+  screen just starts in the wrong state. **The shared base in `core` still has this trap.**
 
-Related: `quad`, `segments` and `homography` are stored in **display-space pixels**, so any relayout
-invalidates all three at once — `PhotoMeasureState.onCanvasResized` re-projects them and re-solves
-the calibration. Holding them in bitmap space and projecting at draw time would make that impossible
-rather than handled.
+### Two deliberate exceptions to "everything is State, everything is an Intent"
 
-Both are known and assessed, not overlooked — see
-`plans/reports/report-260827-1910-mvi-conversion-risk.md` for what converting to the house MVI
-convention would and would not fix.
+Both are about event rate, both are documented at the code:
+
+1. **The ARCore frame stream is not `State`.** `onFrame(...)` runs from ARCore's callback at roughly
+   30-60 Hz, writing tracking flags and the live measurement. Routed through
+   `processIntent -> SharedFlow -> handleIntent -> updateState` that is a coroutine dispatch and a
+   whole-state allocation per frame, replacing Compose's per-field invalidation with whole-state
+   invalidation. Those values live in `MeasureFrameStream` / `ShapeFrameStream` /
+   `ArSessionFrameStream`, owned by the ViewModel and read directly by the renderer. Transient render
+   state is not UI state.
+2. **Drag is a direct ViewModel call, not an Intent.** `detectDragGestures` fires on every pointer
+   move, 60-120 times a second, and the intent channel is a zero-buffer `MutableSharedFlow` whose
+   `emit` suspends until the collector catches up. The photo and AR halves reached this independently.
+
+The Joy_4 is why both exist: release cold start there is 648 ms against 2.7 s for a debug build, and
+there is no headroom to spend on a coroutine hop per frame. **Neither exception has been profiled** —
+they are reasoned from the call sites. `plans/260827-1910-mvi-alignment/final-verification-round.md`
+section C carries the measurement that is still owed.
+
+### Coordinates
+
+`quad`, `segments` and the homography are in the photo's **own pixel grid**, not screen pixels, and
+are projected at the draw and gesture edges only (`PhotoCoordinates.kt`). They used to be display-space,
+which meant any relayout invalidated all three at once — that shipped as a quad sitting ~180 px off the
+object, and corrupted a hand-captured measurement fixture badly enough to waste a session of tuning.
+The export path needs no conversion at all now: its draw target *is* the photo's grid, so the same
+projection is the identity there.
+
+### What still does not survive process death
+
+The photo bitmap, the quad and the segments. Only the reference choice, the open sheets and the
+in-progress camera capture Uri do. A `Bundle` has a hard transaction size limit and throws rather than
+truncating, so the bitmap deliberately stays out.
 
 ## 16. Maintenance audits
 

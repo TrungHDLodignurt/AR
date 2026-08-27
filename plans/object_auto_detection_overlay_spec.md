@@ -8,9 +8,10 @@
 > - **No OpenCV.** Detection is pure Kotlin (`photo/domain/imaging/`) plus ML Kit subject
 >   segmentation. Sections naming `OpenCVObjectDetector`, `cv::` calls or OpenCV types describe an
 >   approach that was never adopted.
-> - **No MVVM, no ViewModel.** The presentation layer is plain Compose state-holder classes
->   (`PhotoMeasureState`, `MeasureState`, `ShapeMeasureState`, `ArSessionState`), created in
->   `remember {}`. See `AR_feature/README.md` for what is actually there and what it costs.
+> - **Not MVVM.** The presentation layer is MVI — `XContract.kt` + `XViewModel.kt` over a local
+>   `MviViewModel<S, I, E>`, matching the Apero apps' own convention. It was plain Compose state
+>   holders until 2026-08-27; see `AR_feature/README.md` §15, including the two deliberate exceptions
+>   for the 60 Hz ARCore frame stream and for drag.
 >
 > What the shipped pipeline does instead: tap -> ML Kit subject segmentation -> flood fill from the
 > tap -> convex hull -> largest-area 4 hull vertices -> per-side line fit -> intersect -> a shared
