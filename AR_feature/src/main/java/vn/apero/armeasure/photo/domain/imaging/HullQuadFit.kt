@@ -10,7 +10,7 @@ import kotlin.math.sqrt
  * [minAreaRect] cannot represent what a photograph actually shows. A rectangle shot from anywhere
  * other than straight on projects to a trapezoid whose opposite sides differ in length, and forcing
  * a rectangle onto it leaves a box visibly larger than the object with its corners off every one of
- * them. The homography in `PhotoMeasureState.confirmReference` is a full projective map and wants
+ * them. The homography in `PhotoMeasureReducers.confirmReference` is a full projective map and wants
  * exactly those four skewed corners; handing it a rectangle throws the perspective information away
  * before it can be used.
  *
@@ -191,7 +191,7 @@ private fun isConvex(quad: List<Vec2>): Boolean {
 
 /**
  * Rotates the cycle so `[0] -> [1]` is the longest side, matching the convention
- * `PhotoMeasureState.confirmReference` maps onto the reference object's real long side. Opposite
+ * `PhotoMeasureReducers.confirmReference` maps onto the reference object's real long side. Opposite
  * sides are averaged, since under perspective the two "long" sides differ.
  */
 private fun orient(quad: List<Vec2>): List<Vec2> {

@@ -5,7 +5,7 @@ import kotlin.math.hypot
 
 /**
  * Smallest-area enclosing rectangle of a point set, at any rotation, as 4 corners ordered so that
- * `[0] -> [1]` is the LONGER side — the convention `PhotoMeasureState.confirmReference` maps onto the
+ * `[0] -> [1]` is the LONGER side — the convention `PhotoMeasureReducers.confirmReference` maps onto the
  * reference object's real long side.
  *
  * This is what turns a segmentation mask into a measurable quad. Unlike the Canny+Hough path it needs

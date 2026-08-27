@@ -22,24 +22,34 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import vn.apero.armeasure.common.ui.drawLabelPill
 import vn.apero.armeasure.common.ui.labelTextColorFor
+import vn.apero.armeasure.photo.domain.imaging.Vec2
 import vn.apero.armeasure.photo.domain.imaging.aspectFit
-import vn.apero.armeasure.photo.domain.imaging.toBitmapSpace
+import vn.apero.armeasure.photo.domain.imaging.toDisplaySpace
 
 /** A dark halo behind the line/endpoints so a bright user-chosen colour still reads over a light photo (insight 6). */
 private val LineHalo = Color(0x59000000)
 
+/**
+ * The draw edge: a stored bitmap-space [point] projected into wherever this draw scope is painting
+ * the photo. On screen that undoes the aspect-fit letterbox; in [renderAnnotatedBitmap], where the
+ * draw target IS the photo's own resolution, it is the identity — which is exactly why the export
+ * path no longer converts anything itself.
+ */
+private fun DrawScope.displayOf(point: Vec2, photo: ImageBitmap): Offset =
+    toDisplaySpace(point, photo.width.toFloat(), photo.height.toFloat(), size.width, size.height).toOffset()
+
 /** Just the line + its two endpoint dots, no label — the part every draw path below shares. */
-private fun DrawScope.drawSegmentStroke(line: LiveLine, color: Color) {
-    drawLine(LineHalo, line.start, line.end, strokeWidth = 4.dp.toPx())
-    drawLine(color, line.start, line.end, strokeWidth = 2.dp.toPx())
-    drawCircle(LineHalo, radius = 7.dp.toPx(), center = line.start)
-    drawCircle(color, radius = 5.dp.toPx(), center = line.start)
-    drawCircle(LineHalo, radius = 7.dp.toPx(), center = line.end)
-    drawCircle(color, radius = 5.dp.toPx(), center = line.end)
+private fun DrawScope.drawSegmentStroke(start: Offset, end: Offset, color: Color) {
+    drawLine(LineHalo, start, end, strokeWidth = 4.dp.toPx())
+    drawLine(color, start, end, strokeWidth = 2.dp.toPx())
+    drawCircle(LineHalo, radius = 7.dp.toPx(), center = start)
+    drawCircle(color, radius = 5.dp.toPx(), center = start)
+    drawCircle(LineHalo, radius = 7.dp.toPx(), center = end)
+    drawCircle(color, radius = 5.dp.toPx(), center = end)
 }
 
-private fun DrawScope.drawSegmentLabel(line: LiveLine, label: String, color: Color, textMeasurer: TextMeasurer) {
-    val mid = Offset((line.start.x + line.end.x) / 2f, (line.start.y + line.end.y) / 2f)
+private fun DrawScope.drawSegmentLabel(start: Offset, end: Offset, label: String, color: Color, textMeasurer: TextMeasurer) {
+    val mid = Offset((start.x + end.x) / 2f, (start.y + end.y) / 2f)
     val style = TextStyle(color = labelTextColorFor(color), fontSize = 13.sp, fontWeight = FontWeight.Bold)
     drawLabelPill(textMeasurer, label, mid, style, backgroundColor = color)
 }
@@ -60,8 +70,10 @@ internal fun DrawScope.drawPhotoAnnotations(
 ) {
     drawPlainPhoto(photo)
     if (line == null) return
-    drawSegmentStroke(line, lineColor)
-    if (label != null) drawSegmentLabel(line, label, lineColor, textMeasurer)
+    val start = displayOf(line.start, photo)
+    val end = displayOf(line.end, photo)
+    drawSegmentStroke(start, end, lineColor)
+    if (label != null) drawSegmentLabel(start, end, label, lineColor, textMeasurer)
 }
 
 /**
@@ -72,7 +84,7 @@ internal fun DrawScope.drawPhotoAnnotations(
  */
 internal fun DrawScope.drawCommittedSegmentStrokes(photo: ImageBitmap, segments: List<Segment>) {
     drawPlainPhoto(photo)
-    segments.forEach { drawSegmentStroke(LiveLine(it.start, it.end), it.color) }
+    segments.forEach { drawSegmentStroke(displayOf(it.start, photo), displayOf(it.end, photo), it.color) }
 }
 
 /**
@@ -83,9 +95,10 @@ internal fun DrawScope.drawCommittedSegmentStrokes(photo: ImageBitmap, segments:
 internal fun DrawScope.drawExportSegments(photo: ImageBitmap, segments: List<Pair<Segment, String?>>, textMeasurer: TextMeasurer) {
     drawPlainPhoto(photo)
     segments.forEach { (segment, label) ->
-        val line = LiveLine(segment.start, segment.end)
-        drawSegmentStroke(line, segment.color)
-        if (label != null) drawSegmentLabel(line, label, segment.color, textMeasurer)
+        val start = displayOf(segment.start, photo)
+        val end = displayOf(segment.end, photo)
+        drawSegmentStroke(start, end, segment.color)
+        if (label != null) drawSegmentLabel(start, end, label, segment.color, textMeasurer)
     }
 }
 
@@ -107,9 +120,9 @@ private fun DrawScope.drawPlainPhoto(photo: ImageBitmap) {
 /**
  * Renders [photo] plus every committed segment into a fresh [Bitmap] at the photo's own
  * resolution — the file [PhotoMeasureScreen]'s "Lưu" saves: the original photo with every
- * measurement drawn over it, no watermark. [onScreenCanvasSize] is the size [segments]'
- * coordinates were captured in (SCR-23's own canvas), used to map them into the export bitmap's
- * own pixel grid before drawing.
+ * measurement drawn over it, no watermark. [segments] are already in the photo's own pixel grid, and
+ * the draw target here is that same grid, so there is no on-screen canvas size to pass in and
+ * nothing to remap: what was measured is drawn exactly where it was measured.
  *
  * The caller recycles the result; this function never does, since a caller that also draws it to
  * screen first would then have nothing left to draw.
@@ -117,28 +130,14 @@ private fun DrawScope.drawPlainPhoto(photo: ImageBitmap) {
 internal fun renderAnnotatedBitmap(
     photo: Bitmap,
     segments: List<Pair<Segment, String?>>,
-    onScreenCanvasSize: IntSize,
     textMeasurer: TextMeasurer,
     density: Density,
 ): Bitmap {
-    val exportSegments = segments.map { (segment, label) -> toBitmapSpaceSegment(segment, photo, onScreenCanvasSize) to label }
     val imageBitmap = ImageBitmap(photo.width, photo.height)
     val canvas = Canvas(imageBitmap)
     val size = Size(photo.width.toFloat(), photo.height.toFloat())
     CanvasDrawScope().draw(density, LayoutDirection.Ltr, canvas, size) {
-        drawExportSegments(photo.asImageBitmap(), exportSegments, textMeasurer)
+        drawExportSegments(photo.asImageBitmap(), segments, textMeasurer)
     }
     return imageBitmap.asAndroidBitmap()
-}
-
-/** [segment]'s on-screen pixels -> [photo]'s own pixel grid, undoing the aspect-fit letterbox [drawPlainPhoto] applies on screen. */
-private fun toBitmapSpaceSegment(segment: Segment, photo: Bitmap, canvasSize: IntSize): Segment {
-    fun convert(point: Offset) = toBitmapSpace(
-        point.toVec2(),
-        photo.width.toFloat(),
-        photo.height.toFloat(),
-        canvasSize.width.toFloat(),
-        canvasSize.height.toFloat(),
-    ).toOffset()
-    return segment.copy(start = convert(segment.start), end = convert(segment.end))
 }

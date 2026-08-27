@@ -15,7 +15,7 @@ import kotlinx.coroutines.withContext
  * `BitmapFactory` decodes raw pixels only — it ignores the EXIF orientation tag a phone camera
  * writes, so a photo taken in portrait can decode sideways. That would silently rotate the
  * quad the user drags relative to the reference object's real edges, which breaks the long/short
- * side convention `PhotoMeasureState.confirmReference` relies on. `android.media.ExifInterface`
+ * side convention `PhotoMeasureReducers.confirmReference` relies on. `android.media.ExifInterface`
  * has taken an `InputStream` since API 24 — this app's floor — so no extra dependency is needed.
  *
  * Also downscales long photos: a 12+ MP camera photo is far more resolution than a screen can

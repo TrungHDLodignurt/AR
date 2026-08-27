@@ -11,7 +11,7 @@ import vn.apero.armeasure.photo.domain.imaging.detectQuadInGrayscale
  * [tapPointBitmapSpace] and returns the 4 corners of the most plausible surrounding rectangle,
  * in the same bitmap-pixel coordinate space as the input point — or null if nothing plausible
  * was found, in which case the caller falls back to a plain default box (see
- * `PhotoMeasureState.revealQuadAt`).
+ * `PhotoMeasureContract.Intent.TapToReveal`).
  *
  * This is the "no ML, no license risk" alternative to ARuler's FastSAM-based auto-fit: it can't
  * segment an arbitrary object, but a reference object is always a plain rectangle, and a

@@ -12,15 +12,16 @@ import org.junit.Test
  *
  * **Both assertions are currently disabled, and the fixture's ground truth is known to be wrong.**
  * It was captured by dragging the quad onto the object on-device, but the screen was reflowing between
- * detection and confirmation — quad/segments/homography are display-space, so all three were left
- * about 180px behind on a 2048px-tall photo. Measuring per-edge luminance contrast afterwards settled
+ * detection and confirmation — quad/segments/homography were display-space at the time, so all three
+ * were left about 180px behind on a 2048px-tall photo. They are stored in the bitmap's own pixel grid
+ * now, which is what makes that particular corruption impossible rather than merely handled. Measuring per-edge luminance contrast afterwards settled
  * it: the captured quad sits on a real boundary on one side out of four, while the detector's own quad
  * sits on one on all four. Every IoU figure derived from it (0.263, 0.376, 0.43) is meaningless, and
  * so is the conclusion drawn from them that the photo was unwinnable.
  *
  * The harness itself is sound and worth keeping — it runs production code over real pixels in about
  * seven seconds, which is the only way to compare two candidate algorithms on identical input. What it
- * needs is a fresh capture on a build with `PhotoMeasureState.onCanvasResized`, plus the per-edge
+ * needs is a fresh capture on a current build (bitmap-space coordinates), plus the per-edge
  * contrast check run over any new capture BEFORE it is trusted. That check is what caught this one.
  *
  * Re-enabling: replace `groundTruth` below, delete both `@Ignore`s, and set `BaselineIoU` to whatever

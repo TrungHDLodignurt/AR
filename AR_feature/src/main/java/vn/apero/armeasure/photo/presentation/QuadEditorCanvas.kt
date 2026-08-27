@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import vn.apero.armeasure.common.ui.drawLabelPill
+import vn.apero.armeasure.photo.domain.imaging.Vec2
 import vn.apero.armeasure.photo.domain.imaging.aspectFit
 
 private val LongEdgeColor = Color(0xFF64D2FF)
@@ -40,17 +41,27 @@ private val EdgeLabelText = Color(0xFF1C1C1E)
  * Top/bottom edges are always the "long side", left/right the "short side" — labelled directly
  * on the edges the way ARuler does, rather than leaving orientation to be inferred from colour
  * alone.
+ *
+ * [quad] arrives in the photo's own bitmap pixels (see `PhotoMeasureContract.State`) and is projected into
+ * this composable's display pixels here, once per frame, purely to draw it and to place the
+ * handles. Drags travel the other way: [onCornerDrag] reports a bitmap-space corner, converted on
+ * the way out, so the caller never sees a screen coordinate.
  */
 @Composable
 internal fun QuadEditorCanvas(
     photo: ImageBitmap,
-    quad: List<Offset>,
-    onCornerDrag: (index: Int, newPosition: Offset) -> Unit,
+    quad: List<Vec2>,
+    onCornerDrag: (index: Int, newPosition: Vec2) -> Unit,
     modifier: Modifier = Modifier,
     onCornerDragEnd: () -> Unit = {},
 ) {
     val textMeasurer = rememberTextMeasurer()
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+
+    // bitmap space -> display space, for this frame's canvas only. Empty until the box has been
+    // measured, so the quad is never briefly drawn against a zero-sized canvas (which would collapse
+    // every corner onto the top-left).
+    val displayQuad = if (canvasSize == IntSize.Zero) emptyList() else quad.map { it.toDisplayOffsetIn(photo, canvasSize) }
 
     Box(modifier = modifier.fillMaxSize().onSizeChanged { canvasSize = it }) {
         Canvas(Modifier.fillMaxSize()) {
@@ -60,13 +71,14 @@ internal fun QuadEditorCanvas(
                 dstOffset = IntOffset(fit.offsetX.roundToInt(), fit.offsetY.roundToInt()),
                 dstSize = IntSize(fit.width.roundToInt(), fit.height.roundToInt()),
             )
-            if (quad.size == 4) drawQuadWithEdgeLabels(quad, textMeasurer)
+            if (displayQuad.size == 4) drawQuadWithEdgeLabels(displayQuad, textMeasurer)
         }
 
         DraggableHandlesOverlay(
             photo = photo,
-            points = quad,
-            onPointDrag = onCornerDrag,
+            points = displayQuad,
+            // display space in, bitmap space out — the gesture edge.
+            onPointDrag = { index, position -> onCornerDrag(index, position.toBitmapSpaceIn(photo, canvasSize)) },
             canvasSize = canvasSize,
             modifier = Modifier.fillMaxSize(),
             onPointDragEnd = { onCornerDragEnd() },

@@ -20,10 +20,13 @@ import androidx.compose.ui.unit.IntSize
 import vn.apero.armeasure.R
 import vn.apero.armeasure.common.domain.formatLength
 import vn.apero.armeasure.common.ui.ArMeasureTokens
+import vn.apero.armeasure.photo.domain.imaging.Vec2
+import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.Intent
+import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.State
 
 /**
  * SCR-24 ("AR Adjust", design `kYLQt`) — a distinct screen (not an overlay) for drawing exactly
- * one segment, selected the same way [PhotoMeasureState.isEditingQuad] already swaps SCR-22 back
+ * one segment, selected the same way [State.isEditingQuad] already swaps SCR-22 back
  * in over SCR-23: an in-Activity state flag, not a second `Activity` or a nav-graph destination.
  * [ArPhotoActivity]'s own KDoc already documents "no NavHost" as this module's navigation model,
  * and a full `Activity` per screen would tear down and rebuild the loaded photo `Bitmap` for no
@@ -34,49 +37,54 @@ import vn.apero.armeasure.common.ui.ArMeasureTokens
  * — which is why it reuses [drawPhotoAnnotations], [DraggableHandlesOverlay], [MagnifierLoupe] and
  * [ColorPickerBar] verbatim rather than rebuilding any of them.
  *
- * [targetCanvasSize] is SCR-23's own last-measured canvas size (this screen has no way to measure
- * a screen it isn't showing) — needed because this screen's own photo box is a *different* size,
- * so every distance readout and the eventual commit must remap through
- * [PhotoMeasureState.commitDrawnSegment] / [PhotoMeasureState.draftDistanceMm] rather than treating
- * the two canvases as interchangeable.
+ * This screen's photo box is a *different* size from SCR-23's, which used to matter a great deal:
+ * the draft had to be remapped between the two canvases at commit time and for every distance
+ * readout. It no longer does. The draft is stored in the photo's own bitmap pixels, so this screen
+ * needs to know nothing about SCR-23's canvas — only its own, and only to paint with.
  */
 @Composable
 internal fun LineDrawScreen(
     photo: ImageBitmap,
-    state: PhotoMeasureState,
-    targetCanvasSize: IntSize,
-    onCommitted: (Segment) -> Unit,
+    state: State,
+    onIntent: (Intent) -> Unit,
+    // Direct callback, not an Intent — see PhotoMeasureViewModel's drag methods.
+    onDraftEndpointDrag: (isStart: Boolean, position: Vec2) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val textMeasurer = rememberTextMeasurer()
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
-    LaunchedEffect(canvasSize) {
-        if (canvasSize != IntSize.Zero) state.placeDraftInitial(canvasSize.width.toFloat(), canvasSize.height.toFloat())
+    // The initial draft is placed in bitmap space, so it no longer waits on this screen's own box
+    // being measured — the photo's dimensions are all it needs.
+    LaunchedEffect(photo) {
+        onIntent(Intent.PlaceDraftInitial(photo.width.toFloat(), photo.height.toFloat()))
     }
 
     Column(modifier = modifier.fillMaxSize().background(ArMeasureTokens.BgPrimary)) {
         LineDrawTopNav(
             title = stringResource(R.string.armeasure_photo_line_draw_title),
-            onCancel = { state.cancelDrawSegment() },
-            onCommit = {
-                state.commitDrawnSegment(photo.width.toFloat(), photo.height.toFloat(), canvasSize, targetCanvasSize)
-                state.segments.lastOrNull()?.let(onCommitted)
-            },
+            onCancel = { onIntent(Intent.CancelDraft) },
+            // The committed segment is reported to the host by
+            // PhotoMeasureContract.Effect.MeasurementCompleted, not from here — this screen no
+            // longer has to read the segment list back to find out what it just committed.
+            onCommit = { onIntent(Intent.CommitDraft) },
         )
 
         Box(modifier = Modifier.weight(1f).fillMaxSize().onSizeChanged { canvasSize = it }) {
             val draft = state.draftLine
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val label = state.draftDistanceMm(photo.width.toFloat(), photo.height.toFloat(), canvasSize, targetCanvasSize)
-                    ?.let { formatLength(it / 1000f, state.unit) }
+                val label = state.draftDistanceMm()?.let { formatLength(it / 1000f, state.unit) }
                 drawPhotoAnnotations(photo, draft, label, state.draftColor, textMeasurer)
             }
-            if (draft != null) {
+            if (draft != null && canvasSize != IntSize.Zero) {
                 DraggableHandlesOverlay(
                     photo = photo,
-                    points = listOf(draft.start, draft.end),
-                    onPointDrag = { index, position -> state.moveDraftEndpoint(index == 0, position) },
+                    // bitmap space -> display space, to position the two handles on this canvas.
+                    points = listOf(draft.start.toDisplayOffsetIn(photo, canvasSize), draft.end.toDisplayOffsetIn(photo, canvasSize)),
+                    // ...and display space -> bitmap space on the way back out.
+                    onPointDrag = { index, position ->
+                        onDraftEndpointDrag(index == 0, position.toBitmapSpaceIn(photo, canvasSize))
+                    },
                     canvasSize = canvasSize,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -85,9 +93,9 @@ internal fun LineDrawScreen(
 
         ColorPickerBar(
             selected = state.draftColor,
-            onSelect = state::setDraftColor,
+            onSelect = { onIntent(Intent.SetDraftColor(it)) },
             unit = state.unit,
-            onSelectUnit = state::setUnit,
+            onSelectUnit = { onIntent(Intent.SetUnit(it)) },
         )
     }
 }

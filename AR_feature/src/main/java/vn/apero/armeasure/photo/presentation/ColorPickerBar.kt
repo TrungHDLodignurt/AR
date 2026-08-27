@@ -39,7 +39,7 @@ import vn.apero.armeasure.common.ui.UnitMenu
  * the design's raw `#EB3232` — at the original hex neither white nor [ArMeasureTokens.TextPrimary]
  * label text clears WCAG AA against it (best case ~4.17:1; see `LabelContrastTest`), and per this
  * phase's own success criteria "if a palette colour cannot clear it, the palette changes, not the
- * test". The other four clear 4.5:1 unchanged. [PhotoMeasureState] seeds its default line colour
+ * test". The other four clear 4.5:1 unchanged. `PhotoMeasureContract.State` seeds its default line colour
  * from [first], matching the design's own selected dot.
  */
 internal val PhotoLineColors = listOf(

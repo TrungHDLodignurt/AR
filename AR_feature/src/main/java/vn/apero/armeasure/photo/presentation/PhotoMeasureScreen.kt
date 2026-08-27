@@ -1,6 +1,7 @@
 package vn.apero.armeasure.photo.presentation
 
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -17,21 +18,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.listSaver
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -39,35 +32,28 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.lifecycle.createSavedStateHandle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import vn.apero.armeasure.MeasurementImageSaver
 import vn.apero.armeasure.R
-import vn.apero.armeasure.common.data.DefaultUnit
 import vn.apero.armeasure.common.data.UnitPreference
-import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
 import vn.apero.armeasure.common.domain.formatLength
 import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.photo.data.CustomReferenceStore
 import vn.apero.armeasure.photo.data.discardCameraCapture
 import vn.apero.armeasure.photo.data.loadRotatedBitmap
-import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
 import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
-
-/**
- * [IntSize] is an inline value class over a packed Long — neither Parcelable nor Serializable, so
- * the saved-state bundle cannot take it as-is. Its two ints are all there is to it, hence a plain
- * [listSaver] rather than anything cleverer.
- */
-private val IntSizeSaver: Saver<IntSize, Any> = listSaver(
-    save = { listOf(it.width, it.height) },
-    restore = { IntSize(it[0], it[1]) },
-)
+import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.Effect
+import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.Intent
 
 /**
  * "Measure from a photo" — no ARCore, no camera-ar feature, no depth. A rectangle of known size
@@ -75,31 +61,27 @@ private val IntSizeSaver: Saver<IntSize, Any> = listSaver(
  * two points on a still photo be measured, distorted-perspective photo included. See
  * `Homography.kt` for the maths this ports from ARuler's "Photoruler".
  *
- * Built to SCR-21 (place the quad) / SCR-22 (adjust + confirm it) / SCR-23 (edit the measuring
- * line, which also hosts "Chỉnh sửa tỉ lệ" back into the SCR-22 quad editor without losing the
- * line — see [PhotoMeasureState.beginEditQuad]).
+ * Built to SCR-21 (place the quad) / SCR-22 (adjust + confirm it) / SCR-23 (the segment list, which
+ * also hosts "Chỉnh sửa tỉ lệ" back into the SCR-22 quad editor) / SCR-24 ([LineDrawScreen]).
+ *
+ * All state lives in [PhotoMeasureViewModel]; this composable renders it and posts [Intent]s. The
+ * six `rememberSaveable` patches this screen used to carry are gone — what survives process death
+ * is now one decision, [PhotoMeasureViewModel.persist]. The single exception, deliberately left
+ * where it is, is the camera capture's `pendingUri` in `CameraCapture.kt`.
  *
  * @param referenceStore passed in rather than constructed here so this composable stays
  *   host-agnostic; in practice the only caller, [ArPhotoActivity], constructs and owns the one
- *   instance itself (see its own KDoc for why that reverses an earlier "host always constructs
- *   the store" decision).
- * @param imageSaver where "Lưu" writes the finished annotated photo; the caller ([ArPhotoActivity])
- *   defaults this to the module's own `MediaStoreImageSaver` when a host hasn't installed one via
- *   `ArMeasureConfig`.
- * @param unit fallback display unit for the very first launch, before [UnitPreference] holds any
- *   value; the persisted, process-wide unit choice (shared with the AR tools) takes over from
- *   then on — see decision 8.
- * @param onResult emitted once per completed measurement gesture (drag-end or first placement),
- *   never per drag frame.
- * @param onClose null renders no close affordance (today's chrome, unchanged); non-null renders
- *   a "✕" the host can wire to its own navigation.
+ *   instance itself.
+ * @param imageSaver where "Lưu" writes the finished annotated photo.
+ * @param onResult emitted once per completed measurement gesture, never per drag frame.
+ * @param onClose null renders no close affordance; non-null renders a "✕" the host can wire to its
+ *   own navigation.
  */
 @Composable
 internal fun PhotoMeasureScreen(
     referenceStore: CustomReferenceStore,
     imageSaver: MeasurementImageSaver,
     modifier: Modifier = Modifier,
-    unit: LengthUnit = DefaultUnit,
     onResult: (MeasurementResult.Photo) -> Unit = {},
     onClose: (() -> Unit)? = null,
 ) {
@@ -112,131 +94,107 @@ internal fun PhotoMeasureScreen(
     val saveSuccessMessage = stringResource(R.string.armeasure_photo_save_success)
     val saveFailureMessage = stringResource(R.string.armeasure_photo_save_failure)
     val unitPreference = remember { UnitPreference(context) }
-    // unitPreference.unit already falls back to DefaultUnit on a first-ever launch — same value as
-    // the unit param's own default, so the persisted store is the single seed.
-    val state = remember { PhotoMeasureState(initialUnit = unitPreference.unit) }
-    LaunchedEffect(state.unit) { unitPreference.save(state.unit) }
-    // Loaded after first composition, not during it: the store reads a prefs file off disk and
-    // parses JSON, and can write a migration back. The grid renders empty for one frame, which is
-    // correct — nothing is known yet — rather than blocking the frame to find out.
-    val customReferences = remember { mutableStateListOf<ReferenceObject>() }
-    LaunchedEffect(referenceStore) {
-        customReferences.clear()
-        customReferences.addAll(referenceStore.loadAll())
-    }
 
-    // All five below are rememberSaveable, not remember: picking a photo hands the foreground to
-    // the OEM camera/gallery activity, which routinely recreates this activity (config change, or
-    // the whole process being reclaimed while backgrounded). With plain `remember` the flow snapped
-    // all the way back to the reference picker on return, losing the step the user was on.
-    //
-    // The chosen reference is saved as its id rather than the object: ReferenceObject is a plain
-    // data class (not Parcelable/Serializable) and re-resolving it from `customReferences` — which
-    // is reloaded from the store above anyway — is both cheaper and always in sync with an edit
-    // that happened in between. Null means "still on the picker", which also carries what the old
-    // `referenceChosen` boolean said, so there is only one source of truth for that step.
-    var chosenReferenceId by rememberSaveable { mutableStateOf<String?>(null) }
-    // Restoring this true is what makes the picker survive at all: PickPhotoSheet owns the
-    // ActivityResult launchers, so the sheet has to be composed again for the picked Uri to land.
-    var showPickPhotoSheet by rememberSaveable { mutableStateOf(false) }
-    var showReferenceSheet by rememberSaveable { mutableStateOf(false) }
-    // Same id-not-object reasoning as chosenReferenceId; only custom objects are editable
-    // (ReferencePickerScreen wires onEdit from the customs grid only), so the id always resolves
-    // against customReferences. Null = "add new", which is exactly what a stale id degrades to.
-    var editingReferenceId by rememberSaveable { mutableStateOf<String?>(null) }
-    var canvasSize by rememberSaveable(stateSaver = IntSizeSaver) { mutableStateOf(IntSize.Zero) }
+    // The factory is remembered so it is not rebuilt every recomposition; viewModel() only consults
+    // it on first creation anyway. createSavedStateHandle() is what ties the four persisted fields
+    // to the Activity's saved state — the ViewModel itself survives a configuration change, and the
+    // handle is what carries it through process death on top of that.
+    val viewModel: PhotoMeasureViewModel = viewModel(
+        factory = remember(referenceStore) {
+            viewModelFactory {
+                initializer {
+                    PhotoMeasureViewModel(
+                        savedState = createSavedStateHandle(),
+                        referenceStore = referenceStore,
+                        // unitPreference.unit already falls back to DefaultUnit on a first-ever
+                        // launch, so the persisted store is the single seed for the unit.
+                        initialUnit = unitPreference.unit,
+                        persistUnit = { unitPreference.save(it) },
+                    )
+                }
+            }
+        },
+    )
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val photo by viewModel.photo.collectAsStateWithLifecycle()
 
-    val referenceChosen = chosenReferenceId != null
-
-    // state.reference is not saveable either (PhotoMeasureState is a plain remember), so without
-    // this a restored chosenReferenceId would show the flow past the picker while the state still
-    // held the default A4 — silently measuring against the wrong object.
-    //
-    // Keyed on the custom list's size as well as the id, because that list arrives asynchronously:
-    // on the first pass after a restore it is still empty, so a CUSTOM reference cannot be resolved
-    // and the screen would sit on A4 while displaying the restored flow. Re-running once the store
-    // has loaded is what actually recovers it. Built-ins never had the problem — they are a static
-    // list — which is why this only ever showed up for user-created objects.
-    LaunchedEffect(chosenReferenceId, customReferences.size) {
-        val id = chosenReferenceId ?: return@LaunchedEffect
-        if (state.reference.id != id) {
-            (builtInReferenceObjects + customReferences).firstOrNull { it.id == id }?.let { state.reference = it }
+    LaunchedEffect(viewModel) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                is Effect.MeasurementCompleted -> onResult(effect.result)
+            }
         }
     }
 
-    fun selectReference(reference: ReferenceObject) {
-        state.reference = reference
-        chosenReferenceId = reference.id
-        showPickPhotoSheet = true
-    }
-
-    fun emitResult(segment: Segment) {
-        val distanceMm = state.distanceMmFor(segment) ?: return
-        onResult(MeasurementResult.Photo(distanceMm / 1000f, state.unit))
-    }
-
     fun requestSave() {
-        val photo = state.photo ?: return
+        val bitmap = photo ?: return
         val labeledSegments = state.segments.map { segment ->
             segment to state.distanceMmFor(segment)?.let { formatLength(it / 1000f, state.unit) }
         }
         coroutineScope.launch {
-            val uri = performSave(photo, labeledSegments, canvasSize, textMeasurer, density, imageSaver)
+            val uri = performSave(bitmap, labeledSegments, textMeasurer, density, imageSaver)
             Toast.makeText(context, if (uri != null) saveSuccessMessage else saveFailureMessage, Toast.LENGTH_SHORT).show()
         }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
+        val reference = state.reference
         when {
-            !referenceChosen -> {
+            !state.referenceChosen -> {
                 ReferencePickerScreen(
                     builtIns = builtInReferenceObjects,
-                    customs = customReferences,
+                    customs = state.customReferences,
                     unit = state.unit,
-                    onSelect = { selectReference(it) },
-                    onAddNew = { editingReferenceId = null; showReferenceSheet = true },
-                    onEdit = { editingReferenceId = it.id; showReferenceSheet = true },
+                    onSelect = { viewModel.processIntent(Intent.SelectReference(it)) },
+                    onAddNew = { viewModel.processIntent(Intent.AddNewReferenceRequested) },
+                    onEdit = { viewModel.processIntent(Intent.EditReferenceRequested(it)) },
                     onBack = { onClose?.invoke() },
                 )
             }
 
-            state.photo == null -> {
+            // Chosen but not resolvable yet — only reachable for a CUSTOM reference in the frame or
+            // two before the store's async load lands. Rendering the background rather than falling
+            // back to A4 is the point: the old fallback is exactly how a restored custom reference
+            // came back as "A4 paper" and measured against the wrong object.
+            reference == null -> Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1C1C1E)))
+
+            photo == null -> {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1C1C1E))) {
                     WaitingForPhoto(
-                        referenceLabel = state.reference.label,
-                        onPickPhoto = { showPickPhotoSheet = true },
-                        onChangeReference = { chosenReferenceId = null },
+                        referenceLabel = reference.label,
+                        onPickPhoto = { viewModel.processIntent(Intent.PickPhotoRequested) },
+                        onChangeReference = { viewModel.processIntent(Intent.ChangeReference) },
                         onClose = onClose,
                     )
                 }
             }
 
             state.isDrawingSegment -> {
-                val imageBitmap = remember(state.photo) { state.photo!!.asImageBitmap() }
+                val imageBitmap = remember(photo) { photo!!.asImageBitmap() }
                 LineDrawScreen(
                     photo = imageBitmap,
                     state = state,
-                    targetCanvasSize = canvasSize,
-                    onCommitted = { emitResult(it) },
+                    onIntent = viewModel::processIntent,
+                    onDraftEndpointDrag = viewModel::onDraftEndpointDrag,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
 
             else -> {
-                val imageBitmap = remember(state.photo) { state.photo!!.asImageBitmap() }
+                val imageBitmap = remember(photo) { photo!!.asImageBitmap() }
                 val hasEverCalibrated = state.isCalibrated || state.isEditingQuad
                 val awaitingQuadConfirm = state.quad.size == 4 && (!state.isCalibrated || state.isEditingQuad)
                 val saveSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
-                // BgPrimary, not the old screen-wide 0xFF1C1C1E — SCR-21/22/23 all show the
-                // cream app background around the aspect-fit photo, not a black letterbox.
+                // BgPrimary, not a screen-wide 0xFF1C1C1E — SCR-21/22/23 all show the cream app
+                // background around the aspect-fit photo, not a black letterbox.
                 Column(modifier = Modifier.fillMaxSize().background(ArMeasureTokens.BgPrimary)) {
                     PhotoTopNav(
-                        onBack = { state.discardPhoto() },
+                        onBack = { viewModel.processIntent(Intent.DiscardPhoto) },
                         canUndo = state.canUndo,
-                        onUndo = state::undo,
+                        onUndo = { viewModel.processIntent(Intent.Undo) },
                         canRedo = state.canRedo,
-                        onRedo = state::redo,
+                        onRedo = { viewModel.processIntent(Intent.Redo) },
                         showUndoRedoAndSave = hasEverCalibrated,
                         saveSupported = saveSupported,
                         saveEnabled = state.isCalibrated,
@@ -244,8 +202,8 @@ internal fun PhotoMeasureScreen(
                     )
 
                     if (!hasEverCalibrated) {
-                        val placeText = stringResource(R.string.armeasure_photo_instruction_place, state.reference.label)
-                        val adjustText = stringResource(R.string.armeasure_photo_instruction_adjust, state.reference.label)
+                        val placeText = stringResource(R.string.armeasure_photo_instruction_place, reference.label)
+                        val adjustText = stringResource(R.string.armeasure_photo_instruction_adjust, reference.label)
                         val showPlace = state.quad.isEmpty()
                         // The unused wording is handed over as the sizing ghost so this box always
                         // measures to the taller of the two: the swap the moment a quad appears must
@@ -258,27 +216,23 @@ internal fun PhotoMeasureScreen(
                         )
                     }
 
-                    // The weighted Box below takes exactly the space left between the top nav and
-                    // the bottom slot/toolbar; PhotoQuadCanvas's own aspect-fit always centres the
-                    // photo within whatever box it is given, so the photo is centred between those
-                    // two — no hardcoded offset needed for either edge.
+                    // The weighted Box takes exactly the space left between the top nav and the
+                    // bottom slot/toolbar; PhotoQuadCanvas's own aspect-fit always centres the photo
+                    // within whatever box it is given.
                     Box(modifier = Modifier.weight(1f).fillMaxSize()) {
                         PhotoQuadCanvas(
                             photo = imageBitmap,
                             state = state,
-                            // The quad/segments/calibration are display-space, so the state has to
-                            // be told before anything is drawn against a new size.
-                            modifier = Modifier.fillMaxSize().onSizeChanged {
-                                state.onCanvasResized(it)
-                                canvasSize = it
-                            },
+                            onIntent = viewModel::processIntent,
+                            onCornerDrag = viewModel::onCornerDrag,
+                            onCornerDragEnded = viewModel::onCornerDragEnded,
+                            modifier = Modifier.fillMaxSize(),
                         )
                         if (awaitingQuadConfirm && hasEverCalibrated) {
-                            // Re-editing the quad from SCR-23 (state.beginEditQuad): the confirm
-                            // affordance stays an overlay here, exactly as before, so SCR-23/24's
-                            // already-verified layout below is untouched by this change.
+                            // Re-editing the quad from SCR-23: the confirm affordance stays an
+                            // overlay here, so SCR-23/24's already-verified layout is untouched.
                             CheckmarkBtn(
-                                onClick = { state.confirmReference() },
+                                onClick = { viewModel.processIntent(Intent.ConfirmReference) },
                                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 32.dp),
                             )
                         }
@@ -286,85 +240,55 @@ internal fun PhotoMeasureScreen(
 
                     if (!hasEverCalibrated) {
                         // SCR-21 (no button yet) and SCR-22 (button confirmed) reserve this exact
-                        // same height regardless of awaitingQuadConfirm — only the button's own
-                        // visibility toggles inside it — so the weighted photo box above never
-                        // resizes between the two states and the photo does not jump when the
-                        // user finishes adjusting the quad.
+                        // same height regardless of awaitingQuadConfirm, so the weighted photo box
+                        // above never resizes and the photo does not jump.
                         Box(
                             modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 32.dp).height(100.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             if (awaitingQuadConfirm) {
-                                CheckmarkBtn(onClick = { state.confirmReference() })
+                                CheckmarkBtn(onClick = { viewModel.processIntent(Intent.ConfirmReference) })
                             }
                         }
                     }
 
                     if (hasEverCalibrated) {
-                        // SCR-23 shows only the two toolbar actions — no line-drawing UI, no
-                        // colour bar: those live on SCR-24 ([LineDrawScreen]) now. This also
-                        // rebalances the screen's top/bottom chrome closer to symmetric (design:
-                        // ~118dp top vs ~109dp bottom), which is what actually centres the photo —
-                        // the old combined toolbar+colour-bar bottom chrome was taller than the top
-                        // nav, so the middle box (and the photo aspect-fit within it) sat off-centre.
                         PhotoBottomToolbar(
-                            onLineSegment = { state.beginDrawSegment() },
-                            onEditScale = state::beginEditQuad,
+                            onLineSegment = { viewModel.processIntent(Intent.BeginDrawSegment) },
+                            onEditScale = { viewModel.processIntent(Intent.EditQuadRequested) },
                         )
                     }
                 }
             }
         }
 
-        if (showPickPhotoSheet) {
+        if (state.showPickPhotoSheet) {
             PickPhotoSheet(
-                // Launched, not called inline: decoding is suspending now precisely because it is
-                // several megapixels of work on a content Uri.
+                // Launched, not called inline: decoding is suspending precisely because it is
+                // several megapixels of work on a content Uri. It stays at this edge rather than
+                // moving into the ViewModel so the ViewModel needs no Context — the decoded pixels
+                // arrive as Intent.PhotoPicked.
                 onPhotoPicked = { uri ->
                     coroutineScope.launch {
-                        loadRotatedBitmap(context, uri)?.let(state::loadPhoto)
+                        loadRotatedBitmap(context, uri)?.let { viewModel.processIntent(Intent.PhotoPicked(it)) }
                         // The pixels are in memory now, so a camera capture's temp JPEG has done its
                         // job. No-op for a gallery Uri — see discardCameraCapture.
                         discardCameraCapture(context, uri)
                     }
                 },
-                onDismiss = { showPickPhotoSheet = false },
+                onDismiss = { viewModel.processIntent(Intent.PickPhotoSheetDismissed) },
             )
         }
-        if (showReferenceSheet) {
-            val target = editingReferenceId?.let { id -> customReferences.firstOrNull { it.id == id } }
+        if (state.showReferenceSheet) {
+            val editing = state.editingReference
             ReferenceEditSheet(
-                editing = target,
+                editing = editing,
                 unit = state.unit,
-                onDismiss = { showReferenceSheet = false },
+                onDismiss = { viewModel.processIntent(Intent.ReferenceSheetDismissed) },
                 onSubmit = { label, shortSideMm, longSideMm ->
-                    coroutineScope.launch {
-                        if (target == null) {
-                            // Stay on the reference grid (SCR-15) after creating an object — do not
-                            // auto-advance via selectReference. The new card lands right before the
-                            // "Add new" tile the user just tapped, so it's already in view without a
-                            // scroll-to; tapping it is what advances.
-                            val newReference = referenceStore.add(label, shortSideMm, longSideMm)
-                            customReferences.add(newReference)
-                        } else {
-                            val updated = referenceStore.update(target.id, label, shortSideMm, longSideMm)
-                            if (updated != null) {
-                                val index = customReferences.indexOfFirst { it.id == target.id }
-                                if (index >= 0) customReferences[index] = updated
-                                if (state.reference.id == target.id) state.reference = updated
-                            }
-                        }
-                    }
+                    viewModel.processIntent(Intent.SubmitReference(label, shortSideMm, longSideMm))
                 },
-                onDelete = target?.let {
-                    {
-                        coroutineScope.launch {
-                            if (referenceStore.delete(it.id)) {
-                                customReferences.removeAll { r -> r.id == it.id }
-                            }
-                        }
-                    }
-                },
+                onDelete = editing?.let { { viewModel.processIntent(Intent.DeleteEditedReference) } },
             )
         }
     }
@@ -421,19 +345,19 @@ private fun WaitingForPhoto(
 /**
  * Renders the annotated export bitmap and hands it to [imageSaver], entirely off the main thread
  * — [renderAnnotatedBitmap] does real drawing work and [MeasurementImageSaver.save] does file IO,
- * neither of which belongs on the UI thread. The export bitmap is always recycled, save or fail;
- * it never touches [PhotoMeasureState]'s undo stack (that stack only ever holds pixel coordinates
- * and a colour, never a [Bitmap]).
+ * neither of which belongs on the UI thread. The export bitmap is always recycled, save or fail.
+ *
+ * Not an [Intent]: it mutates no state, and it needs a `TextMeasurer` and a `Density`, both of which
+ * only exist inside composition.
  */
 private suspend fun performSave(
     photo: Bitmap,
     segments: List<Pair<Segment, String?>>,
-    canvasSize: IntSize,
     textMeasurer: TextMeasurer,
     density: Density,
     imageSaver: MeasurementImageSaver,
 ): Uri? = withContext(Dispatchers.Default) {
-    val exported = renderAnnotatedBitmap(photo, segments, canvasSize, textMeasurer, density)
+    val exported = renderAnnotatedBitmap(photo, segments, textMeasurer, density)
     try {
         imageSaver.save(exported, "armeasure_${System.currentTimeMillis()}.png")
     } finally {

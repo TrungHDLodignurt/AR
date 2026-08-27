@@ -14,17 +14,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import vn.apero.armeasure.R
 import vn.apero.armeasure.common.domain.formatLength
 import vn.apero.armeasure.common.ui.labelTextColorFor
+import vn.apero.armeasure.photo.domain.imaging.Vec2
+import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.State
 
 /**
  * SCR-23's interactive replacement for a Canvas-drawn label pill: a `Canvas` draw cannot receive
@@ -42,15 +46,27 @@ import vn.apero.armeasure.common.ui.labelTextColorFor
  * line apart resolves it; this overlay does not attempt anything fancier (e.g. auto-offsetting
  * pills), which would fight the "label sits on its segment" design intent for a case that barely
  * ever happens in practice.
+ *
+ * A segment's endpoints are bitmap-space, so its midpoint is computed there and projected into
+ * [canvasSize]'s display pixels only to position the pill — the same conversion the stroke drawing
+ * does, so pill and line cannot drift apart.
  */
 @Composable
-internal fun SegmentLabelOverlay(state: PhotoMeasureState) {
+internal fun SegmentLabelOverlay(
+    state: State,
+    photo: ImageBitmap,
+    canvasSize: IntSize,
+    onDeleteSegment: (Int) -> Unit,
+) {
+    if (canvasSize == IntSize.Zero) return
     state.segments.forEachIndexed { index, segment ->
         val distanceMm = state.distanceMmFor(segment) ?: return@forEachIndexed
         val label = formatLength(distanceMm / 1000f, state.unit)
-        val mid = Offset((segment.start.x + segment.end.x) / 2f, (segment.start.y + segment.end.y) / 2f)
-        CenteredAt(mid) {
-            SegmentLabelPill(label = label, color = segment.color, onDelete = { state.deleteSegment(index) })
+        // bitmap space
+        val midBitmap = Vec2((segment.start.x + segment.end.x) / 2f, (segment.start.y + segment.end.y) / 2f)
+        // display space, for placement only
+        CenteredAt(midBitmap.toDisplayOffsetIn(photo, canvasSize)) {
+            SegmentLabelPill(label = label, color = segment.color, onDelete = { onDeleteSegment(index) })
         }
     }
 }

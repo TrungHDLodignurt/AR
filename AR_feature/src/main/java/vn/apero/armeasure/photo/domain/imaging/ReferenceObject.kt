@@ -7,7 +7,7 @@ package vn.apero.armeasure.photo.domain.imaging
  * known — a sheet of paper, a payment card — and every other line drawn on that photo scales
  * off it. [shortSideMm]/[longSideMm] name which side is which; the quad editor always maps its
  * top/bottom edges to the long side and its left/right edges to the short side (see
- * `PhotoMeasureState.confirmReference`), so orientation is fixed by convention rather than
+ * `PhotoMeasureReducers.confirmReference`), so orientation is fixed by convention rather than
  * guessed from pixel lengths under perspective distortion.
  *
  * [id] is a stable identifier distinct from [label] — two custom objects can share a label (the

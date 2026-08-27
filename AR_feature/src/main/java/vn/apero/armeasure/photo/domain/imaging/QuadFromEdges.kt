@@ -11,7 +11,7 @@ import kotlin.math.sqrt
 /**
  * Picks the 4 [HoughLine]s most likely to be a rectangle's edges immediately around [point] and
  * returns their pairwise intersections as a quad, ordered top-left/top-right/bottom-right/
- * bottom-left the way `PhotoMeasureState.confirmReference` expects.
+ * bottom-left the way `PhotoMeasureReducers.confirmReference` expects.
  *
  * Does NOT assume the rectangle is aligned with the image's horizontal/vertical axes — a
  * reference object photographed at an angle has no lines anywhere near 0°/90°, and an

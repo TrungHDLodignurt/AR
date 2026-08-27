@@ -4,9 +4,9 @@ package vn.apero.armeasure.photo.domain.imaging
  * Aspect-fit rectangle: the largest box with [imageWidth]x[imageHeight]'s aspect ratio that
  * fits inside [boxWidth]x[boxHeight], centred — the classic "letterbox" fit.
  *
- * Shared between [PhotoQuadCanvas] (where to draw the photo) and [PhotoMeasureState] (where to
- * place the default calibration quad) so the two never disagree about where the photo actually
- * sits on screen.
+ * Shared by every path that has to know where the photo actually sits inside its box — the draw
+ * scopes, the magnifier crop, and [toBitmapSpace]/[toDisplaySpace] — so none of them can disagree
+ * about the letterbox.
  */
 internal data class FittedRect(val offsetX: Float, val offsetY: Float, val width: Float, val height: Float)
 
@@ -27,12 +27,12 @@ internal fun aspectFit(imageWidth: Float, imageHeight: Float, boxWidth: Float, b
  * [photoWidth]x[photoHeight] photo, into that photo's own pixel grid — undoing [aspectFit]'s
  * letterbox. [toDisplaySpace] is the inverse.
  *
- * The bridge that lets two *different-sized* canvases (SCR-23's full-screen photo box and SCR-24's
- * shorter one) agree on where "the same point on the photo" is: convert out of one canvas's pixels
- * into the photo's own grid, then back into the other canvas's pixels (see
- * `PhotoMeasureState.remapToCanvas`). Kept here, not duplicated per caller, so the on-screen canvas
- * (`PhotoQuadCanvas`/`LineDrawScreen`) and the exported bitmap (`renderAnnotatedBitmap`) — which
- * already used this exact conversion under a different name — share one implementation.
+ * This is the **gesture edge**. `PhotoMeasureContract.State` stores every coordinate — quad, segments, draft
+ * line, and the homography's source points — in the photo's own pixel grid, so a tap or a drag is
+ * converted through here exactly once, on the way in, and never stored as it arrived. That is what
+ * makes a relayout harmless: it changes only where the photo is drawn, not what was measured.
+ * SCR-23's full-screen photo box and SCR-24's shorter one therefore need no bridge between each
+ * other any more — each converts against its own size, and the stored value is common to both.
  */
 internal fun toBitmapSpace(point: Vec2, photoWidth: Float, photoHeight: Float, canvasWidth: Float, canvasHeight: Float): Vec2 {
     val fit = aspectFit(photoWidth, photoHeight, canvasWidth, canvasHeight)
@@ -42,7 +42,12 @@ internal fun toBitmapSpace(point: Vec2, photoWidth: Float, photoHeight: Float, c
     )
 }
 
-/** The inverse of [toBitmapSpace]: places a photo-pixel [point] into a [canvasWidth]x[canvasHeight] aspect-fit canvas. */
+/**
+ * The inverse of [toBitmapSpace], and the **draw edge**: places a stored photo-pixel [point] into a
+ * [canvasWidth]x[canvasHeight] aspect-fit canvas, for as long as it takes to paint it or to place a
+ * handle over it. Degenerates to the identity when the canvas IS the photo's own resolution, which
+ * is why `renderAnnotatedBitmap` can draw stored coordinates into the exported PNG unconverted.
+ */
 internal fun toDisplaySpace(point: Vec2, photoWidth: Float, photoHeight: Float, canvasWidth: Float, canvasHeight: Float): Vec2 {
     val fit = aspectFit(photoWidth, photoHeight, canvasWidth, canvasHeight)
     return Vec2(
