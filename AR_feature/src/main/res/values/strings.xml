@@ -88,6 +88,11 @@
     <string name="armeasure_photo_toolbar_line_segment">Line segment</string>
     <string name="armeasure_photo_toolbar_edit_scale">Edit scale</string>
 
+    <string name="armeasure_photo_line_draw_title">Length</string>
+    <string name="armeasure_photo_segment_discard_cd">Discard segment</string>
+    <string name="armeasure_photo_segment_confirm_cd">Confirm segment</string>
+    <string name="armeasure_photo_segment_delete_cd">Delete segment</string>
+
     <string name="armeasure_photo_save_cta">Save</string>
     <string name="armeasure_photo_save_success">Saved to Pictures</string>
     <string name="armeasure_photo_save_failure">Couldn\'t save the photo</string>

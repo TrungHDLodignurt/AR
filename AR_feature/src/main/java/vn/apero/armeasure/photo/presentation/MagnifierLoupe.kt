@@ -66,11 +66,12 @@ internal fun MagnifierLoupe(photo: ImageBitmap, fit: FittedRect, target: Offset,
                 dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
             )
 
-            // Crosshair marking the exact point being placed, at the loupe's centre — a 20dp
-            // "plus" per the design (`l6wgWg`), in the same translucent white as the ring so it
-            // reads over any photo content rather than only over a light or dark one.
+            // Crosshair marking the exact point being placed, at the loupe's centre — the
+            // design's own 20dp "plus" (`l6wgWg`) is below the module's 30dp icon-size floor, so
+            // this is drawn at 30dp instead; same translucent white as the ring so it reads over
+            // any photo content rather than only over a light or dark one.
             val center = Offset(size.width / 2f, size.height / 2f)
-            val armLength = 10.dp.toPx()
+            val armLength = 15.dp.toPx()
             drawLine(LoupeRingColor, Offset(center.x - armLength, center.y), Offset(center.x + armLength, center.y), 1.5.dp.toPx())
             drawLine(LoupeRingColor, Offset(center.x, center.y - armLength), Offset(center.x, center.y + armLength), 1.5.dp.toPx())
         }

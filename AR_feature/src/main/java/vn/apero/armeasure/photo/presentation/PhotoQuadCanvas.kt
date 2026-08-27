@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import vn.apero.armeasure.R
-import vn.apero.armeasure.common.domain.formatLength
 
 /**
  * The photo plus one of three things, depending on [PhotoMeasureState]:
@@ -36,9 +35,10 @@ import vn.apero.armeasure.common.domain.formatLength
  *    draggable quad ([QuadEditorCanvas]) — re-checking `isEditingQuad` here, not just
  *    `!isCalibrated`, is what makes the quad editor reachable again after a first confirm; before
  *    this flag existed, a non-null homography made this branch permanently unreachable.
- *  - calibrated and not re-editing: one measuring line with two draggable endpoints
- *    ([DraggableHandlesOverlay]), matching ARuler's "Chiều dài" tool — drag either end to
- *    measure, not tap-2-points.
+ *  - calibrated and not re-editing: every committed segment, drawn but not draggable (locked
+ *    decision: a committed segment cannot be edited, only deleted via its label's trash
+ *    affordance — see [SegmentLabelOverlay]). Drawing a *new* segment happens on SCR-24
+ *    ([LineDrawScreen]), a separate screen, not here.
  *
  * Coordinates throughout are display pixels — this composable's own size — never the bitmap's
  * native pixel grid. See `Homography.kt` for why that is fine for the maths.
@@ -48,7 +48,6 @@ internal fun PhotoQuadCanvas(
     photo: ImageBitmap,
     state: PhotoMeasureState,
     modifier: Modifier = Modifier,
-    onLineDragEnd: () -> Unit = {},
 ) {
     val textMeasurer = rememberTextMeasurer()
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
@@ -72,7 +71,8 @@ internal fun PhotoQuadCanvas(
                         }
                     },
                 ) {
-                    drawPhotoAnnotations(photo, line = null, label = null, lineColor = state.lineColor, textMeasurer = textMeasurer)
+                    // line = null makes lineColor a no-op value — nothing is drawn but the plain photo yet.
+                    drawPhotoAnnotations(photo, line = null, label = null, lineColor = Color.Unspecified, textMeasurer = textMeasurer)
                 }
                 if (state.isDetectingQuad) {
                     Text(
@@ -98,25 +98,10 @@ internal fun PhotoQuadCanvas(
             }
 
             else -> {
-                val line = state.line
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val label = state.currentDistanceMm?.let { formatLength(it / 1000f, state.unit) }
-                    drawPhotoAnnotations(photo, line, label, state.lineColor, textMeasurer)
+                    drawCommittedSegmentStrokes(photo, state.segments)
                 }
-
-                if (line != null) {
-                    DraggableHandlesOverlay(
-                        photo = photo,
-                        points = listOf(line.start, line.end),
-                        onPointDrag = { index, position -> state.moveLineEndpoint(index == 0, position) },
-                        canvasSize = canvasSize,
-                        modifier = Modifier.fillMaxSize(),
-                        onPointDragEnd = {
-                            state.commitDrag()
-                            onLineDragEnd()
-                        },
-                    )
-                }
+                SegmentLabelOverlay(state = state)
             }
         }
     }

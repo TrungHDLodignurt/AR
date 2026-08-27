@@ -109,16 +109,18 @@ internal fun PhotoMeasureScreen(
         showPickPhotoSheet = true
     }
 
-    fun emitResult() {
-        val distanceMm = state.currentDistanceMm ?: return
+    fun emitResult(segment: Segment) {
+        val distanceMm = state.distanceMmFor(segment) ?: return
         onResult(MeasurementResult.Photo(distanceMm / 1000f, state.unit))
     }
 
     fun requestSave() {
         val photo = state.photo ?: return
-        val label = state.currentDistanceMm?.let { formatLength(it / 1000f, state.unit) }
+        val labeledSegments = state.segments.map { segment ->
+            segment to state.distanceMmFor(segment)?.let { formatLength(it / 1000f, state.unit) }
+        }
         coroutineScope.launch {
-            val uri = performSave(photo, state.line, canvasSize, label, state.lineColor, textMeasurer, density, imageSaver)
+            val uri = performSave(photo, labeledSegments, canvasSize, textMeasurer, density, imageSaver)
             val messageRes = if (uri != null) R.string.armeasure_photo_save_success else R.string.armeasure_photo_save_failure
             Toast.makeText(context, context.getString(messageRes), Toast.LENGTH_SHORT).show()
         }
@@ -147,6 +149,17 @@ internal fun PhotoMeasureScreen(
                         onClose = onClose,
                     )
                 }
+            }
+
+            state.isDrawingSegment -> {
+                val imageBitmap = remember(state.photo) { state.photo!!.asImageBitmap() }
+                LineDrawScreen(
+                    photo = imageBitmap,
+                    state = state,
+                    targetCanvasSize = canvasSize,
+                    onCommitted = { emitResult(it) },
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
 
             else -> {
@@ -181,37 +194,34 @@ internal fun PhotoMeasureScreen(
                         )
                     }
 
+                    // The weighted Box below takes exactly the space left between the top nav and
+                    // the bottom toolbar; PhotoQuadCanvas/PhotoQuadCanvas's own aspect-fit always
+                    // centres the photo within whatever box it is given, so the photo is centred
+                    // between those two — no hardcoded offset needed for either edge.
                     Box(modifier = Modifier.weight(1f).fillMaxSize()) {
                         PhotoQuadCanvas(
                             photo = imageBitmap,
                             state = state,
                             modifier = Modifier.fillMaxSize().onSizeChanged { canvasSize = it },
-                            onLineDragEnd = { emitResult() },
                         )
                         if (awaitingQuadConfirm) {
                             CheckmarkBtn(
-                                onClick = {
-                                    state.confirmReference(canvasSize.width.toFloat(), canvasSize.height.toFloat())
-                                    emitResult()
-                                },
+                                onClick = { state.confirmReference() },
                                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 32.dp),
                             )
                         }
                     }
 
                     if (hasEverCalibrated) {
+                        // SCR-23 shows only the two toolbar actions — no line-drawing UI, no
+                        // colour bar: those live on SCR-24 ([LineDrawScreen]) now. This also
+                        // rebalances the screen's top/bottom chrome closer to symmetric (design:
+                        // ~118dp top vs ~109dp bottom), which is what actually centres the photo —
+                        // the old combined toolbar+colour-bar bottom chrome was taller than the top
+                        // nav, so the middle box (and the photo aspect-fit within it) sat off-centre.
                         PhotoBottomToolbar(
-                            onLineSegment = {
-                                state.resetLine(canvasSize.width.toFloat(), canvasSize.height.toFloat())
-                                emitResult()
-                            },
+                            onLineSegment = { state.beginDrawSegment() },
                             onEditScale = state::beginEditQuad,
-                        )
-                        ColorPickerBar(
-                            selected = state.lineColor,
-                            onSelect = state::setLineColor,
-                            unit = state.unit,
-                            onSelectUnit = state::setUnit,
                         )
                     }
                 }
@@ -314,15 +324,13 @@ private fun WaitingForPhoto(
  */
 private suspend fun performSave(
     photo: Bitmap,
-    line: LiveLine?,
+    segments: List<Pair<Segment, String?>>,
     canvasSize: IntSize,
-    label: String?,
-    lineColor: Color,
     textMeasurer: TextMeasurer,
     density: Density,
     imageSaver: MeasurementImageSaver,
 ): Uri? = withContext(Dispatchers.Default) {
-    val exported = renderAnnotatedBitmap(photo, line, canvasSize, label, lineColor, textMeasurer, density)
+    val exported = renderAnnotatedBitmap(photo, segments, canvasSize, textMeasurer, density)
     try {
         imageSaver.save(exported, "armeasure_${System.currentTimeMillis()}.png")
     } finally {

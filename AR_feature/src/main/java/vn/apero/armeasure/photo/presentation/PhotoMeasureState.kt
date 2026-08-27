@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import vn.apero.armeasure.common.domain.LengthUnit
@@ -18,21 +19,37 @@ import vn.apero.armeasure.photo.domain.imaging.aspectFit
 import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
 import vn.apero.armeasure.photo.domain.imaging.computeHomography
 import vn.apero.armeasure.photo.domain.imaging.measureRealDistanceMm
+import vn.apero.armeasure.photo.domain.imaging.toBitmapSpace
+import vn.apero.armeasure.photo.domain.imaging.toDisplaySpace
 
-/** The measuring line's two endpoints, in display-space pixels — both user-draggable. */
+/** Two draggable endpoints in display-space pixels — used for SCR-24's in-progress segment. */
 internal data class LiveLine(val start: Offset, val end: Offset)
+
+/**
+ * One committed measuring segment, drawn on SCR-23 (design `jwRjx`'s photo) once the user has
+ * confirmed it on SCR-24 (`kYLQt`). Coordinates are SCR-23's own display-space pixels — the same
+ * space [quad]/[homography] already live in — never SCR-24's, whose canvas is a different size;
+ * see [PhotoMeasureState.remapToCanvas] for the conversion a segment goes through exactly once, at
+ * commit time. Immutable by design (locked decision: committed segments cannot be edited, only
+ * deleted via [PhotoMeasureState.deleteSegment] or undone).
+ */
+internal data class Segment(val start: Offset, val end: Offset, val color: Color)
+
+internal fun Offset.toVec2() = Vec2(x, y)
+internal fun Vec2.toOffset() = Offset(x, y)
 
 /**
  * A whole-state snapshot for [PhotoMeasureState] undo/redo — simpler and more honest than
  * per-field undo, and it covers everything a mutating gesture can change. Deliberately excludes
  * the photo [Bitmap] itself: snapshotting bitmaps would multiply memory by the undo depth and
- * could OOM on a large photo, and `loadPhoto` is the only gesture that changes it anyway.
+ * could OOM on a large photo, and `loadPhoto` is the only gesture that changes it anyway. Also
+ * excludes SCR-24's in-progress draft — undo is scoped to *committed* segments only (locked
+ * decision), never a still-being-dragged one that hasn't been confirmed yet.
  */
 internal data class PhotoSnapshot(
     val quad: List<Offset>,
     val homography: Homography?,
-    val line: LiveLine?,
-    val lineColor: Color,
+    val segments: List<Segment>,
 )
 
 /**
@@ -56,13 +73,20 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
     var homography by mutableStateOf<Homography?>(null)
         private set
 
-    /**
-     * One measuring line the user drags into place — matching ARuler's own "Chiều dài" tool,
-     * which is a single persistent line with two draggable endpoints, not tap-to-place-2-points.
-     * The distance is read live off wherever the endpoints currently are, so dragging an
-     * endpoint updates the number on every move rather than needing a separate commit step.
-     */
-    var line by mutableStateOf<LiveLine?>(null)
+    /** Every segment the user has confirmed so far (SCR-24's ✓), drawn together on SCR-23. */
+    var segments by mutableStateOf<List<Segment>>(emptyList())
+        private set
+
+    /** True while SCR-24 ("AR Adjust", design `kYLQt`) is showing in place of SCR-23. */
+    var isDrawingSegment by mutableStateOf(false)
+        private set
+
+    /** SCR-24's in-progress segment, in SCR-24's OWN canvas-space pixels. Null until [placeDraftInitial] runs, and always null again once [isDrawingSegment] goes false. */
+    var draftLine by mutableStateOf<LiveLine?>(null)
+        private set
+
+    /** Always reset to the palette's first (red) entry every time SCR-24 opens — locked decision: a new segment never inherits the previously used colour. */
+    var draftColor by mutableStateOf(PhotoLineColors.first())
         private set
 
     var unit by mutableStateOf(initialUnit)
@@ -72,19 +96,10 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
         private set
 
     /**
-     * The measuring line + its label's fill colour (design `ColorPickerBar`, decision: colour
-     * choice is scoped to the photo line only, never [QuadEditorCanvas]'s semantic cyan/yellow).
-     * Seeded from the palette's own default entry.
-     */
-    var lineColor by mutableStateOf(PhotoLineColors.first())
-        private set
-
-    /**
      * True once the user has asked to re-open the quad editor after already calibrating once —
      * "Chỉnh sửa tỉ lệ" in SCR-23's bottom toolbar (see [beginEditQuad]). Set back to `false` by
-     * [confirmReference]. The quad and line survive the round trip untouched: dragging a corner
-     * only clears [homography] (via [moveQuadCorner]), never [line] — see the class doc's own
-     * note on why this was architecturally dead code before this flag existed.
+     * [confirmReference]. The quad and segments survive the round trip untouched: dragging a
+     * corner only clears [homography] (via [moveQuadCorner]), never [segments].
      */
     var isEditingQuad by mutableStateOf(false)
         private set
@@ -99,19 +114,18 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
     val canUndo: Boolean get() = undoRedo.canUndo
     val canRedo: Boolean get() = undoRedo.canRedo
 
-    /** Captured the moment a corner/endpoint drag begins and committed only once it ends, so undo reverts a whole drag rather than each intermediate frame — see the risk this guards against in the phase's own notes. Null between gestures. */
+    /** Captured the moment a quad-corner drag begins and committed only once it ends, so undo reverts a whole drag rather than each intermediate frame. Null between gestures. */
     private var dragStartSnapshot: PhotoSnapshot? = null
 
-    private fun snapshotNow() = PhotoSnapshot(quad, homography, line, lineColor)
+    private fun snapshotNow() = PhotoSnapshot(quad, homography, segments)
 
     private fun applySnapshot(snapshot: PhotoSnapshot) {
         quad = snapshot.quad
         homography = snapshot.homography
-        line = snapshot.line
-        lineColor = snapshot.lineColor
+        segments = snapshot.segments
     }
 
-    /** Undoes the last committed gesture, restoring the exact previous quad/homography/line. */
+    /** Undoes the last committed gesture (a quad edit, a segment commit, or a segment delete), restoring the exact previous quad/homography/segment list. */
     fun undo() {
         val previous = undoRedo.popUndo() ?: return
         undoRedo.pushRedo(snapshotNow())
@@ -125,7 +139,7 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
         applySnapshot(next)
     }
 
-    /** Marks the end of a corner/endpoint drag gesture — commits the pre-drag snapshot for undo. No-op if no drag was in progress (e.g. a tap that never moved). */
+    /** Marks the end of a quad-corner drag gesture — commits the pre-drag snapshot for undo. No-op if no drag was in progress (e.g. a tap that never moved). */
     fun commitDrag() {
         dragStartSnapshot?.let { undoRedo.push(it) }
         dragStartSnapshot = null
@@ -135,13 +149,39 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
         if (dragStartSnapshot == null) dragStartSnapshot = snapshotNow()
     }
 
-    /** The live line's real-world length, or null before calibration/placement. */
-    val currentDistanceMm: Float?
-        get() {
-            val h = homography ?: return null
-            val l = line ?: return null
-            return measureRealDistanceMm(h, Vec2(l.start.x, l.start.y), Vec2(l.end.x, l.end.y))
-        }
+    /** [segment]'s real-world length, using the homography already solved for SCR-23's own canvas-space — every committed segment lives in that same space, so no remapping is needed here (only [remapToCanvas], at commit time, needs one). Null before calibration. */
+    fun distanceMmFor(segment: Segment): Float? {
+        val h = homography ?: return null
+        return measureRealDistanceMm(h, segment.start.toVec2(), segment.end.toVec2())
+    }
+
+    /**
+     * SCR-24's in-progress segment's live real-world length. [draftLine] lives in SCR-24's own
+     * canvas-space, which is a *different* aspect-fit box than the one [homography] was solved
+     * against (SCR-23's) — so unlike [distanceMmFor], this must remap through [remapToCanvas]
+     * first. [photoWidthPx]/[photoHeightPx] are the loaded photo's own intrinsic pixel size —
+     * passed in rather than read off a stored `Bitmap` so this stays pure Float geometry, testable
+     * with no `Bitmap` in play at all (only its two dimensions matter to the maths). Null before
+     * calibration or before [placeDraftInitial] runs.
+     */
+    fun draftDistanceMm(photoWidthPx: Float, photoHeightPx: Float, draftCanvasSize: IntSize, targetCanvasSize: IntSize): Float? {
+        val h = homography ?: return null
+        val draft = draftLine ?: return null
+        val start = remapToCanvas(draft.start, photoWidthPx, photoHeightPx, draftCanvasSize, targetCanvasSize)
+        val end = remapToCanvas(draft.end, photoWidthPx, photoHeightPx, draftCanvasSize, targetCanvasSize)
+        return measureRealDistanceMm(h, start.toVec2(), end.toVec2())
+    }
+
+    /**
+     * Re-expresses [point] from a [fromCanvas]-sized aspect-fit box into the equivalent point in a
+     * [toCanvas]-sized one, via the photo's own [photoWidthPx]x[photoHeightPx] pixel grid (see
+     * `ImageFit.toBitmapSpace`/`toDisplaySpace`) — the bridge SCR-24's draft and SCR-23's committed
+     * segments need since the two screens' photo boxes are different sizes but show the same photo.
+     */
+    private fun remapToCanvas(point: Offset, photoWidthPx: Float, photoHeightPx: Float, fromCanvas: IntSize, toCanvas: IntSize): Offset {
+        val bitmapPoint = toBitmapSpace(point.toVec2(), photoWidthPx, photoHeightPx, fromCanvas.width.toFloat(), fromCanvas.height.toFloat())
+        return toDisplaySpace(bitmapPoint, photoWidthPx, photoHeightPx, toCanvas.width.toFloat(), toCanvas.height.toFloat()).toOffset()
+    }
 
     /** Loads a new photo and resets everything downstream of it — a new picture is a new plane. */
     fun loadPhoto(bitmap: Bitmap) {
@@ -149,22 +189,26 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
         photo = bitmap
         quad = emptyList()
         homography = null
-        line = null
+        segments = emptyList()
         isEditingQuad = false
+        isDrawingSegment = false
+        draftLine = null
     }
 
     /**
      * [PhotoMeasureScreen]'s "back" affordance once a photo is loaded: returns to the pick-photo
      * step without discarding the chosen [reference]. Undo history is cleared with it — an undo
-     * across two different photos would restore quad/line coordinates that belong to a bitmap no
-     * longer loaded, which is meaningless.
+     * across two different photos would restore quad/segment coordinates that belong to a bitmap
+     * no longer loaded, which is meaningless.
      */
     fun discardPhoto() {
         photo = null
         quad = emptyList()
         homography = null
-        line = null
+        segments = emptyList()
         isEditingQuad = false
+        isDrawingSegment = false
+        draftLine = null
         undoRedo.clear()
     }
 
@@ -229,16 +273,11 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
     }
 
     /**
-     * Solves the homography from the current quad to [reference]'s real-world rectangle.
-     *
-     * First-time confirm (no [line] yet): places the measuring line straight away, centred on
-     * screen — ARuler's own tool starts with a line already there to drag, not an empty canvas
-     * waiting for a first tap. Re-confirm after [beginEditQuad] (line already exists): the line's
-     * on-screen pixel position is left untouched — the photo and its aspect-fit letterboxing
-     * haven't moved, only the calibration quad has, so nothing needs recomputing (see the class
-     * doc's own note on why "Chỉnh sửa tỉ lệ" doesn't need to touch it).
+     * Solves the homography from the current quad to [reference]'s real-world rectangle. Never
+     * creates a segment itself (unlike the old single-line flow) — SCR-23 shows no line-drawing UI
+     * until the user explicitly taps "Đoạn thẳng", per the target flow.
      */
-    fun confirmReference(canvasWidthPx: Float, canvasHeightPx: Float) {
+    fun confirmReference() {
         if (quad.size != 4) return
         undoRedo.push(snapshotNow())
         val long = reference.longSideMm
@@ -251,45 +290,80 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = LengthUnit.Cm) {
         )
         homography = computeHomography(quad.map { Vec2(it.x, it.y) }, dst) ?: return
         isEditingQuad = false
-        if (line == null) resetLine(canvasWidthPx, canvasHeightPx)
     }
 
     /**
      * "Chỉnh sửa tỉ lệ" (Edit scale): re-opens the quad editor without discarding the photo or the
-     * line — see the class doc's note on why this was architecturally blocked before this flag
-     * existed. No-op before the first calibration, since there is nothing yet to re-edit.
+     * committed segments — see the class doc's note on why this was architecturally blocked before
+     * this flag existed. No-op before the first calibration, since there is nothing yet to re-edit.
      */
     fun beginEditQuad() {
         if (!isCalibrated) return
         isEditingQuad = true
     }
 
-    /**
-     * A hard user choice like [setUnit] — pushes its own undo entry so a colour change is
-     * separately undoable/redoable (`ColorPickerBar`'s on-device check). `@JvmName` for the same
-     * reason as [setUnit]: avoids a JVM signature clash with the `var lineColor` property's own
-     * auto-generated bean setter.
-     */
-    @JvmName("setLineColorTo")
-    fun setLineColor(newColor: Color) {
-        if (newColor == lineColor) return
-        undoRedo.push(snapshotNow())
-        lineColor = newColor
+    /** "Đoạn thẳng" on SCR-23: opens SCR-24. [placeDraftInitial] pre-places the two endpoints once SCR-24's own canvas is measured (its size isn't known yet at the moment this is called). No-op before calibration — there is nothing to measure against yet. */
+    fun beginDrawSegment() {
+        if (!isCalibrated) return
+        draftColor = PhotoLineColors.first()
+        draftLine = null
+        isDrawingSegment = true
     }
 
-    /** Re-centres the measuring line — the "start over" action once it's been dragged somewhere unhelpful. */
-    fun resetLine(canvasWidthPx: Float, canvasHeightPx: Float) {
-        val halfSpan = canvasWidthPx * 0.25f
-        val midY = canvasHeightPx / 2f
+    /** Pre-places SCR-24's two endpoints near the centre of its own (freshly measured) canvas — locked decision: no tap-to-place step. No-op once already placed. */
+    fun placeDraftInitial(canvasWidthPx: Float, canvasHeightPx: Float) {
+        if (draftLine != null) return
+        val halfSpan = canvasWidthPx * 0.2f
         val midX = canvasWidthPx / 2f
-        line = LiveLine(Offset(midX - halfSpan, midY), Offset(midX + halfSpan, midY))
+        val midY = canvasHeightPx / 2f
+        draftLine = LiveLine(Offset(midX - halfSpan, midY), Offset(midX + halfSpan, midY))
     }
 
-    /** Drags one endpoint. `isStart` picks which — there are only ever these two handles. */
-    fun moveLineEndpoint(isStart: Boolean, position: Offset) {
-        val current = line ?: return
-        beginDragIfNeeded()
-        line = if (isStart) current.copy(start = position) else current.copy(end = position)
+    /** Drags one of SCR-24's two endpoints. `isStart` picks which. */
+    fun moveDraftEndpoint(isStart: Boolean, position: Offset) {
+        val current = draftLine ?: return
+        draftLine = if (isStart) current.copy(start = position) else current.copy(end = position)
+    }
+
+    /**
+     * SCR-24's colour bar — scoped to the in-progress segment only, never the previously
+     * committed ones. `@JvmName` avoids a JVM signature clash with the `var draftColor` property's
+     * own auto-generated bean setter, same reasoning as [setUnit].
+     */
+    @JvmName("setDraftColorTo")
+    fun setDraftColor(color: Color) {
+        draftColor = color
+    }
+
+    /**
+     * SCR-24's ✓: converts [draftLine] out of its own canvas-space and into SCR-23's (see
+     * [remapToCanvas]) and commits it as a new, undoable [Segment]. No-op without a placed draft.
+     * [targetCanvasSize] is SCR-23's own last-measured canvas size, supplied by the caller since
+     * SCR-24 has no way to measure a screen it isn't showing; [photoWidthPx]/[photoHeightPx] are
+     * the loaded photo's intrinsic size (see [draftDistanceMm] for why this takes dimensions
+     * rather than a `Bitmap`).
+     */
+    fun commitDrawnSegment(photoWidthPx: Float, photoHeightPx: Float, draftCanvasSize: IntSize, targetCanvasSize: IntSize) {
+        val draft = draftLine ?: return
+        val start = remapToCanvas(draft.start, photoWidthPx, photoHeightPx, draftCanvasSize, targetCanvasSize)
+        val end = remapToCanvas(draft.end, photoWidthPx, photoHeightPx, draftCanvasSize, targetCanvasSize)
+        undoRedo.push(snapshotNow())
+        segments = segments + Segment(start, end, draftColor)
+        draftLine = null
+        isDrawingSegment = false
+    }
+
+    /** SCR-24's X: discards the in-progress segment and returns to SCR-23. Every already-committed segment is untouched — this never touches [segments] or the undo history. */
+    fun cancelDrawSegment() {
+        draftLine = null
+        isDrawingSegment = false
+    }
+
+    /** The trash affordance inside a committed segment's label (SCR-23) — deletes just that one. Pushes its own undo entry, same convention as [moveQuadCorner]/[commitDrawnSegment]. */
+    fun deleteSegment(index: Int) {
+        if (index !in segments.indices) return
+        undoRedo.push(snapshotNow())
+        segments = segments.toMutableList().also { it.removeAt(index) }
     }
 
     /**

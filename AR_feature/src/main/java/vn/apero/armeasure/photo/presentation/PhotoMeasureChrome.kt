@@ -66,12 +66,13 @@ internal fun PhotoTopNav(
             glyph = "‹",
             onClick = onBack,
             contentDescription = stringResource(R.string.armeasure_action_back),
-            fontSize = 22.sp,
+            fontSize = MinIconSp,
         )
 
         if (showUndoRedoAndSave) {
-            // 40dp between the 24dp icons (design's UndoForwardGroup): with a bare-icon 48dp touch
-            // box (12dp inset each side), visible icon gap = spacedBy + 24, so spacedBy(16.dp).
+            // Design's UndoForwardGroup gap (40dp between 24dp icons) shrinks a little now the
+            // icons are floored to 30dp — 9dp touch-box inset each side instead of 12dp — but the
+            // 48dp touch boxes themselves are untouched, so nothing clips.
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 UndoRedoButton("↩", canUndo, onUndo, stringResource(R.string.armeasure_action_undo))
                 UndoRedoButton("↪", canRedo, onRedo, stringResource(R.string.armeasure_action_redo))
@@ -98,7 +99,12 @@ internal fun PhotoTopNav(
     }
 }
 
-/** Bare 24x24-ish glyph in a 48dp touch box, no drawn pill — SCR-21/22/23 sit on the cream
+/** The floor every bare-glyph icon in this module's photo flow must clear: a 24dp (or smaller)
+ * drawn glyph inside a ≥48dp touch box still reads as too small — this is about the *visible*
+ * size, a separate thing from the touch target. Touch targets stay ≥48dp regardless. */
+private val MinIconSp = 30.sp
+
+/** Bare 30dp+ glyph in a 48dp touch box, no drawn pill — SCR-21/22/23/24 sit on the cream
  * [ArMeasureTokens.BgPrimary], unlike SCR-19's live camera feed, so the blurred chrome pill
  * ([vn.apero.armeasure.common.ui.ChromeLightButton]) is unnecessary here; [ArMeasureTokens]'
  * own contrast note confirms [ArMeasureTokens.TextPrimary] on [ArMeasureTokens.BgPrimary] clears
@@ -111,9 +117,10 @@ private fun BareIconButton(
     fontSize: TextUnit,
     enabled: Boolean = true,
     color: Color = ArMeasureTokens.TextPrimary,
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(48.dp)
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
             .semantics { this.contentDescription = contentDescription },
@@ -129,10 +136,48 @@ private fun UndoRedoButton(glyph: String, enabled: Boolean, onClick: () -> Unit,
         glyph = glyph,
         onClick = onClick,
         contentDescription = contentDescription,
-        fontSize = 20.sp,
+        fontSize = MinIconSp,
         enabled = enabled,
         color = if (enabled) ArMeasureTokens.TextPrimary else ArMeasureTokens.TextDisabled,
     )
+}
+
+/**
+ * SCR-24's ("AR Adjust", design `kYLQt`) top nav — **only** X (discard) and ✓ (commit), no
+ * undo/redo/save: those stay exclusive to SCR-23's [PhotoTopNav], since SCR-24 never edits history
+ * or writes a file. The title sits in a true screen-centred [Box], not a 3-way [Row], so its
+ * position never shifts if the two icon boxes were ever unequal widths.
+ */
+@Composable
+internal fun LineDrawTopNav(title: String, onCancel: () -> Unit, onCommit: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        BareIconButton(
+            glyph = "✕",
+            onClick = onCancel,
+            contentDescription = stringResource(R.string.armeasure_photo_segment_discard_cd),
+            fontSize = MinIconSp,
+            modifier = Modifier.align(Alignment.CenterStart),
+        )
+        Text(
+            text = title,
+            color = ArMeasureTokens.TextPrimary,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.align(Alignment.Center),
+        )
+        BareIconButton(
+            glyph = "✓",
+            onClick = onCommit,
+            contentDescription = stringResource(R.string.armeasure_photo_segment_confirm_cd),
+            fontSize = MinIconSp,
+            modifier = Modifier.align(Alignment.CenterEnd),
+        )
+    }
 }
 
 /** 48dp-tall filled button, `SignatureText` fill / `OnSignature` text — `SignatureText` (not `Signature`) is what actually clears WCAG AA with white text (~4.54:1 vs ~3.06:1), fixing the design's 2.78:1 bare-text "Lưu". */
@@ -241,7 +286,9 @@ private fun ToolbarItem(glyph: String, label: String, onClick: () -> Unit, modif
             modifier = Modifier.size(48.dp).clip(CircleShape).background(ArMeasureTokens.BgSecondary),
             contentAlignment = Alignment.Center,
         ) {
-            Text(glyph, color = ArMeasureTokens.TextPrimary, fontSize = 20.sp)
+            // 30dp icon in the same 48dp circle — 9dp padding each side remains, same margin the
+            // design's own 48dp LineIconCircle left around its (too-small) 24dp icon.
+            Text(glyph, color = ArMeasureTokens.TextPrimary, fontSize = MinIconSp)
         }
         Text(label, color = ArMeasureTokens.TextSecondary, fontSize = 12.sp)
     }

@@ -23,15 +23,33 @@ import kotlin.math.roundToInt
 import vn.apero.armeasure.common.ui.drawLabelPill
 import vn.apero.armeasure.common.ui.labelTextColorFor
 import vn.apero.armeasure.photo.domain.imaging.aspectFit
+import vn.apero.armeasure.photo.domain.imaging.toBitmapSpace
 
 /** A dark halo behind the line/endpoints so a bright user-chosen colour still reads over a light photo (insight 6). */
 private val LineHalo = Color(0x59000000)
 
+/** Just the line + its two endpoint dots, no label — the part every draw path below shares. */
+private fun DrawScope.drawSegmentStroke(line: LiveLine, color: Color) {
+    drawLine(LineHalo, line.start, line.end, strokeWidth = 4.dp.toPx())
+    drawLine(color, line.start, line.end, strokeWidth = 2.dp.toPx())
+    drawCircle(LineHalo, radius = 7.dp.toPx(), center = line.start)
+    drawCircle(color, radius = 5.dp.toPx(), center = line.start)
+    drawCircle(LineHalo, radius = 7.dp.toPx(), center = line.end)
+    drawCircle(color, radius = 5.dp.toPx(), center = line.end)
+}
+
+private fun DrawScope.drawSegmentLabel(line: LiveLine, label: String, color: Color, textMeasurer: TextMeasurer) {
+    val mid = Offset((line.start.x + line.end.x) / 2f, (line.start.y + line.end.y) / 2f)
+    val style = TextStyle(color = labelTextColorFor(color), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+    drawLabelPill(textMeasurer, label, mid, style, backgroundColor = color)
+}
+
 /**
- * The one draw path for [photo] plus the measuring [line] and its [label] — shared by the
- * on-screen canvas ([PhotoQuadCanvas]) and the exported PNG ([renderAnnotatedBitmap]), so the two
- * can never drift apart (insight 10). Coordinates are whatever this [DrawScope]'s own pixel space
- * is; callers are responsible for placing [line] in that space before calling this.
+ * The photo plus one [line] and its [label] — SCR-24's draft segment, which is always exactly one
+ * line being actively dragged, so a plain Canvas-drawn pill (no trash affordance needed; nothing
+ * is committed yet) is all it needs. Shared by the live canvas and (indirectly, via
+ * [drawExportSegments] for the *committed* case) the exported PNG so on-screen and saved drawing
+ * can never drift apart.
  */
 internal fun DrawScope.drawPhotoAnnotations(
     photo: ImageBitmap,
@@ -42,18 +60,32 @@ internal fun DrawScope.drawPhotoAnnotations(
 ) {
     drawPlainPhoto(photo)
     if (line == null) return
+    drawSegmentStroke(line, lineColor)
+    if (label != null) drawSegmentLabel(line, label, lineColor, textMeasurer)
+}
 
-    drawLine(LineHalo, line.start, line.end, strokeWidth = 4.dp.toPx())
-    drawLine(lineColor, line.start, line.end, strokeWidth = 2.dp.toPx())
-    drawCircle(LineHalo, radius = 7.dp.toPx(), center = line.start)
-    drawCircle(lineColor, radius = 5.dp.toPx(), center = line.start)
-    drawCircle(LineHalo, radius = 7.dp.toPx(), center = line.end)
-    drawCircle(lineColor, radius = 5.dp.toPx(), center = line.end)
+/**
+ * SCR-23's live on-screen draw for every *committed* [segments] — strokes only, deliberately no
+ * label pill: [SegmentLabelOverlay] renders each label (with its trash affordance) as a real
+ * composable on top instead, since a `Canvas` draw cannot receive taps. Drawing a pill here too
+ * would double it.
+ */
+internal fun DrawScope.drawCommittedSegmentStrokes(photo: ImageBitmap, segments: List<Segment>) {
+    drawPlainPhoto(photo)
+    segments.forEach { drawSegmentStroke(LiveLine(it.start, it.end), it.color) }
+}
 
-    if (label != null) {
-        val mid = Offset((line.start.x + line.end.x) / 2f, (line.start.y + line.end.y) / 2f)
-        val style = TextStyle(color = labelTextColorFor(lineColor), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-        drawLabelPill(textMeasurer, label, mid, style, backgroundColor = lineColor)
+/**
+ * The exported-PNG draw for "Lưu" — strokes AND plain label pills, but never a trash icon: a
+ * delete affordance baked into a saved photo would make no sense. [segments] pairs each committed
+ * segment with its already-formatted length label (or null if calibration was somehow lost).
+ */
+internal fun DrawScope.drawExportSegments(photo: ImageBitmap, segments: List<Pair<Segment, String?>>, textMeasurer: TextMeasurer) {
+    drawPlainPhoto(photo)
+    segments.forEach { (segment, label) ->
+        val line = LiveLine(segment.start, segment.end)
+        drawSegmentStroke(line, segment.color)
+        if (label != null) drawSegmentLabel(line, label, segment.color, textMeasurer)
     }
 }
 
@@ -73,40 +105,40 @@ private fun DrawScope.drawPlainPhoto(photo: ImageBitmap) {
 }
 
 /**
- * Renders [photo] plus [line]/[label] into a fresh [Bitmap] at the photo's own resolution — the
- * file [PhotoMeasureScreen]'s "Lưu" saves: the original photo with the measurement drawn over it,
- * no watermark. [onScreenCanvasSize] is the size [line]'s coordinates were captured in (the live
- * [PhotoQuadCanvas]), used to map them into the export bitmap's own pixel grid before drawing —
- * [drawPhotoAnnotations] itself never needs to know two coordinate spaces exist.
+ * Renders [photo] plus every committed segment into a fresh [Bitmap] at the photo's own
+ * resolution — the file [PhotoMeasureScreen]'s "Lưu" saves: the original photo with every
+ * measurement drawn over it, no watermark. [onScreenCanvasSize] is the size [segments]'
+ * coordinates were captured in (SCR-23's own canvas), used to map them into the export bitmap's
+ * own pixel grid before drawing.
  *
  * The caller recycles the result; this function never does, since a caller that also draws it to
  * screen first would then have nothing left to draw.
  */
 internal fun renderAnnotatedBitmap(
     photo: Bitmap,
-    line: LiveLine?,
+    segments: List<Pair<Segment, String?>>,
     onScreenCanvasSize: IntSize,
-    label: String?,
-    lineColor: Color,
     textMeasurer: TextMeasurer,
     density: Density,
 ): Bitmap {
-    val exportLine = line?.let { toBitmapSpace(it, photo, onScreenCanvasSize) }
+    val exportSegments = segments.map { (segment, label) -> toBitmapSpaceSegment(segment, photo, onScreenCanvasSize) to label }
     val imageBitmap = ImageBitmap(photo.width, photo.height)
     val canvas = Canvas(imageBitmap)
     val size = Size(photo.width.toFloat(), photo.height.toFloat())
     CanvasDrawScope().draw(density, LayoutDirection.Ltr, canvas, size) {
-        drawPhotoAnnotations(photo.asImageBitmap(), exportLine, label, lineColor, textMeasurer)
+        drawExportSegments(photo.asImageBitmap(), exportSegments, textMeasurer)
     }
     return imageBitmap.asAndroidBitmap()
 }
 
-/** [line]'s on-screen pixels -> [photo]'s own pixel grid, undoing the aspect-fit letterbox [drawPlainPhoto] applies on screen. */
-private fun toBitmapSpace(line: LiveLine, photo: Bitmap, canvasSize: IntSize): LiveLine {
-    val fit = aspectFit(photo.width.toFloat(), photo.height.toFloat(), canvasSize.width.toFloat(), canvasSize.height.toFloat())
-    fun convert(point: Offset) = Offset(
-        (point.x - fit.offsetX) / fit.width * photo.width,
-        (point.y - fit.offsetY) / fit.height * photo.height,
-    )
-    return LiveLine(convert(line.start), convert(line.end))
+/** [segment]'s on-screen pixels -> [photo]'s own pixel grid, undoing the aspect-fit letterbox [drawPlainPhoto] applies on screen. */
+private fun toBitmapSpaceSegment(segment: Segment, photo: Bitmap, canvasSize: IntSize): Segment {
+    fun convert(point: Offset) = toBitmapSpace(
+        point.toVec2(),
+        photo.width.toFloat(),
+        photo.height.toFloat(),
+        canvasSize.width.toFloat(),
+        canvasSize.height.toFloat(),
+    ).toOffset()
+    return segment.copy(start = convert(segment.start), end = convert(segment.end))
 }
