@@ -6,7 +6,10 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmentation
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmenterOptions
 import kotlin.coroutines.resume
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import vn.apero.armeasure.photo.domain.imaging.Vec2
 import vn.apero.armeasure.photo.domain.imaging.isPlausibleReferenceQuad
 import vn.apero.armeasure.photo.domain.imaging.quadFromMask
@@ -38,8 +41,12 @@ internal suspend fun segmentQuad(
     // the commonest way segmentation goes wrong is swallowing an attached shadow or a second object,
     // and both show up as proportions nothing like the reference's.
     targetAspectRatio: Float? = null,
-): List<Vec2>? {
-    if (photo.width < 20 || photo.height < 20) return null
+): List<Vec2>? = withContext(Dispatchers.Default) {
+    // Every step below is real per-pixel work — a bilinear rescale of a few megapixels, a 3 MB
+    // FloatArray copy out of the mask buffer, a flood fill over ~790k pixels and a convex-hull fit.
+    // It ran on the main thread until this wrapper existed, which is also why the "detecting"
+    // spinner never appeared: the thread that would have animated it was the one doing the work.
+    if (photo.width < 20 || photo.height < 20) return@withContext null
 
     // Segmentation runs on a downscaled copy: the model has its own fixed internal resolution, so a
     // full-size input buys no accuracy while the returned per-pixel FloatBuffer costs 4 bytes per
@@ -58,7 +65,7 @@ internal suspend fun segmentQuad(
         null
     } finally {
         if (scaled !== photo) scaled.recycle()
-    } ?: return null
+    } ?: return@withContext null
 
     val quad = quadFromMask(
         mask = mask,
@@ -73,9 +80,9 @@ internal suspend fun segmentQuad(
         targetAspectRatio = targetAspectRatio,
         maxAspectDeviation = MaxAspectDeviation,
     )
-    if (quad == null || !plausible) return null
+    if (quad == null || !plausible) return@withContext null
     // Back to full bitmap space.
-    return quad.map { Vec2(it.x / scale, it.y / scale) }
+    quad.map { Vec2(it.x / scale, it.y / scale) }
 }
 
 /**
@@ -92,29 +99,46 @@ private const val MaxAspectDeviation = 0.5f
  * tap, which already isolates the one object the user pointed at, so paying the model to separate
  * every subject in the frame would buy nothing.
  */
-private suspend fun foregroundConfidenceMask(bitmap: Bitmap, width: Int, height: Int): FloatArray? =
-    suspendCancellableCoroutine { continuation ->
-        val segmenter = SubjectSegmentation.getClient(
-            SubjectSegmenterOptions.Builder().enableForegroundConfidenceMask().build(),
-        )
-        continuation.invokeOnCancellation { segmenter.close() }
-        segmenter.process(InputImage.fromBitmap(bitmap, 0))
-            .addOnSuccessListener { result ->
-                val buffer = result.foregroundConfidenceMask
-                val values = if (buffer == null || buffer.remaining() < width * height) {
-                    null
-                } else {
-                    FloatArray(width * height).also { buffer.get(it) }
-                }
-                segmenter.close()
-                if (continuation.isActive) continuation.resume(values)
+private suspend fun foregroundConfidenceMask(bitmap: Bitmap, width: Int, height: Int): FloatArray? {
+    val segmenter = SubjectSegmentation.getClient(
+        SubjectSegmenterOptions.Builder().enableForegroundConfidenceMask().build(),
+    )
+    // Bounded wait. A Task that never settles used to hang the coroutine for good, leaving the
+    // screen showing "detecting" with no way out and no error — a tap could only start another
+    // segmenter alongside the stuck one. Timing out falls through to the edge detector instead.
+    return try {
+        withTimeoutOrNull(SegmentationTimeoutMs) {
+            suspendCancellableCoroutine { continuation ->
+                segmenter.process(InputImage.fromBitmap(bitmap, 0))
+                    .addOnSuccessListener { result ->
+                        val buffer = result.foregroundConfidenceMask
+                        val values = if (buffer == null || buffer.remaining() < width * height) {
+                            null
+                        } else {
+                            FloatArray(width * height).also { buffer.get(it) }
+                        }
+                        if (continuation.isActive) continuation.resume(values)
+                    }
+                    .addOnFailureListener { error ->
+                        Log.d(DiagTag, "segmentation failed: ${error.javaClass.simpleName}: ${error.message}")
+                        if (continuation.isActive) continuation.resume(null)
+                    }
             }
-            .addOnFailureListener { error ->
-                Log.d(DiagTag, "segmentation failed: ${error.javaClass.simpleName}: ${error.message}")
-                segmenter.close()
-                if (continuation.isActive) continuation.resume(null)
-            }
+        }
+    } finally {
+        // Closed here and nowhere else. Closing inside the listeners as well as on cancellation
+        // gave the client two paths to a double close.
+        segmenter.close()
     }
+}
+
+/**
+ * How long to wait for segmentation before falling back to edge detection.
+ *
+ * Generous: the model is fetched through Play Services on first use, so a genuine first run can be
+ * slow without being stuck. Short enough that a wedged Task does not strand the screen.
+ */
+private const val SegmentationTimeoutMs = 15_000L
 
 /**
  * Long side the photo is downscaled to before segmentation. Larger than the edge pipeline's 900

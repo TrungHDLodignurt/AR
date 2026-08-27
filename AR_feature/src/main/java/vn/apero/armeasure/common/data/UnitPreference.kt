@@ -1,6 +1,8 @@
 package vn.apero.armeasure.common.data
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.core.content.edit
 import vn.apero.armeasure.common.domain.LengthUnit
 
@@ -24,7 +26,9 @@ internal val DefaultUnit = LengthUnit.Cm
  */
 internal class UnitPreference(context: Context) {
 
-    private val prefs = context.getSharedPreferences(PrefsName, Context.MODE_PRIVATE)
+    // Lazy so merely constructing this — which happens inside composition — touches no disk. The
+    // file is only opened when a unit is actually read or written.
+    private val prefs by lazy { context.getSharedPreferences(PrefsName, Context.MODE_PRIVATE) }
 
     var unit: LengthUnit
         get() {
@@ -33,4 +37,18 @@ internal class UnitPreference(context: Context) {
             return enumValues<LengthUnit>().firstOrNull { it.name == stored } ?: DefaultUnit
         }
         set(value) = prefs.edit { putString(KeyUnit, value.name) }
+
+    /**
+     * Persists [value] off the main thread.
+     *
+     * `edit {}` uses `apply()`, so the write itself is already asynchronous — but the first call has
+     * to wait for SharedPreferences to finish loading the file before it can edit it, and that wait
+     * is on whichever thread asks. Callers persist from a `LaunchedEffect`, which runs on the main
+     * thread.
+     *
+     * The matching read is deliberately NOT moved off the main thread: it seeds the unit shown on
+     * the very first frame, and making it asynchronous would render the default unit and then visibly
+     * correct it. One `getString` on a file holding a single short string is the cheaper trade.
+     */
+    suspend fun save(value: LengthUnit) = withContext(Dispatchers.IO) { unit = value }
 }

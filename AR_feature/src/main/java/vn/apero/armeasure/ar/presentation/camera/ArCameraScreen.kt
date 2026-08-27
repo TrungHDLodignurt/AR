@@ -107,7 +107,7 @@ internal fun ArCameraScreen(
     // Hoisted out of the tool state holders (insight 7): one unit, seeded from the persisted
     // choice, shared by all three tools so swapping tools never changes what unit is displayed.
     var unit by remember { mutableStateOf(unitPreference.unit) }
-    LaunchedEffect(unit) { unitPreference.unit = unit }
+    LaunchedEffect(unit) { unitPreference.save(unit) }
 
     val engine = rememberEngine()
     val materialLoader = rememberMaterialLoader(engine)

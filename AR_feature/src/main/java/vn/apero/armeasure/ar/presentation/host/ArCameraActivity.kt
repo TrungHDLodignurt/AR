@@ -16,6 +16,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.core.content.ContextCompat
 import vn.apero.armeasure.ar.ArAvailability
 import vn.apero.armeasure.ar.ArMeasureKit
@@ -88,8 +90,11 @@ internal class ArCameraActivity : ArNavBarHidingActivity() {
      */
     override fun onResume() {
         super.onResume()
+        // requestInstall stays on the main thread — it may start an Activity, and it is cheap when
+        // there is nothing to install. checkAvailability does not: see ArAvailabilityGate's header
+        // for what it costs, which is why it is dispatched instead of called here.
         if (!ArMeasureKit.requestInstall(this)) {
-            arAvailability = ArMeasureKit.checkAvailability(this)
+            lifecycleScope.launch { arAvailability = checkArAvailabilityOffMain(this@ArCameraActivity) }
         }
     }
 

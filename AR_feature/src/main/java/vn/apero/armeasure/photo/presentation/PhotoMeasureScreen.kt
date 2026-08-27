@@ -54,6 +54,7 @@ import vn.apero.armeasure.common.domain.MeasurementResult
 import vn.apero.armeasure.common.domain.formatLength
 import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.photo.data.CustomReferenceStore
+import vn.apero.armeasure.photo.data.discardCameraCapture
 import vn.apero.armeasure.photo.data.loadRotatedBitmap
 import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
 import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
@@ -106,12 +107,23 @@ internal fun PhotoMeasureScreen(
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
     val coroutineScope = rememberCoroutineScope()
+    // Resolved here rather than in the save callback: a getString() off LocalContext.current is not
+    // invalidated by a Configuration change, so it can report a stale locale.
+    val saveSuccessMessage = stringResource(R.string.armeasure_photo_save_success)
+    val saveFailureMessage = stringResource(R.string.armeasure_photo_save_failure)
     val unitPreference = remember { UnitPreference(context) }
     // unitPreference.unit already falls back to DefaultUnit on a first-ever launch — same value as
     // the unit param's own default, so the persisted store is the single seed.
     val state = remember { PhotoMeasureState(initialUnit = unitPreference.unit) }
-    LaunchedEffect(state.unit) { unitPreference.unit = state.unit }
-    val customReferences = remember { mutableStateListOf<ReferenceObject>().apply { addAll(referenceStore.loadAll()) } }
+    LaunchedEffect(state.unit) { unitPreference.save(state.unit) }
+    // Loaded after first composition, not during it: the store reads a prefs file off disk and
+    // parses JSON, and can write a migration back. The grid renders empty for one frame, which is
+    // correct — nothing is known yet — rather than blocking the frame to find out.
+    val customReferences = remember { mutableStateListOf<ReferenceObject>() }
+    LaunchedEffect(referenceStore) {
+        customReferences.clear()
+        customReferences.addAll(referenceStore.loadAll())
+    }
 
     // All five below are rememberSaveable, not remember: picking a photo hands the foreground to
     // the OEM camera/gallery activity, which routinely recreates this activity (config change, or
@@ -139,7 +151,13 @@ internal fun PhotoMeasureScreen(
     // state.reference is not saveable either (PhotoMeasureState is a plain remember), so without
     // this a restored chosenReferenceId would show the flow past the picker while the state still
     // held the default A4 — silently measuring against the wrong object.
-    LaunchedEffect(chosenReferenceId) {
+    //
+    // Keyed on the custom list's size as well as the id, because that list arrives asynchronously:
+    // on the first pass after a restore it is still empty, so a CUSTOM reference cannot be resolved
+    // and the screen would sit on A4 while displaying the restored flow. Re-running once the store
+    // has loaded is what actually recovers it. Built-ins never had the problem — they are a static
+    // list — which is why this only ever showed up for user-created objects.
+    LaunchedEffect(chosenReferenceId, customReferences.size) {
         val id = chosenReferenceId ?: return@LaunchedEffect
         if (state.reference.id != id) {
             (builtInReferenceObjects + customReferences).firstOrNull { it.id == id }?.let { state.reference = it }
@@ -164,8 +182,7 @@ internal fun PhotoMeasureScreen(
         }
         coroutineScope.launch {
             val uri = performSave(photo, labeledSegments, canvasSize, textMeasurer, density, imageSaver)
-            val messageRes = if (uri != null) R.string.armeasure_photo_save_success else R.string.armeasure_photo_save_failure
-            Toast.makeText(context, context.getString(messageRes), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, if (uri != null) saveSuccessMessage else saveFailureMessage, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -301,7 +318,16 @@ internal fun PhotoMeasureScreen(
 
         if (showPickPhotoSheet) {
             PickPhotoSheet(
-                onPhotoPicked = { uri -> loadRotatedBitmap(context, uri)?.let(state::loadPhoto) },
+                // Launched, not called inline: decoding is suspending now precisely because it is
+                // several megapixels of work on a content Uri.
+                onPhotoPicked = { uri ->
+                    coroutineScope.launch {
+                        loadRotatedBitmap(context, uri)?.let(state::loadPhoto)
+                        // The pixels are in memory now, so a camera capture's temp JPEG has done its
+                        // job. No-op for a gallery Uri — see discardCameraCapture.
+                        discardCameraCapture(context, uri)
+                    }
+                },
                 onDismiss = { showPickPhotoSheet = false },
             )
         }
@@ -312,25 +338,31 @@ internal fun PhotoMeasureScreen(
                 unit = state.unit,
                 onDismiss = { showReferenceSheet = false },
                 onSubmit = { label, shortSideMm, longSideMm ->
-                    if (target == null) {
-                        // Stay on the reference grid (SCR-15) after creating an object — do not
-                        // auto-advance via selectReference. The new card lands right before the
-                        // "Add new" tile the user just tapped, so it's already in view without a
-                        // scroll-to; tapping it is what advances.
-                        val newReference = referenceStore.add(label, shortSideMm, longSideMm)
-                        customReferences.add(newReference)
-                    } else {
-                        val updated = referenceStore.update(target.id, label, shortSideMm, longSideMm)
-                        if (updated != null) {
-                            val index = customReferences.indexOfFirst { it.id == target.id }
-                            if (index >= 0) customReferences[index] = updated
-                            if (state.reference.id == target.id) state.reference = updated
+                    coroutineScope.launch {
+                        if (target == null) {
+                            // Stay on the reference grid (SCR-15) after creating an object — do not
+                            // auto-advance via selectReference. The new card lands right before the
+                            // "Add new" tile the user just tapped, so it's already in view without a
+                            // scroll-to; tapping it is what advances.
+                            val newReference = referenceStore.add(label, shortSideMm, longSideMm)
+                            customReferences.add(newReference)
+                        } else {
+                            val updated = referenceStore.update(target.id, label, shortSideMm, longSideMm)
+                            if (updated != null) {
+                                val index = customReferences.indexOfFirst { it.id == target.id }
+                                if (index >= 0) customReferences[index] = updated
+                                if (state.reference.id == target.id) state.reference = updated
+                            }
                         }
                     }
                 },
                 onDelete = target?.let {
                     {
-                        if (referenceStore.delete(it.id)) customReferences.removeAll { r -> r.id == it.id }
+                        coroutineScope.launch {
+                            if (referenceStore.delete(it.id)) {
+                                customReferences.removeAll { r -> r.id == it.id }
+                            }
+                        }
                     }
                 },
             )
