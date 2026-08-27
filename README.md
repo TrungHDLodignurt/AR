@@ -35,7 +35,7 @@ The repo is two modules: one library module holds all feature code, `:app` is na
 
 | Module | Package | Contents | JVM tests |
 |---|---|---|---|
-| [`:AR_feature`](AR_feature/README.md) | `vn.apero.armeasure.*` | `common` (LengthUnit, formatters, LabelPill) + `ar` (Distance/Distance chain/Box/Cylinder + ARCore infra) + `photo` (Canny/Hough/Homography photo-reference measuring). Public API is exactly 3 symbols: `ArMeasureHub` (the entry composable), `ArMeasureConfig`, `MeasurementImageSaver` — everything else is `internal` | 102 |
+| [`:AR_feature`](AR_feature/README.md) | `vn.apero.armeasure.*` | `common` (LengthUnit, formatters, LabelPill) + `ar` (Distance/Distance chain/Box/Cylinder + ARCore infra) + `photo` (ML Kit segmentation + Canny/Hough/Homography photo-reference measuring). Public API is exactly 3 symbols: `ArMeasureHub` (the entry composable), `ArMeasureConfig`, `MeasurementImageSaver` — everything else is `internal` | 172 |
 | `:app` | `vn.quancua.artapemeasure` | `MainActivity` + tab nav only, wires `:AR_feature` | 0 |
 
 `AR_feature/README.md` (linked above) is a self-contained integration guide for pulling the
@@ -50,9 +50,9 @@ gives describes the simulation, not a sensor.
 
 ```bash
 ./gradlew assembleDebug                          # whole app APK -> app/build/outputs/apk/debug/
-./gradlew testDebugUnitTest                      # all 102 pure-maths tests, no device needed
+./gradlew testDebugUnitTest                      # all 172 pure-maths tests, no device needed
 ./gradlew :app:installDebug                      # to a connected device
-./gradlew :AR_feature:testDebugUnitTest          # same 102 tests, feature module only
+./gradlew :AR_feature:testDebugUnitTest          # same 172 tests, feature module only
 ```
 
 Toolchain (verified working, not guessed):

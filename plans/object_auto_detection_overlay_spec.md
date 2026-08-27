@@ -1,5 +1,22 @@
 # Object Auto Detection & Boundary Overlay — Android Kotlin
 
+> **STATUS: design proposal, partly superseded. Not a description of the shipped code.**
+>
+> Written before the feature was built. Two of its central choices were not taken, so read it as the
+> problem statement and the geometric reasoning — both still hold — and not as the implementation:
+>
+> - **No OpenCV.** Detection is pure Kotlin (`photo/domain/imaging/`) plus ML Kit subject
+>   segmentation. Sections naming `OpenCVObjectDetector`, `cv::` calls or OpenCV types describe an
+>   approach that was never adopted.
+> - **No MVVM, no ViewModel.** The presentation layer is plain Compose state-holder classes
+>   (`PhotoMeasureState`, `MeasureState`, `ShapeMeasureState`, `ArSessionState`), created in
+>   `remember {}`. See `AR_feature/README.md` for what is actually there and what it costs.
+>
+> What the shipped pipeline does instead: tap -> ML Kit subject segmentation -> flood fill from the
+> tap -> convex hull -> largest-area 4 hull vertices -> per-side line fit -> intersect -> a shared
+> plausibility gate, with Canny+Hough as the fallback. Recorded in
+> `plans/reports/report-260827-1725-photo-autofit-rebuild.md`.
+
 ## 1. Mục tiêu
 
 Implement tính năng Android Kotlin cho phép:
@@ -28,9 +45,10 @@ Implement tính năng Android Kotlin cho phép:
 - Kotlin
 - Android
 - Jetpack Compose
-- MVVM / Clean Architecture
-- OpenCV
 - Coroutines
+
+As proposed, superseded (see the status note at the top): MVVM / Clean Architecture, OpenCV. What
+shipped uses plain Compose state holders and pure-Kotlin imaging plus ML Kit subject segmentation.
 
 ---
 

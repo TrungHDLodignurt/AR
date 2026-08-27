@@ -323,7 +323,7 @@ which locales to add is entirely the host's call), every name prefixed `armeasur
 (`resourcePrefix` is enforced at the module level, so a collision with a host's own resource name
 is impossible). Two narrow, documented exceptions where a literal ships instead: the
 `ReferenceObject` built-in labels ("A4 paper", "Payment card" — no `Context` available at that
-call site) and — a known limitation, not yet fixed — `QuadEditorCanvas.kt`'s edge labels (see §16).
+call site) and — a known limitation, not yet fixed — `QuadEditorCanvas.kt`'s edge labels (see §17).
 
 ## 11. Cold-start warm-up
 
@@ -438,7 +438,46 @@ adb -s <device-serial> install -r app/build/outputs/apk/release/app-release.apk
 human aiming a real phone at a real textured surface — there is no way to script ARCore's camera
 input. Budget for this explicitly; a green build is not evidence the AR tools work.
 
-## 15. Maintenance audits
+## 15. Architecture — plain Compose state holders, not MVVM or MVI
+
+Stated explicitly because the package layout suggests otherwise. `data/ domain/ presentation/` looks
+like Clean Architecture, but the presentation layer is **not** MVVM or MVI:
+
+- **No ViewModel.** Four plain classes hold screen state — `PhotoMeasureState`, `MeasureState`,
+  `ShapeMeasureState`, `ArSessionState` — created in `remember {}` and mutated directly through
+  their own methods (`state.moveQuadCorner(...)`). 31 properties are `by mutableStateOf`.
+- **No Flow, no Intent, no reducer.** Zero `StateFlow`, zero `sealed interface Intent/Effect`, zero
+  `reduce`/`dispatch`. The UI calls a method; Compose's snapshot system invalidates only the
+  composables that read the field that changed.
+- **No DI.** No Koin, no Hilt. `MeasurementImageSaver` is the single injected seam, passed as a plain
+  interface through `ArMeasureConfig`.
+
+This is the state-holder pattern Google documents for UI logic that does not need to outlive the
+screen, and for the AR tools it is a deliberate fit: `onFrame` writes tracking state and the live
+measurement on **every ARCore frame**, and a direct `mutableStateOf` write with fine-grained
+invalidation is much cheaper there than rebuilding an immutable state object per frame.
+
+**Where the choice costs, and it is not theoretical.** "Nothing outlives the screen" is false for
+Picture Measure: it hands the foreground to the OEM camera or the photo picker, so the Activity is
+routinely recreated mid-flow. Everything that must survive that is patched one variable at a time
+with `rememberSaveable` — `chosenReferenceId`, `showPickPhotoSheet`, `showReferenceSheet`,
+`editingReferenceId`, `canvasSize`, and the camera capture's `pendingUri` — plus a `LaunchedEffect`
+that re-resolves the chosen reference once the custom list has loaded. Each of those was a shipped
+bug before it was a fix, and the same class of bug will recur with the next piece of state added.
+
+The photo bitmap, quad and segments still do **not** survive process death; only the reference choice
+does.
+
+Related: `quad`, `segments` and `homography` are stored in **display-space pixels**, so any relayout
+invalidates all three at once — `PhotoMeasureState.onCanvasResized` re-projects them and re-solves
+the calibration. Holding them in bitmap space and projecting at draw time would make that impossible
+rather than handled.
+
+Both are known and assessed, not overlooked — see
+`plans/reports/report-260827-1910-mvi-conversion-risk.md` for what converting to the house MVI
+convention would and would not fix.
+
+## 16. Maintenance audits
 
 One-line, re-runnable checks for the invariants no compiler enforces (from this module's own
 final verification pass):
@@ -446,7 +485,7 @@ final verification pass):
 | # | Check | Command |
 |---|---|---|
 | 1 | No string literals in Kotlin | `git grep -nE 'Text\(\s*"|text = "|label = "' AR_feature/src/main` → only glyphs |
-| 2 | No Vietnamese literals | `git grep -nP '"[^"]*[àáảãạăâđèéẻêềếệìíỉòóỏôồốơớùúủưứỳýỵ]' AR_feature/src/main --include=*.kt` → only the documented `QuadEditorCanvas` exception (§16) |
+| 2 | No Vietnamese literals | `git grep -nP '"[^"]*[àáảãạăâđèéẻêềếệìíỉòóỏôồốơớùúủưứỳýỵ]' AR_feature/src/main --include=*.kt` → only the documented `QuadEditorCanvas` exception (§17) |
 | 3 | English-only locale | `ls AR_feature/src/main/res/ | grep values-` → nothing |
 | 4 | Resource prefix intact | every `<string name=` starts with `armeasure_` |
 | 5 | No `ar` ↔ `photo` cross-import | `git grep -n 'import vn.apero.armeasure.ar\.' AR_feature/src/main/java/vn/apero/armeasure/photo` and the mirror → both empty (Kotlin `internal` no longer enforces this boundary post-merge — it is convention only) |
@@ -456,7 +495,7 @@ final verification pass):
 | 9 | Reflection sweep | `git grep -n '::class.java\|Class.forName\|reflect\|Gson\|kotlinx.serialization\|getIdentifier' AR_feature/src/main` → only the two documented `Plane::class.java` lookups |
 | 10 | R8 clean | re-run §13/§14 after any dependency bump |
 
-## 16. Known limitations and deferred items
+## 17. Known limitations and deferred items
 
 Stated plainly, not buried:
 
