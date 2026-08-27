@@ -39,6 +39,11 @@ dependencies {
 
     implementation(libs.sceneview.ar)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    // ViewModels are obtained with androidx's own viewModel() plus an explicit factory, deliberately
+    // not koinViewModel(): this module ships no DI so it drops into a host with or without Koin, and
+    // README section 13's R8 story rests on the dependency list staying reflection-free.
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.savedstate)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
     // Primary auto-fit detector. Unbundled: the model arrives via Play Services, so this costs no

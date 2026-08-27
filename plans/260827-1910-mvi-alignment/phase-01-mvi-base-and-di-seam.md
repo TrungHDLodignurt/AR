@@ -1,7 +1,7 @@
 # Phase 01 — local MVI base + the DI seam
 
 Context: [plan.md](plan.md) · [risk assessment](../reports/report-260827-1910-mvi-conversion-risk.md)
-Priority: first. Status: not started.
+Priority: first. Status: **done** 2026-08-27.
 
 ## Goal
 
@@ -34,15 +34,20 @@ pattern. Diverge only where noted below, and say why in KDoc.
 - `common/presentation/mvi/MviContract.kt` — the three marker interfaces, `internal`
 - `common/presentation/mvi/MviViewModel.kt` — the base, `internal`, plus the `SavedStateHandle` seam
 
-## The SavedStateHandle seam
+## The SavedStateHandle seam — as built
 
 The house base has none, which is why converting would not by itself fix any of today's restoration
-bugs. Add it here without changing the house shape:
+bugs. Implemented as a single hook rather than a per-field helper:
 
-- Subclasses receive `SavedStateHandle` in their own constructor (not the base) so a screen with
-  nothing to persist stays identical to the house pattern.
-- Provide `protected fun <T> SavedStateHandle.saved(key: String, default: T)` or equivalent, and
-  document that only small, `Parcelable`-safe values belong there — ids and flags, never bitmaps.
+    protected open fun persist(state: S) = Unit    // called after every updateState
+
+Subclasses take `SavedStateHandle` in their own constructor, restore inside `createInitialState()`,
+and override `persist` to write back. Rationale in the KDoc: it makes "what survives" one reviewable
+decision per screen instead of remembering to guard each new field — which is exactly how this module
+accumulated six separate `rememberSaveable` patches, each one shipped as a bug first.
+
+KDoc also states the limit: only small `Parcelable`-safe values, never a `Bitmap` or a large list,
+because the handle goes through a `Bundle` with a hard transaction size cap.
 
 ## The DI decision — resolve before phase 03
 
@@ -57,16 +62,18 @@ Two options, pick one and record it here:
 2. **Koin.** Matches the house exactly. Adds a dependency to a module advertised as DI-free, and new
    R8 keep surface.
 
-Recommendation: option 1. The module's portability claim is load-bearing for the apply skill, and the
-call-site difference is one line per screen.
+**DECIDED: option 1**, `viewModel()` with an explicit factory. The module's portability claim is
+load-bearing for the apply skill, and the call-site difference is one line per screen. Catalog gains
+`androidx-lifecycle-viewmodel-compose` and `androidx-lifecycle-viewmodel-savedstate` at the existing
+`lifecycle` version — no new version, no DI, no R8 keep surface.
 
 ## Todo
 
-- [ ] Read both house base files in full; note any member this summary missed
-- [ ] Create `MviContract.kt`, `MviViewModel.kt`, `internal`
-- [ ] Add the `SavedStateHandle` helper + KDoc on what may go in it
-- [ ] Decide the DI option, write the decision into this file
-- [ ] `:AR_feature:compileDebugKotlin` + `testDebugUnitTest` (172, 2 skipped)
+- [x] Read both house base files in full; note any member this summary missed
+- [x] Create `MviContract.kt`, `MviViewModel.kt`, `internal`
+- [x] Add the `persist` hook + KDoc on what may go in the handle
+- [x] Decide the DI option, write the decision into this file
+- [x] `:AR_feature:compileDebugKotlin` + `testDebugUnitTest` (172, 2 skipped)
 
 ## Success criteria
 
