@@ -315,7 +315,10 @@ internal fun ArCameraScreen(
                 text = commitToast ?: hintFor(tool, sessionState, distance, distanceChain, box, cylinder),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 110.dp),
+                    // Tracks ArCameraChrome's BottomBarLift: the bar is measured from the same
+                    // bottom edge, so the two offsets have to move together or the toast lands on
+                    // top of the capture button.
+                    .padding(bottom = 160.dp),
             )
         }
 

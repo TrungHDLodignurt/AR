@@ -173,6 +173,14 @@ private fun ModeUnitStack(
 }
 
 /**
+ * How far the bottom bar sits above the navigation-bar inset.
+ *
+ * [ArCameraScreen]'s hint toast is positioned from the same bottom edge, so raising this without
+ * raising the toast's own offset by the same amount puts the two on top of each other.
+ */
+private val BottomBarLift = 50.dp
+
+/**
  * Only [CaptureBtn] plus the freed-up Clear slot — see [ArCameraTopBar]'s KDoc for why Clear
  * lands here even though the live document's bottom bar shows just the capture button.
  * `CaptureBtn` is centred on `fillMaxWidth()`, not at the mock's `x=142` — that value centres a
@@ -190,6 +198,10 @@ internal fun ArCameraBottomBar(
         modifier = modifier
             .navigationBarsPadding()
             .fillMaxWidth()
+            // Lifted clear of the navigation bar's own inset: on a gesture-nav device
+            // navigationBarsPadding() alone leaves the buttons close enough to the swipe-up area
+            // that a tap near the capture button's lower edge reads as a system gesture.
+            .padding(bottom = BottomBarLift)
             .padding(horizontal = 32.dp)
             .height(87.dp),
     ) {
