@@ -54,6 +54,14 @@ import vn.apero.armeasure.photo.data.loadRotatedBitmap
 import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
 import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.Effect
 import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.Intent
+import vn.apero.armeasure.photo.presentation.components.CheckmarkBtn
+import vn.apero.armeasure.photo.presentation.components.InstructionBox
+import vn.apero.armeasure.photo.presentation.components.PhotoBottomToolbar
+import vn.apero.armeasure.photo.presentation.components.PhotoQuadCanvas
+import vn.apero.armeasure.photo.presentation.components.PhotoTopNav
+import vn.apero.armeasure.photo.presentation.components.PickPhotoSheet
+import vn.apero.armeasure.photo.presentation.components.ReferenceEditSheet
+import vn.apero.armeasure.photo.presentation.components.renderAnnotatedBitmap
 
 /**
  * "Measure from a photo" — no ARCore, no camera-ar feature, no depth. A rectangle of known size

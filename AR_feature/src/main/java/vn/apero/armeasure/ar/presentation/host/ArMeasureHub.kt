@@ -35,6 +35,8 @@ import vn.apero.armeasure.ar.ArAvailability
 import vn.apero.armeasure.common.ui.ArMeasureTheme
 import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.photo.presentation.ArPhotoActivity
+import vn.apero.armeasure.ar.presentation.host.components.ArUnsupportedDialog
+import vn.apero.armeasure.ar.presentation.host.components.openArCoreInPlayStore
 
 /**
  * The module's one entry surface — a tab-root composable a host embeds in its own tab (design

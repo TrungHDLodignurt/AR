@@ -13,6 +13,7 @@ import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
 import vn.apero.armeasure.photo.domain.imaging.Vec2
 import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
 import vn.apero.armeasure.photo.domain.imaging.measureRealDistanceMm
+import vn.apero.armeasure.photo.presentation.components.PhotoLineColors
 
 /**
  * Two draggable endpoints of SCR-24's in-progress segment, in the photo's OWN pixel grid — see

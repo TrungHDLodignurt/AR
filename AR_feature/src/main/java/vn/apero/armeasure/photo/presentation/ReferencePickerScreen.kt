@@ -33,6 +33,9 @@ import vn.apero.armeasure.R
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
+import vn.apero.armeasure.photo.presentation.components.AddReferenceCard
+import vn.apero.armeasure.photo.presentation.components.CustomCard
+import vn.apero.armeasure.photo.presentation.components.PresetCard
 
 /**
  * "Choose a reference object" — ARuler's own first screen for this feature, and the reason it

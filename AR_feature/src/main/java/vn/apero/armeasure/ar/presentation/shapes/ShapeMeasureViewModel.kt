@@ -22,6 +22,7 @@ import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
 import vn.apero.armeasure.common.domain.UndoRedoStack
 import vn.apero.armeasure.common.presentation.mvi.MviViewModel
+import vn.apero.armeasure.ar.presentation.shapes.components.ShapeOverlayFrame
 
 /**
  * One undo/redo entry: either a mid-shape step (stepping back from [ShapePhase.SizingEdgeV] to

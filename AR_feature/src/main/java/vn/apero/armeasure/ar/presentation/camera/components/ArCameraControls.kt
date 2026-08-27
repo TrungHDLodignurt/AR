@@ -1,4 +1,4 @@
-package vn.apero.armeasure.ar.presentation.camera
+package vn.apero.armeasure.ar.presentation.camera.components
 
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.runtime.Composable
@@ -18,8 +18,10 @@ import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
 import vn.apero.armeasure.ar.data.arcore.PoseProjector
 import vn.apero.armeasure.ar.domain.geometry.nearestIndexWithin
-import vn.apero.armeasure.ar.presentation.ruler.MeasureOverlay
+import vn.apero.armeasure.ar.presentation.ruler.components.MeasureOverlay
 import vn.apero.armeasure.ar.presentation.ruler.MeasureViewModel
+import vn.apero.armeasure.ar.presentation.camera.ArSessionFrameStream
+import vn.apero.armeasure.ar.presentation.ruler.components.MeasureOverlay
 
 /**
  * Distance's overlay plus its point-drag gesture handling.

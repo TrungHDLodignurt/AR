@@ -1,4 +1,4 @@
-package vn.apero.armeasure.ar.presentation.shapes
+package vn.apero.armeasure.ar.presentation.shapes.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
@@ -10,10 +10,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import vn.apero.armeasure.ar.presentation.ruler.Segment2D
-import vn.apero.armeasure.ar.presentation.ruler.drawReticle
-import vn.apero.armeasure.ar.presentation.ruler.drawSegment
+import vn.apero.armeasure.ar.presentation.ruler.components.drawReticle
+import vn.apero.armeasure.ar.presentation.ruler.components.drawSegment
 import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.common.ui.drawLabelPill
+import vn.apero.armeasure.ar.presentation.ruler.components.drawReticle
+import vn.apero.armeasure.ar.presentation.ruler.components.drawSegment
 
 /**
  * Everything the box/cylinder overlay needs for one frame, in screen pixels — the wireframe

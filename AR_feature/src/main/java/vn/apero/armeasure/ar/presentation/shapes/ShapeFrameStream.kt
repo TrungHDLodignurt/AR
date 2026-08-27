@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import vn.apero.armeasure.ar.data.arcore.SurfaceSample
 import vn.apero.armeasure.ar.domain.steadiness.SteadinessGate
+import vn.apero.armeasure.ar.presentation.shapes.components.ShapeOverlayFrame
 
 /**
  * The box/cylinder tools' **frame stream** — the wireframe counterpart of

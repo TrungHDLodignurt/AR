@@ -43,11 +43,22 @@ import vn.apero.armeasure.ar.presentation.shapes.ShapeEffect
 import vn.apero.armeasure.ar.presentation.shapes.ShapeIntent
 import vn.apero.armeasure.ar.presentation.shapes.ShapeKind
 import vn.apero.armeasure.ar.presentation.shapes.ShapeMeasureViewModel
-import vn.apero.armeasure.ar.presentation.shapes.ShapeOverlay
+import vn.apero.armeasure.ar.presentation.shapes.components.ShapeOverlay
 import vn.apero.armeasure.ar.presentation.shapes.ShapeUiState
 import vn.apero.armeasure.common.data.UnitPreference
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
+import vn.apero.armeasure.ar.presentation.camera.components.ARToast
+import vn.apero.armeasure.ar.presentation.camera.components.ArCameraBottomBar
+import vn.apero.armeasure.ar.presentation.camera.components.ArCameraTopBar
+import vn.apero.armeasure.ar.presentation.camera.components.DistanceOverlay
+import vn.apero.armeasure.ar.presentation.camera.components.MeasureModeSheet
+import vn.apero.armeasure.ar.presentation.camera.components.distanceActions
+import vn.apero.armeasure.ar.presentation.camera.components.result
+import vn.apero.armeasure.ar.presentation.camera.components.shapeActions
+import vn.apero.armeasure.ar.presentation.shapes.components.ShapeOverlay
+import vn.apero.armeasure.photo.presentation.redo
+import vn.apero.armeasure.photo.presentation.undo
 
 /** How often the watchdog below checks whether ARCore frames are still arriving. */
 private const val CameraWatchdogPollIntervalMs = 1_000L

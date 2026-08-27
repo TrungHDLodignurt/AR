@@ -1,4 +1,4 @@
-package vn.apero.armeasure.ar.presentation.camera
+package vn.apero.armeasure.ar.presentation.camera.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -11,6 +11,7 @@ import vn.apero.armeasure.ar.presentation.shapes.ShapeFrameStream
 import vn.apero.armeasure.ar.presentation.shapes.ShapeKind
 import vn.apero.armeasure.ar.presentation.shapes.ShapePhase
 import vn.apero.armeasure.ar.presentation.shapes.ShapeUiState
+import vn.apero.armeasure.ar.presentation.camera.ArSessionFrameStream
 
 /**
  * One line of guidance for whichever tool is active — the merge of the old `MeasureScreen.kt`'s and

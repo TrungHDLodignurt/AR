@@ -23,6 +23,10 @@ import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.photo.domain.imaging.Vec2
 import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.Intent
 import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.State
+import vn.apero.armeasure.photo.presentation.components.ColorPickerBar
+import vn.apero.armeasure.photo.presentation.components.DraggableHandlesOverlay
+import vn.apero.armeasure.photo.presentation.components.LineDrawTopNav
+import vn.apero.armeasure.photo.presentation.components.drawPhotoAnnotations
 
 /**
  * SCR-24 ("AR Adjust", design `kYLQt`) — a distinct screen (not an overlay) for drawing exactly

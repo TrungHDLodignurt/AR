@@ -1,4 +1,4 @@
-package vn.apero.armeasure.photo.presentation
+package vn.apero.armeasure.photo.presentation.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border

@@ -34,6 +34,7 @@ import vn.apero.armeasure.ar.presentation.ruler.Segment2D
 import vn.apero.armeasure.ar.presentation.ruler.resolveAt
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.formatLength
+import vn.apero.armeasure.ar.presentation.shapes.components.ShapeOverlayFrame
 
 /**
  * The per-frame AR loop for the box/cylinder tools — the same three jobs as

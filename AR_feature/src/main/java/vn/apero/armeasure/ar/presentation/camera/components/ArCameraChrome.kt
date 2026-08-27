@@ -1,4 +1,4 @@
-package vn.apero.armeasure.ar.presentation.camera
+package vn.apero.armeasure.ar.presentation.camera.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

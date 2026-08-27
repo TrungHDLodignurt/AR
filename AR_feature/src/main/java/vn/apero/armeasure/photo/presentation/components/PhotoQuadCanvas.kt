@@ -1,4 +1,4 @@
-package vn.apero.armeasure.photo.presentation
+package vn.apero.armeasure.photo.presentation.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -27,6 +27,7 @@ import vn.apero.armeasure.R
 import vn.apero.armeasure.photo.domain.imaging.Vec2
 import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.Intent
 import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.State
+import vn.apero.armeasure.photo.presentation.toBitmapSpaceIn
 
 /**
  * The photo plus one of three things, depending on [State]:

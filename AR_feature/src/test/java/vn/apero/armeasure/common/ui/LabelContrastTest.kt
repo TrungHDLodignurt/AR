@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import vn.apero.armeasure.photo.presentation.PhotoLineColors
+import vn.apero.armeasure.photo.presentation.components.PhotoLineColors
 
 /** Drives [labelTextColorFor] and [contrastRatio] — see phase 08's success criteria for the exact 4 assertions. */
 class LabelContrastTest {

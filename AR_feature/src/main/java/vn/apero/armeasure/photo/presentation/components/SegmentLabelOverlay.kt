@@ -1,4 +1,4 @@
-package vn.apero.armeasure.photo.presentation
+package vn.apero.armeasure.photo.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,6 +29,7 @@ import vn.apero.armeasure.common.domain.formatLength
 import vn.apero.armeasure.common.ui.labelTextColorFor
 import vn.apero.armeasure.photo.domain.imaging.Vec2
 import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.State
+import vn.apero.armeasure.photo.presentation.toDisplayOffsetIn
 
 /**
  * SCR-23's interactive replacement for a Canvas-drawn label pill: a `Canvas` draw cannot receive

@@ -24,6 +24,8 @@ import vn.apero.armeasure.ar.ArMeasureKit
 import vn.apero.armeasure.ar.presentation.camera.ArCameraScreen
 import vn.apero.armeasure.common.ui.ArMeasureTheme
 import vn.apero.armeasure.common.ui.ArNavBarHidingActivity
+import vn.apero.armeasure.ar.presentation.host.components.ArUnsupported
+import vn.apero.armeasure.ar.presentation.host.components.CameraDenied
 
 /**
  * Module-owned, full-screen AR camera Activity — the hub only decides whether to show the card

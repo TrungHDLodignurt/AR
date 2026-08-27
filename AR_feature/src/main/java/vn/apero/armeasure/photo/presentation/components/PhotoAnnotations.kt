@@ -1,4 +1,4 @@
-package vn.apero.armeasure.photo.presentation
+package vn.apero.armeasure.photo.presentation.components
 
 import android.graphics.Bitmap
 import androidx.compose.ui.geometry.Offset
@@ -25,6 +25,9 @@ import vn.apero.armeasure.common.ui.labelTextColorFor
 import vn.apero.armeasure.photo.domain.imaging.Vec2
 import vn.apero.armeasure.photo.domain.imaging.aspectFit
 import vn.apero.armeasure.photo.domain.imaging.toDisplaySpace
+import vn.apero.armeasure.photo.presentation.LiveLine
+import vn.apero.armeasure.photo.presentation.Segment
+import vn.apero.armeasure.photo.presentation.toOffset
 
 /** A dark halo behind the line/endpoints so a bright user-chosen colour still reads over a light photo (insight 6). */
 private val LineHalo = Color(0x59000000)

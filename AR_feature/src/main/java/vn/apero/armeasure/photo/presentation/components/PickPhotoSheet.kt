@@ -1,4 +1,4 @@
-package vn.apero.armeasure.photo.presentation
+package vn.apero.armeasure.photo.presentation.components
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult

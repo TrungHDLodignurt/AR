@@ -9,6 +9,7 @@ import org.junit.Test
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.photo.domain.imaging.Vec2
 import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.State
+import vn.apero.armeasure.photo.presentation.components.PhotoLineColors
 
 /**
  * The photo screen's segment bookkeeping — the part of the SCR-23/24 flow that is genuinely

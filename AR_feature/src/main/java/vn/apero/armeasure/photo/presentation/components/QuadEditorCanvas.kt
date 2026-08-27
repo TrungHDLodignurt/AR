@@ -1,4 +1,4 @@
-package vn.apero.armeasure.photo.presentation
+package vn.apero.armeasure.photo.presentation.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
@@ -27,6 +27,8 @@ import kotlin.math.roundToInt
 import vn.apero.armeasure.common.ui.drawLabelPill
 import vn.apero.armeasure.photo.domain.imaging.Vec2
 import vn.apero.armeasure.photo.domain.imaging.aspectFit
+import vn.apero.armeasure.photo.presentation.toBitmapSpaceIn
+import vn.apero.armeasure.photo.presentation.toDisplayOffsetIn
 
 private val LongEdgeColor = Color(0xFF64D2FF)
 private val ShortEdgeColor = Color(0xFFFFD60A)
