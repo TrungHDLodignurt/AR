@@ -29,7 +29,7 @@ import vn.apero.armeasure.ar.domain.geometry.parallelogramCorners
 import vn.apero.armeasure.ar.domain.geometry.plus
 import vn.apero.armeasure.ar.domain.geometry.projectedEdgeVector
 import vn.apero.armeasure.ar.domain.geometry.times
-import vn.apero.armeasure.ar.presentation.camera.ArSessionState
+import vn.apero.armeasure.ar.presentation.camera.ArSessionFrameStream
 import vn.apero.armeasure.ar.presentation.ruler.Segment2D
 import vn.apero.armeasure.ar.presentation.ruler.resolveAt
 import vn.apero.armeasure.common.domain.LengthUnit
@@ -37,48 +37,58 @@ import vn.apero.armeasure.common.domain.formatLength
 
 /**
  * The per-frame AR loop for the box/cylinder tools — the same three jobs as
- * [onFrame][vn.apero.armeasure.ar.presentation.ruler.onFrame]: resolve what the reticle is pointing at,
- * re-read anchors ARCore may have corrected, and rebuild the screen-space overlay. Kept in its
- * own file (rather than folded into [ShapeMeasureState]) for the same reason
- * `MeasureFrameLoop.kt` is separate from `MeasureState.kt`: the hot path stays plain functions
- * with no composition machinery around it.
+ * [onMeasureFrame][vn.apero.armeasure.ar.presentation.ruler.onMeasureFrame]: resolve what the reticle
+ * is pointing at, re-read anchors ARCore may have corrected, and rebuild the screen-space overlay.
+ *
+ * Kept out of both the composable and [ShapeMeasureViewModel]'s intent path for the same reason
+ * `MeasureFrameLoop.kt` is: the hot path stays plain functions, with no composition and no coroutine
+ * machinery around them, and every write lands in [ShapeFrameStream] rather than in [ShapeUiState].
  */
 internal fun onShapeFrame(
-    state: ShapeMeasureState,
-    sessionState: ArSessionState,
+    frames: ShapeFrameStream,
+    phase: ShapePhase,
+    shapes: List<MeasuredShape>,
+    sessionFrames: ArSessionFrameStream,
     projector: PoseProjector,
     unit: LengthUnit,
     session: Session,
     frame: Frame,
     viewSize: IntSize,
 ) {
-    sessionState.tracking = frame.camera.trackingState == TrackingState.TRACKING
+    sessionFrames.tracking = frame.camera.trackingState == TrackingState.TRACKING
 
-    if (!sessionState.tracking || viewSize == IntSize.Zero) {
-        state.live = null
-        state.overlay = ShapeOverlayFrame()
+    if (!sessionFrames.tracking || viewSize == IntSize.Zero) {
+        frames.clearForUntrackedFrame()
         return
     }
 
-    sessionState.anyPlaneTracked = session.getAllTrackables(Plane::class.java)
+    sessionFrames.anyPlaneTracked = session.getAllTrackables(Plane::class.java)
         .any { it.trackingState == TrackingState.TRACKING }
 
     projector.update(frame)
 
     val centre = Offset(viewSize.width / 2f, viewSize.height / 2f)
-    val sample = when (val phase = state.phase) {
+    val sample = when (phase) {
         // Height has nothing real to hit-test against — resolve it analytically instead. See
         // heightConstructionPlaneNormal's doc for why.
         is ShapePhase.SizingHeight -> resolveHeightSample(frame, projector, viewSize, centre, phase)
-        else -> resolveAt(frame, projector, viewSize, centre, sessionState.depthSupported)
+        else -> resolveAt(frame, projector, viewSize, centre, sessionFrames.depthSupported)
     }
 
-    state.noteLiveSample(
+    frames.noteLiveSample(
         sample = sample,
         distanceMeters = sample?.let { measureDistanceMeters(it.position, frame.camera.pose.toVec3()) },
     )
 
-    state.overlay = buildShapeOverlay(state, projector, viewSize, frame.camera.pose.toVec3(), unit)
+    frames.overlay = buildShapeOverlay(
+        frames = frames,
+        phase = phase,
+        shapes = shapes,
+        projector = projector,
+        viewSize = viewSize,
+        cameraPosition = frame.camera.pose.toVec3(),
+        unit = unit,
+    )
 }
 
 /** A safe in-plane fallback direction for [heightConstructionPlaneNormal] — see its doc. */
@@ -133,7 +143,9 @@ private fun ShapeBase.dimensionLabel(height: Float, unit: LengthUnit): String = 
 
 /** Projects every committed shape plus whatever is currently being sized into screen space. */
 internal fun buildShapeOverlay(
-    state: ShapeMeasureState,
+    frames: ShapeFrameStream,
+    phase: ShapePhase,
+    shapes: List<MeasuredShape>,
     projector: PoseProjector,
     viewSize: IntSize,
     cameraPosition: Vec3,
@@ -147,7 +159,7 @@ internal fun buildShapeOverlay(
     val committedHiddenEdges = mutableListOf<Segment2D>()
     val committedLabels = mutableListOf<Pair<Offset, String>>()
 
-    state.shapes.forEach { shape ->
+    shapes.forEach { shape ->
         val origin = shape.originAnchor.pose.toVec3()
         val baseCorners = shape.base.corners(origin)
         val topCorners = baseCorners.map { it + shape.normal * shape.height }
@@ -165,9 +177,9 @@ internal fun buildShapeOverlay(
     }
 
     val liveEdges = mutableListOf<Segment2D>()
-    val sample = state.live
+    val sample = frames.live
     if (sample != null) {
-        when (val phase = state.phase) {
+        when (phase) {
             ShapePhase.AwaitingOrigin -> Unit
             is ShapePhase.SizingEdgeU -> buildEdgeUSegment(phase, sample, unit, ::project, liveEdges)
             is ShapePhase.SizingEdgeV -> buildEdgeVEdges(phase, sample, unit, ::project, liveEdges)
@@ -183,7 +195,7 @@ internal fun buildShapeOverlay(
         liveEdges = liveEdges,
         // Only a reading steady enough to commit earns the solid reticle — same rule as the
         // point-to-point ruler's overlay.
-        reticleOnSurface = sample != null && state.liveStable,
+        reticleOnSurface = sample != null && frames.liveStable,
     )
 }
 

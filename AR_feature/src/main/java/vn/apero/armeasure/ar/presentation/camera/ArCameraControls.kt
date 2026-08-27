@@ -6,85 +6,46 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.google.ar.core.Session
-import kotlin.math.abs
-import vn.apero.armeasure.ar.data.arcore.PoseProjector
-import vn.apero.armeasure.ar.domain.geometry.length
-import vn.apero.armeasure.ar.domain.geometry.measureDistanceMeters
-import vn.apero.armeasure.ar.domain.geometry.nearestIndexWithin
-import vn.apero.armeasure.ar.domain.geometry.segmentIndexPairs
-import vn.apero.armeasure.ar.presentation.ruler.MeasureOverlay
-import vn.apero.armeasure.ar.presentation.ruler.MeasureState
-import vn.apero.armeasure.ar.presentation.shapes.ShapeBase
-import vn.apero.armeasure.ar.presentation.shapes.ShapeMeasureState
+import androidx.compose.ui.res.stringResource
+import vn.apero.armeasure.ar.presentation.ruler.MeasureIntent
+import vn.apero.armeasure.ar.presentation.ruler.MeasureUiState
+import vn.apero.armeasure.ar.presentation.shapes.ShapeEffect
+import vn.apero.armeasure.ar.presentation.shapes.ShapeIntent
+import vn.apero.armeasure.ar.presentation.shapes.ShapeMeasureViewModel
+import vn.apero.armeasure.ar.presentation.shapes.ShapeUiState
+import vn.apero.armeasure.ar.presentation.ruler.MeasureEffect
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
+import vn.apero.armeasure.ar.data.arcore.PoseProjector
+import vn.apero.armeasure.ar.domain.geometry.nearestIndexWithin
+import vn.apero.armeasure.ar.presentation.ruler.MeasureOverlay
+import vn.apero.armeasure.ar.presentation.ruler.MeasureViewModel
 
 /**
- * Bottom-bar "+" handling for both distance tools, folded out of [ArCameraScreen] to keep that
- * file's orchestration readable.
+ * Distance's overlay plus its point-drag gesture handling.
  *
- * A result is emitted only for a point that actually *closed* a segment. The old "two or more
- * points" test was equivalent while the only tool was the chained one, but in the unchained tool a
- * point that opens a new segment would have reported the gap between the previous segment's end and
- * this new start — a length that is never drawn and that the user never asked to measure.
+ * The gesture talks to [MeasureViewModel]'s direct drag API rather than sending intents, and reads
+ * `viewModel.frames` rather than a collected state snapshot. Both for the same reason, spelled out on
+ * [vn.apero.armeasure.ar.presentation.ruler.MeasureFrameStream]: a drag produces values at
+ * touch-event rate that are resolved against a surface inside the frame loop, and `onDragStart` must
+ * be visible to the very next `onDrag` — which a `processIntent -> SharedFlow -> handleIntent` round
+ * trip cannot promise, and which a state snapshot captured by `pointerInput(Unit)` would not see at
+ * all.
  */
-internal fun commitDistancePoint(
-    state: MeasureState,
-    session: Session,
-    unit: LengthUnit,
-    onResult: (MeasurementResult) -> Unit,
-) {
-    val committed = state.commitLivePoint(session)
-    if (!committed) return
-    val points = state.worldPoints
-    // The last pair only counts as this commit's segment when it ends on the point just placed.
-    val closed = segmentIndexPairs(points.size, state.chained)
-        .lastOrNull()
-        ?.takeIf { (_, end) -> end == points.lastIndex }
-        ?: return
-    val meters = measureDistanceMeters(points[closed.first], points[closed.second])
-    onResult(MeasurementResult.Distance(meters, unit))
-}
-
-/**
- * Bottom-bar "+" handling for Box/Cylinder — the [MeasurementResult] mapping that used to live in
- * `ArMeasureBoxScreen`/`ArMeasureCylinderScreen` (`ShapeMeasureScreen.kt`), now a shared branch
- * since both shapes commute through the same [ShapeMeasureState].
- */
-internal fun commitShapeStep(
-    state: ShapeMeasureState,
-    session: Session,
-    unit: LengthUnit,
-    onResult: (MeasurementResult) -> Unit,
-) {
-    val before = state.shapes.size
-    state.commitStep(session)
-    if (state.shapes.size <= before) return
-    val shape = state.shapes.last()
-    when (val base = shape.base) {
-        is ShapeBase.Rect ->
-            onResult(MeasurementResult.Box(base.edgeU.length(), base.edgeV.length(), abs(shape.height), unit))
-        is ShapeBase.Circle ->
-            onResult(MeasurementResult.Cylinder(base.radius, abs(shape.height), unit))
-    }
-}
-
-/** Distance's overlay plus its point-drag gesture handling — unchanged from the old `MeasureScreen.kt`. */
 @Composable
 internal fun DistanceOverlay(
-    state: MeasureState,
+    viewModel: MeasureViewModel,
     projector: PoseProjector,
-    session: Session?,
     viewSize: IntSize,
     modifier: Modifier,
 ) {
+    val frames = viewModel.frames
     MeasureOverlay(
-        frameProvider = { state.overlay },
+        frameProvider = { frames.overlay },
         modifier = modifier.pointerInput(Unit) {
             detectDragGestures(
                 onDragStart = { touch ->
-                    val positions = state.worldPoints.map {
+                    val positions = frames.worldPoints.map {
                         projector.project(it, viewSize.width, viewSize.height)?.let { p -> p.x to p.y }
                     }
                     val index = nearestIndexWithin(
@@ -92,21 +53,84 @@ internal fun DistanceOverlay(
                         touch = touch.x to touch.y,
                         maxDistancePx = 32.dp.toPx(),
                     )
-                    if (index != null) state.beginDrag(index, touch)
+                    if (index != null) viewModel.onDragStart(index, touch)
                 },
                 onDrag = { change, _ ->
-                    if (state.draggingIndex != null) {
+                    if (frames.draggingIndex != null) {
                         change.consume()
-                        state.updateDragTouch(change.position)
+                        viewModel.onDragMove(change.position)
                     }
                 },
                 onDragEnd = {
-                    if (state.draggingIndex != null) {
-                        session?.let { state.commitDrag(it) } ?: state.cancelDrag()
-                    }
+                    if (frames.draggingIndex != null) viewModel.onDragEnd()
                 },
-                onDragCancel = state::cancelDrag,
+                onDragCancel = viewModel::onDragCancel,
             )
         },
     )
 }
+
+/** The active tool's chrome bindings — picked once per recomposition rather than re-`when`-ed at every call site below. */
+internal data class ToolActions(
+    val canUndo: Boolean,
+    val undo: () -> Unit,
+    val canRedo: Boolean,
+    val redo: () -> Unit,
+    val clear: () -> Unit,
+    val addEnabled: Boolean,
+    val add: () -> Unit,
+    val hint: String?,
+)
+
+/** The one payload every tool's only effect carries — flattened so the screen has one collector. */
+internal fun MeasureEffect.result(): MeasurementResult = when (this) {
+    is MeasureEffect.Measured -> result
+}
+
+internal fun ShapeEffect.result(): MeasurementResult = when (this) {
+    is ShapeEffect.Measured -> result
+}
+
+/**
+ * Chrome bindings for a distance tool.
+ *
+ * `addEnabled` and the hint read the frame stream, so this composable recomposes whenever the live
+ * reading changes — exactly as the pre-MVI version did, since it read the same two fields off the
+ * old state holder. The overlay itself does not: it reads `frames.overlay` inside a draw lambda.
+ */
+@Composable
+internal fun distanceActions(
+    viewModel: MeasureViewModel,
+    state: MeasureUiState,
+    sessionFrames: ArSessionFrameStream,
+    unit: LengthUnit,
+) = ToolActions(
+    canUndo = state.canUndo,
+    undo = { viewModel.processIntent(MeasureIntent.Undo) },
+    canRedo = state.canRedo,
+    redo = { viewModel.processIntent(MeasureIntent.Redo) },
+    clear = { viewModel.processIntent(MeasureIntent.Clear) },
+    addEnabled = viewModel.frames.addEnabled,
+    add = { viewModel.processIntent(MeasureIntent.CommitLivePoint(unit)) },
+    hint = trackingFailureHint(sessionFrames)
+        ?: distanceHint(sessionFrames, state, viewModel.frames, viewModel.chained),
+)
+
+/** Chrome bindings for a shape tool — see [distanceActions]. */
+@Composable
+internal fun shapeActions(
+    viewModel: ShapeMeasureViewModel,
+    state: ShapeUiState,
+    sessionFrames: ArSessionFrameStream,
+    unit: LengthUnit,
+) = ToolActions(
+    canUndo = state.canUndo,
+    undo = { viewModel.processIntent(ShapeIntent.Undo) },
+    canRedo = state.canRedo,
+    redo = { viewModel.processIntent(ShapeIntent.Redo) },
+    clear = { viewModel.processIntent(ShapeIntent.Clear) },
+    addEnabled = viewModel.frames.addEnabled,
+    add = { viewModel.processIntent(ShapeIntent.CommitStep(unit)) },
+    hint = trackingFailureHint(sessionFrames)
+        ?: shapeHint(sessionFrames, state, viewModel.frames, viewModel.kind),
+)

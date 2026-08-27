@@ -6,23 +6,31 @@ import androidx.compose.runtime.setValue
 import com.google.ar.core.TrackingFailureReason
 
 /**
- * Facts about the one shared ARCore session, not about any single tool.
+ * The **session-level frame stream**: facts about the one shared ARCore session, not about any
+ * single tool, every one of them written from an ARCore callback rather than by a user action.
  *
- * Before phase 05, `MeasureState` and `ShapeMeasureState` each carried their own copy of these
- * six fields — one writer each ([depthSupported] from `sessionConfiguration`, [trackingFailure]
- * from `onTrackingFailureChanged`, the rest from the per-frame callback). Now that
- * Distance/Box/Cylinder share one `ARSceneView`, there is exactly one session, so there is
- * exactly one of each fact — same values, same writers, just a new, single owner instead of one
- * duplicate per tool.
+ * Deliberately NOT an MVI `State` and deliberately not its own Contract/ViewModel pair (phase 04
+ * asked the question explicitly; this is the answer). Nothing here is a screen and nothing here is
+ * a user decision: [tracking] and [anyPlaneTracked] are rewritten from `onSessionUpdated` at
+ * 30-60 Hz, [depthSupported] once from `sessionConfiguration`, [trackingFailure] from
+ * `onTrackingFailureChanged`, [lastFrameAtMillis]/[cameraReady] from every frame that arrives.
+ * Routing that through `processIntent -> SharedFlow -> handleIntent -> updateState { copy() } ->
+ * StateFlow` would cost a coroutine dispatch and a full state allocation *per frame*, and would
+ * replace Compose's per-field invalidation with whole-state invalidation. Transient render state
+ * is not UI state.
+ *
+ * Owned by `ArCameraScreen`'s `remember` rather than by a ViewModel, because the thing it describes
+ * — one `ARSceneView`, one `Session` — is itself created and destroyed with the composition. A
+ * ViewModel-scoped copy would outlive the session it describes and start every re-entry by
+ * reporting the *previous* session's tracking flags.
+ *
+ * Backed by Compose state (not plain `var`s) because the AR library's frame callback may not run on
+ * the same thread as the watchdog's polling coroutine in `ArCameraScreen`, and because the chrome
+ * reads these values inside composition.
  */
-internal class ArSessionState {
+internal class ArSessionFrameStream {
 
-    /**
-     * Wall-clock time of the last ARCore frame that actually arrived. Backed by Compose state
-     * (not a plain `var`) because the AR library's frame callback may not run on the same thread
-     * as the watchdog's polling coroutine in `ArCameraScreen` — a plain field would risk the
-     * watchdog reading a stale value across threads.
-     */
+    /** Wall-clock time of the last ARCore frame that actually arrived — the watchdog's clock. */
     var lastFrameAtMillis by mutableStateOf(System.currentTimeMillis())
 
     var cameraReady by mutableStateOf(false)

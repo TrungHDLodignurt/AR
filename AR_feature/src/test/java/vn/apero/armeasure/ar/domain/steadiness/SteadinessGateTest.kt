@@ -12,7 +12,7 @@ import vn.apero.armeasure.ar.domain.geometry.Vec3
  * The trust gate every tap-commit (point ruler, box, cylinder) runs through before a reading is
  * allowed to become a permanent point.
  *
- * Ported from [MeasureState]'s own steadiness logic, which had no dedicated test either — this
+ * Ported from the distance tools' own steadiness logic, which had no dedicated test either — this
  * now backs three screens instead of one, so a regression here is three times as visible.
  */
 class SteadinessGateTest {

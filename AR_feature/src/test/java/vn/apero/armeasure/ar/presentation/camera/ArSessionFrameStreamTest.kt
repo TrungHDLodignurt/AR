@@ -9,7 +9,7 @@ import org.junit.Test
  * two previous "confident" fixes got wrong on-device (see the phase-05 hazard record, §11). Kept
  * as a pure function specifically so it can be tested at all.
  */
-class ArSessionStateTest {
+class ArSessionFrameStreamTest {
 
     private val timeoutMs = 10_000L
 
@@ -75,7 +75,7 @@ class ArSessionStateTest {
 
     @Test
     fun `noteFrame sets cameraReady and advances lastFrameAtMillis`() {
-        val state = ArSessionState()
+        val state = ArSessionFrameStream()
         state.lastFrameAtMillis = 0L
         state.cameraReady = false
 
