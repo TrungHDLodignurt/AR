@@ -7,15 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +40,7 @@ import vn.apero.armeasure.common.ui.ArMeasureTokens
  * Selection is signalled by fill AND stroke AND label colour, not colour alone (insight 3): the
  * mock's olive-stroke-only cue is a colour-blind failure the UI review flagged.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MeasureModeSheet(
     selected: MeasureTool,
@@ -46,32 +48,33 @@ internal fun MeasureModeSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(ArMeasureTokens.Scrim)
-                .clickable(onClick = onDismiss),
-        )
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(
-                    ArMeasureTokens.BgSurface,
-                    RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-                )
-                .navigationBarsPadding()
-                .padding(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+    // skipPartiallyExpanded: this sheet's content never exceeds half the screen, so a
+    // PartiallyExpanded resting state would just be a second no-op stop between Hidden and
+    // Expanded — dropping it means a single swipe-down always dismisses instead of settling
+    // there first.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+        containerColor = ArMeasureTokens.BgSurface,
+        dragHandle = {
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 12.dp, bottom = 16.dp)
                     .size(width = 40.dp, height = 4.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(ArMeasureTokens.BorderSoft),
             )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 22.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

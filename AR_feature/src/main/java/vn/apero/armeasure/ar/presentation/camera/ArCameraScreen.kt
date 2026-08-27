@@ -313,6 +313,8 @@ internal fun ArCameraScreen(
         )
 
         if (showModeSheet) {
+            // ModalBottomSheet renders in its own window (not this Box), so no .align() here —
+            // Material3 positions and sizes the sheet itself.
             MeasureModeSheet(
                 selected = tool,
                 onSelect = {
@@ -320,7 +322,6 @@ internal fun ArCameraScreen(
                     showModeSheet = false
                 },
                 onDismiss = { showModeSheet = false },
-                modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
     }

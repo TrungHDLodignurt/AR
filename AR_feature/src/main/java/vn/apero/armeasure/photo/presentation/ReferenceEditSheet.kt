@@ -6,14 +6,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +43,7 @@ import vn.apero.armeasure.photo.domain.imaging.customReferenceObject
  * (decision 8's "hard user choice", the same one `UnitMenu` edits everywhere else); the selector
  * only changes how *this sheet's* two numbers are interpreted, not the global preference.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ReferenceEditSheet(
     editing: ReferenceObject?,
@@ -71,26 +72,32 @@ internal fun ReferenceEditSheet(
         onDismiss()
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize().background(ArMeasureTokens.Scrim).clickable(onClick = onDismiss))
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(ArMeasureTokens.BgSurface, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
-                .navigationBarsPadding()
-                .imePadding()
-                .padding(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+    // skipPartiallyExpanded: the form's content is short and fixed-height (no scrolling list),
+    // so — same as MeasureModeSheet — a PartiallyExpanded resting stop would just be an extra
+    // no-op state between Hidden and Expanded.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+        containerColor = ArMeasureTokens.BgSurface,
+        dragHandle = {
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 12.dp, bottom = 16.dp)
                     .size(width = 40.dp, height = 4.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(ArMeasureTokens.BorderSoft),
             )
-
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 22.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             SheetHeader(isEditing = editing != null, onClose = onDismiss)
 
             Column {
