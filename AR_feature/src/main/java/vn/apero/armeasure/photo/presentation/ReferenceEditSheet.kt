@@ -109,7 +109,14 @@ internal fun ReferenceEditSheet(
                 )
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                // Design `DimRow` is `alignItems: end` — the Unit chip is shorter than a
+                // label+field column, so its bottom edge (not its top) lines up with the two
+                // fields' bottoms.
+                verticalAlignment = Alignment.Bottom,
+            ) {
                 DimensionField(
                     label = stringResource(R.string.armeasure_reference_length_label),
                     value = lengthText,

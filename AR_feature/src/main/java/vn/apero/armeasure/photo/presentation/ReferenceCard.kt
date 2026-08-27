@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -75,6 +76,7 @@ internal fun CustomCard(reference: ReferenceObject, unit: LengthUnit, onClick: (
 internal fun AddReferenceCard(onClick: () -> Unit) {
     Column(
         modifier = Modifier
+            .fillMaxWidth()
             .height(176.dp)
             .clip(RoundedCornerShape(14.dp))
             .border(1.5.dp, ArMeasureTokens.BorderStrong, RoundedCornerShape(14.dp))
@@ -104,6 +106,7 @@ internal fun AddReferenceCard(onClick: () -> Unit) {
 private fun CardShell(onClick: () -> Unit, contentPadding: Dp = 16.dp, content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
+            .fillMaxWidth()
             .height(176.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(ArMeasureTokens.BgSurface)

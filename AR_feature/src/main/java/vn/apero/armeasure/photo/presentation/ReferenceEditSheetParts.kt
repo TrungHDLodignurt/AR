@@ -143,7 +143,8 @@ internal fun UnitChip(
             }
         }
         if (showMenu) {
-            UnitMenu(selected = unit, onSelect = onSelect, onDismiss = onDismissMenu)
+            // Sheet sits at the bottom of the screen — a downward menu would be clipped/offscreen.
+            UnitMenu(selected = unit, onSelect = onSelect, onDismiss = onDismissMenu, openUpward = true)
         }
     }
 }

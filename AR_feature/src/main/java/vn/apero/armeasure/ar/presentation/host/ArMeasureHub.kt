@@ -6,7 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -73,7 +73,7 @@ fun ArMeasureHub(modifier: Modifier = Modifier) {
             }
 
             Column(
-                modifier = Modifier.padding(horizontal = 20.dp),
+                modifier = Modifier.weight(1f).padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 if (availability != ArAvailability.Unsupported) {
@@ -82,6 +82,7 @@ fun ArMeasureHub(modifier: Modifier = Modifier) {
                         title = stringResource(R.string.armeasure_hub_ar_card_title),
                         description = stringResource(R.string.armeasure_hub_ar_card_desc),
                         onClick = { ArCameraActivity.start(context) },
+                        modifier = Modifier.weight(1f),
                     )
                 }
                 HubCard(
@@ -89,6 +90,7 @@ fun ArMeasureHub(modifier: Modifier = Modifier) {
                     title = stringResource(R.string.armeasure_hub_photo_card_title),
                     description = stringResource(R.string.armeasure_hub_photo_card_desc),
                     onClick = { ArPhotoActivity.start(context) },
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -96,9 +98,11 @@ fun ArMeasureHub(modifier: Modifier = Modifier) {
 }
 
 /**
- * One card: a badge, title+description, and a decorative chevron. Hug height (design shipped
- * `fill_container` inside a `fill_container` column, which was a resize artefact, not intent —
- * the actual content is ~88dp regardless of how tall the column around it is).
+ * One card: a badge, title+description, and a decorative chevron pinned to the trailing-bottom
+ * edge. Design (SCR-14) instances are tall panels — 314x238, `fill_container` in both axes inside
+ * the 493-tall cards region (2 x 238 + 18px gap ≈ 493) — not the compact 320x88 row the shared
+ * `c/FeatureCard` component draws elsewhere; [modifier] carries the `Modifier.weight(1f)` that
+ * makes each card stretch to fill its half of that region.
  */
 @Composable
 private fun HubCard(
@@ -106,17 +110,16 @@ private fun HubCard(
     title: String,
     description: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = Modifier
+    Column(
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(ArMeasureTokens.BgSurface)
             .border(1.dp, ArMeasureTokens.BorderSoft, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(20.dp),
     ) {
         Box(
             modifier = Modifier.size(56.dp).clip(CircleShape).background(ArMeasureTokens.SignatureMuted),
@@ -124,15 +127,21 @@ private fun HubCard(
         ) {
             Text(text = badgeGlyph, color = ArMeasureTokens.Signature, fontSize = 26.sp)
         }
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.padding(top = 16.dp)) {
             Text(text = title, color = ArMeasureTokens.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             Text(
                 text = description,
                 color = ArMeasureTokens.TextSecondary,
                 fontSize = 13.sp,
-                modifier = Modifier.padding(top = 2.dp),
+                modifier = Modifier.padding(top = 4.dp),
             )
         }
-        Text(text = "›", color = ArMeasureTokens.TextDisabled, fontSize = 20.sp)
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            text = "›",
+            color = ArMeasureTokens.TextDisabled,
+            fontSize = 20.sp,
+            modifier = Modifier.align(Alignment.End),
+        )
     }
 }

@@ -53,6 +53,12 @@ internal fun UnitBtn(unit: LengthUnit, onClick: () -> Unit, modifier: Modifier =
  * Each row is at least [MinTouchTargetDp]dp tall, and the selected row is marked by a fill AND a
  * check glyph AND an accessible label colour — colour alone would be the colour-blind failure the
  * UI review flagged for [MeasureModeSheet]'s cards too.
+ *
+ * [openUpward] flips the anchor corner from `TopEnd` to `BottomEnd`: [Popup]'s alignment pins the
+ * same corner of the popup to that corner of its anchor, so `TopEnd` grows the menu downward from
+ * the anchor's top edge while `BottomEnd` grows it upward from the anchor's bottom edge. The
+ * reference-object sheet's unit chip sits at the bottom of a bottom sheet, where a
+ * downward-opening menu would be clipped or offscreen.
  */
 @Composable
 internal fun UnitMenu(
@@ -60,10 +66,11 @@ internal fun UnitMenu(
     onSelect: (LengthUnit) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    openUpward: Boolean = false,
 ) {
     val menuTitle = stringResource(R.string.armeasure_unit_menu_title)
     Popup(
-        alignment = Alignment.TopEnd,
+        alignment = if (openUpward) Alignment.BottomEnd else Alignment.TopEnd,
         onDismissRequest = onDismiss,
         properties = PopupProperties(focusable = true),
     ) {
