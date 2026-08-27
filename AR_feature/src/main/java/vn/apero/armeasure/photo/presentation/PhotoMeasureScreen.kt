@@ -232,9 +232,12 @@ internal fun PhotoMeasureScreen(
                 onDismiss = { showReferenceSheet = false },
                 onSubmit = { label, shortSideMm, longSideMm ->
                     if (target == null) {
+                        // Stay on the reference grid (SCR-15) after creating an object — do not
+                        // auto-advance via selectReference. The new card lands right before the
+                        // "Add new" tile the user just tapped, so it's already in view without a
+                        // scroll-to; tapping it is what advances.
                         val newReference = referenceStore.add(label, shortSideMm, longSideMm)
                         customReferences.add(newReference)
-                        selectReference(newReference)
                     } else {
                         val updated = referenceStore.update(target.id, label, shortSideMm, longSideMm)
                         if (updated != null) {
