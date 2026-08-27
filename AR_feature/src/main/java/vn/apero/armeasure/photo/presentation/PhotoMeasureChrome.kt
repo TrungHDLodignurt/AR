@@ -27,11 +27,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import vn.apero.armeasure.R
 import vn.apero.armeasure.common.ui.ArMeasureTokens
-import vn.apero.armeasure.common.ui.ChromeLightButton
 
 /**
  * The SCR-21/22/23 top nav. `showUndoRedoAndSave` follows the design literally: SCR-21/22 (before
@@ -52,27 +52,35 @@ internal fun PhotoTopNav(
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // vertical=4dp around 48dp touch targets = 56dp content height, matching the design's TopNav
+    // (its own 62dp StatusBar sits on top via the statusBars inset padding below, unchanged).
     Row(
         modifier = modifier
             .windowInsetsPadding(WindowInsets.statusBars)
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ChromeLightButton(
-            drawnSize = 40.dp,
+        BareIconButton(
+            glyph = "‹",
             onClick = onBack,
             contentDescription = stringResource(R.string.armeasure_action_back),
-        ) {
-            Text("‹", color = ArMeasureTokens.TextPrimary, fontSize = 22.sp)
-        }
+            fontSize = 22.sp,
+        )
 
         if (showUndoRedoAndSave) {
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            // 40dp between the 24dp icons (design's UndoForwardGroup): with a bare-icon 48dp touch
+            // box (12dp inset each side), visible icon gap = spacedBy + 24, so spacedBy(16.dp).
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 UndoRedoButton("↩", canUndo, onUndo, stringResource(R.string.armeasure_action_undo))
                 UndoRedoButton("↪", canRedo, onRedo, stringResource(R.string.armeasure_action_redo))
             }
+        } else {
+            Box(modifier = Modifier.size(48.dp))
+        }
+
+        if (showUndoRedoAndSave) {
             if (saveSupported) {
                 SaveButton(enabled = saveEnabled, onClick = onSave)
             } else {
@@ -90,11 +98,41 @@ internal fun PhotoTopNav(
     }
 }
 
+/** Bare 24x24-ish glyph in a 48dp touch box, no drawn pill — SCR-21/22/23 sit on the cream
+ * [ArMeasureTokens.BgPrimary], unlike SCR-19's live camera feed, so the blurred chrome pill
+ * ([vn.apero.armeasure.common.ui.ChromeLightButton]) is unnecessary here; [ArMeasureTokens]'
+ * own contrast note confirms [ArMeasureTokens.TextPrimary] on [ArMeasureTokens.BgPrimary] clears
+ * WCAG AA (~15:1). */
+@Composable
+private fun BareIconButton(
+    glyph: String,
+    onClick: () -> Unit,
+    contentDescription: String,
+    fontSize: TextUnit,
+    enabled: Boolean = true,
+    color: Color = ArMeasureTokens.TextPrimary,
+) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(glyph, color = color, fontSize = fontSize)
+    }
+}
+
 @Composable
 private fun UndoRedoButton(glyph: String, enabled: Boolean, onClick: () -> Unit, contentDescription: String) {
-    ChromeLightButton(drawnSize = 40.dp, onClick = onClick, enabled = enabled, contentDescription = contentDescription) {
-        Text(glyph, color = if (enabled) ArMeasureTokens.TextPrimary else ArMeasureTokens.TextDisabled, fontSize = 20.sp)
-    }
+    BareIconButton(
+        glyph = glyph,
+        onClick = onClick,
+        contentDescription = contentDescription,
+        fontSize = 20.sp,
+        enabled = enabled,
+        color = if (enabled) ArMeasureTokens.TextPrimary else ArMeasureTokens.TextDisabled,
+    )
 }
 
 /** 48dp-tall filled button, `SignatureText` fill / `OnSignature` text — `SignatureText` (not `Signature`) is what actually clears WCAG AA with white text (~4.54:1 vs ~3.06:1), fixing the design's 2.78:1 bare-text "Lưu". */
@@ -114,22 +152,39 @@ private fun SaveButton(enabled: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** SCR-21/22's instruction box (`fill #1a3a4a`, off-token raw hex — recorded, not promoted into [ArMeasureTokens] for one screen's use). */
+/** SCR-21/22's instruction box (`fill #1a3a4a`, off-token raw hex — recorded, not promoted into
+ * [ArMeasureTokens] for one screen's use). Design: a 354x96 wrapper (12dp side inset, 16dp
+ * top/bottom) around a fixed 330x64 box — `fillMaxWidth` + `defaultMinSize(minHeight = 64.dp)`
+ * so a short reference name doesn't collapse the box to its text height.
+ *
+ * Sized on an outer [Box], not the [Text] directly: a bare `Text(modifier = ...)`'s own semantics
+ * node reports only its intrinsic glyph bounds, not the padding/background this composable adds
+ * around it — a real (if minor) TalkBack bug too, since its focus highlight would otherwise
+ * undersize the visible card. `semantics(mergeDescendants = true)` on the [Box] merges the
+ * [Text]'s content up into a node sized to the full box, matching every other chrome element here
+ * ([ChromeLightButton]-style buttons already do this by attaching semantics to their outer box). */
 @Composable
 internal fun InstructionBox(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text = text,
-        color = Color.White,
-        fontSize = 14.sp,
-        lineHeight = 19.6.sp,
-        textAlign = TextAlign.Center,
+    Box(
         modifier = modifier
-            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .padding(horizontal = 12.dp, vertical = 16.dp)
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 64.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFF1A3A4A))
             .border(1.dp, Color(0xFF4A6A7A), RoundedCornerShape(12.dp))
+            .semantics(mergeDescendants = true) {}
             .padding(horizontal = 16.dp, vertical = 12.dp),
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            fontSize = 14.sp,
+            lineHeight = 19.6.sp,
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 /** SCR-22's confirm affordance, corrected from the mock's 66-glyph-in-100dp (oversized vs any Material FAB) down to 44. */
