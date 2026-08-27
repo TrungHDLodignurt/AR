@@ -41,6 +41,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
+    // Primary auto-fit detector. Unbundled: the model arrives via Play Services, so this costs no
+    // APK size, but it also means a device without Play Services gets the Canny+Hough fallback.
+    implementation(libs.mlkit.subject.segmentation)
 
     testImplementation(libs.junit)
     // Unit tests run against android.jar's stub org.json (throws "not mocked"), not a real

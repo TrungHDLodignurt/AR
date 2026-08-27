@@ -17,12 +17,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import android.net.Uri
@@ -54,6 +57,16 @@ import vn.apero.armeasure.photo.data.CustomReferenceStore
 import vn.apero.armeasure.photo.data.loadRotatedBitmap
 import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
 import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
+
+/**
+ * [IntSize] is an inline value class over a packed Long — neither Parcelable nor Serializable, so
+ * the saved-state bundle cannot take it as-is. Its two ints are all there is to it, hence a plain
+ * [listSaver] rather than anything cleverer.
+ */
+private val IntSizeSaver: Saver<IntSize, Any> = listSaver(
+    save = { listOf(it.width, it.height) },
+    restore = { IntSize(it[0], it[1]) },
+)
 
 /**
  * "Measure from a photo" — no ARCore, no camera-ar feature, no depth. A rectangle of known size
@@ -100,15 +113,42 @@ internal fun PhotoMeasureScreen(
     LaunchedEffect(state.unit) { unitPreference.unit = state.unit }
     val customReferences = remember { mutableStateListOf<ReferenceObject>().apply { addAll(referenceStore.loadAll()) } }
 
-    var referenceChosen by remember { mutableStateOf(false) }
-    var showPickPhotoSheet by remember { mutableStateOf(false) }
-    var showReferenceSheet by remember { mutableStateOf(false) }
-    var editingReference by remember { mutableStateOf<ReferenceObject?>(null) }
-    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    // All five below are rememberSaveable, not remember: picking a photo hands the foreground to
+    // the OEM camera/gallery activity, which routinely recreates this activity (config change, or
+    // the whole process being reclaimed while backgrounded). With plain `remember` the flow snapped
+    // all the way back to the reference picker on return, losing the step the user was on.
+    //
+    // The chosen reference is saved as its id rather than the object: ReferenceObject is a plain
+    // data class (not Parcelable/Serializable) and re-resolving it from `customReferences` — which
+    // is reloaded from the store above anyway — is both cheaper and always in sync with an edit
+    // that happened in between. Null means "still on the picker", which also carries what the old
+    // `referenceChosen` boolean said, so there is only one source of truth for that step.
+    var chosenReferenceId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Restoring this true is what makes the picker survive at all: PickPhotoSheet owns the
+    // ActivityResult launchers, so the sheet has to be composed again for the picked Uri to land.
+    var showPickPhotoSheet by rememberSaveable { mutableStateOf(false) }
+    var showReferenceSheet by rememberSaveable { mutableStateOf(false) }
+    // Same id-not-object reasoning as chosenReferenceId; only custom objects are editable
+    // (ReferencePickerScreen wires onEdit from the customs grid only), so the id always resolves
+    // against customReferences. Null = "add new", which is exactly what a stale id degrades to.
+    var editingReferenceId by rememberSaveable { mutableStateOf<String?>(null) }
+    var canvasSize by rememberSaveable(stateSaver = IntSizeSaver) { mutableStateOf(IntSize.Zero) }
+
+    val referenceChosen = chosenReferenceId != null
+
+    // state.reference is not saveable either (PhotoMeasureState is a plain remember), so without
+    // this a restored chosenReferenceId would show the flow past the picker while the state still
+    // held the default A4 — silently measuring against the wrong object.
+    LaunchedEffect(chosenReferenceId) {
+        val id = chosenReferenceId ?: return@LaunchedEffect
+        if (state.reference.id != id) {
+            (builtInReferenceObjects + customReferences).firstOrNull { it.id == id }?.let { state.reference = it }
+        }
+    }
 
     fun selectReference(reference: ReferenceObject) {
         state.reference = reference
-        referenceChosen = true
+        chosenReferenceId = reference.id
         showPickPhotoSheet = true
     }
 
@@ -137,8 +177,8 @@ internal fun PhotoMeasureScreen(
                     customs = customReferences,
                     unit = state.unit,
                     onSelect = { selectReference(it) },
-                    onAddNew = { editingReference = null; showReferenceSheet = true },
-                    onEdit = { editingReference = it; showReferenceSheet = true },
+                    onAddNew = { editingReferenceId = null; showReferenceSheet = true },
+                    onEdit = { editingReferenceId = it.id; showReferenceSheet = true },
                     onBack = { onClose?.invoke() },
                 )
             }
@@ -148,7 +188,7 @@ internal fun PhotoMeasureScreen(
                     WaitingForPhoto(
                         referenceLabel = state.reference.label,
                         onPickPhoto = { showPickPhotoSheet = true },
-                        onChangeReference = { referenceChosen = false },
+                        onChangeReference = { chosenReferenceId = null },
                         onClose = onClose,
                     )
                 }
@@ -187,12 +227,16 @@ internal fun PhotoMeasureScreen(
                     )
 
                     if (!hasEverCalibrated) {
+                        val placeText = stringResource(R.string.armeasure_photo_instruction_place, state.reference.label)
+                        val adjustText = stringResource(R.string.armeasure_photo_instruction_adjust, state.reference.label)
+                        val showPlace = state.quad.isEmpty()
+                        // The unused wording is handed over as the sizing ghost so this box always
+                        // measures to the taller of the two: the swap the moment a quad appears must
+                        // not change this box's height, or the weighted photo box below it resizes
+                        // and the photo visibly jumps/shrinks.
                         InstructionBox(
-                            text = if (state.quad.isEmpty()) {
-                                stringResource(R.string.armeasure_photo_instruction_place, state.reference.label)
-                            } else {
-                                stringResource(R.string.armeasure_photo_instruction_adjust, state.reference.label)
-                            },
+                            text = if (showPlace) placeText else adjustText,
+                            sizingText = if (showPlace) adjustText else placeText,
                             modifier = Modifier.align(Alignment.CenterHorizontally),
                         )
                     }
@@ -205,7 +249,12 @@ internal fun PhotoMeasureScreen(
                         PhotoQuadCanvas(
                             photo = imageBitmap,
                             state = state,
-                            modifier = Modifier.fillMaxSize().onSizeChanged { canvasSize = it },
+                            // The quad/segments/calibration are display-space, so the state has to
+                            // be told before anything is drawn against a new size.
+                            modifier = Modifier.fillMaxSize().onSizeChanged {
+                                state.onCanvasResized(it)
+                                canvasSize = it
+                            },
                         )
                         if (awaitingQuadConfirm && hasEverCalibrated) {
                             // Re-editing the quad from SCR-23 (state.beginEditQuad): the confirm
@@ -257,7 +306,7 @@ internal fun PhotoMeasureScreen(
             )
         }
         if (showReferenceSheet) {
-            val target = editingReference
+            val target = editingReferenceId?.let { id -> customReferences.firstOrNull { it.id == id } }
             ReferenceEditSheet(
                 editing = target,
                 unit = state.unit,

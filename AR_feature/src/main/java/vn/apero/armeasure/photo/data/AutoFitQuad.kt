@@ -1,11 +1,10 @@
 package vn.apero.armeasure.photo.data
 
 import android.graphics.Bitmap
+import vn.apero.armeasure.photo.domain.imaging.DetectionLongSidePx
 import vn.apero.armeasure.photo.domain.imaging.GrayscaleImage
 import vn.apero.armeasure.photo.domain.imaging.Vec2
-import vn.apero.armeasure.photo.domain.imaging.cannyEdges
-import vn.apero.armeasure.photo.domain.imaging.houghLines
-import vn.apero.armeasure.photo.domain.imaging.quadFromLines
+import vn.apero.armeasure.photo.domain.imaging.detectQuadInGrayscale
 
 /**
  * Runs Canny edge detection + Hough line transform on a window of [photo] around
@@ -21,29 +20,38 @@ import vn.apero.armeasure.photo.domain.imaging.quadFromLines
  * Does real per-pixel work over the window (Canny is O(window size), Hough is
  * O(edge pixels × theta steps)) — callers must run this off the main thread.
  */
-internal fun autoFitQuad(photo: Bitmap, tapPointBitmapSpace: Vec2, windowSizePx: Int = 480): List<Vec2>? {
-    val halfWindow = windowSizePx / 2
-    val left = (tapPointBitmapSpace.x - halfWindow).toInt().coerceIn(0, (photo.width - 1).coerceAtLeast(0))
-    val top = (tapPointBitmapSpace.y - halfWindow).toInt().coerceIn(0, (photo.height - 1).coerceAtLeast(0))
-    val right = (tapPointBitmapSpace.x + halfWindow).toInt().coerceIn(left + 1, photo.width)
-    val bottom = (tapPointBitmapSpace.y + halfWindow).toInt().coerceIn(top + 1, photo.height)
-    val windowWidth = right - left
-    val windowHeight = bottom - top
-    if (windowWidth < 20 || windowHeight < 20) return null
+internal fun autoFitQuad(
+    photo: Bitmap,
+    tapPointBitmapSpace: Vec2,
+    // long/short of the real reference object, when known — the constraint that separates the object
+    // from the many clutter rectangles a real photo contains. See quadFromLines.
+    targetAspectRatio: Float? = null,
+): List<Vec2>? {
+    if (photo.width < 20 || photo.height < 20) return null
 
-    val grayscale = extractGrayscaleWindow(photo, left, top, windowWidth, windowHeight)
-    val edges = cannyEdges(grayscale)
-    val lines = houghLines(edges, windowWidth, windowHeight)
+    val longSide = maxOf(photo.width, photo.height)
+    val scale = if (longSide > DetectionLongSidePx) DetectionLongSidePx.toFloat() / longSide else 1f
+    val detectWidth = (photo.width * scale).toInt().coerceAtLeast(1)
+    val detectHeight = (photo.height * scale).toInt().coerceAtLeast(1)
 
-    val pointInWindow = Vec2(tapPointBitmapSpace.x - left, tapPointBitmapSpace.y - top)
-    val quadInWindow = quadFromLines(lines, pointInWindow) ?: return null
+    val grayscale = extractGrayscaleScaled(photo, detectWidth, detectHeight)
+    val pointInDetectSpace = Vec2(tapPointBitmapSpace.x * scale, tapPointBitmapSpace.y * scale)
+    val detection = detectQuadInGrayscale(grayscale, pointInDetectSpace, targetAspectRatio)
 
-    return quadInWindow.map { Vec2(it.x + left, it.y + top) }
+    val quad = detection.quad ?: return null
+    // Back to full bitmap space.
+    return quad.map { Vec2(it.x / scale, it.y / scale) }
 }
 
-private fun extractGrayscaleWindow(bitmap: Bitmap, left: Int, top: Int, width: Int, height: Int): GrayscaleImage {
+private fun extractGrayscaleScaled(bitmap: Bitmap, width: Int, height: Int): GrayscaleImage {
+    val scaled = if (bitmap.width == width && bitmap.height == height) {
+        bitmap
+    } else {
+        Bitmap.createScaledBitmap(bitmap, width, height, true)
+    }
     val pixels = IntArray(width * height)
-    bitmap.getPixels(pixels, 0, width, left, top, width, height)
+    scaled.getPixels(pixels, 0, width, 0, 0, width, height)
+    if (scaled !== bitmap) scaled.recycle()
 
     val luminance = FloatArray(width * height)
     for (i in pixels.indices) {

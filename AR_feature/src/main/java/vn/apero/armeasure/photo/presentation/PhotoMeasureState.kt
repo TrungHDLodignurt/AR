@@ -13,6 +13,7 @@ import vn.apero.armeasure.common.data.DefaultUnit
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.UndoRedoStack
 import vn.apero.armeasure.photo.data.autoFitQuad
+import vn.apero.armeasure.photo.data.segmentQuad
 import vn.apero.armeasure.photo.domain.imaging.Homography
 import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
 import vn.apero.armeasure.photo.domain.imaging.Vec2
@@ -230,6 +231,7 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = DefaultUnit) {
     suspend fun revealQuadAt(tapPoint: Offset, canvasWidthPx: Float, canvasHeightPx: Float) {
         if (quad.isNotEmpty()) return
         val bitmap = photo
+        if (displayCanvas == null) displayCanvas = IntSize(canvasWidthPx.toInt(), canvasHeightPx.toInt())
 
         if (bitmap != null) {
             val fit = aspectFit(bitmap.width.toFloat(), bitmap.height.toFloat(), canvasWidthPx, canvasHeightPx)
@@ -239,11 +241,23 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = DefaultUnit) {
             )
             isDetectingQuad = true
             val detected = try {
-                withContext(Dispatchers.Default) { autoFitQuad(bitmap, tapInBitmap) }
+                // The reference object is always a rectangle whose real proportions we know, so hand
+                // that ratio to the detectors — it is what separates the object from the many clutter
+                // rectangles a real photo contains.
+                val targetRatio = reference.longSideMm / reference.shortSideMm
+                // Segmentation first, edges as fallback. Not the other way round: an edge detector
+                // needs the object's boundary to exist as a gradient, and on real photos it often
+                // does not (a black phone's body merging into its own shadow measured 1/255 of
+                // luminance difference across its true bottom edge). Segmentation decides which
+                // pixels are the object instead, so it is the one that copes with that. Edges still
+                // win where they ARE visible — an exact line beats an approximate mask boundary —
+                // and they are the only path on a device with no Play Services.
+                segmentQuad(bitmap, tapInBitmap, targetRatio)
+                    ?: withContext(Dispatchers.Default) { autoFitQuad(bitmap, tapInBitmap, targetRatio) }
             } finally {
                 isDetectingQuad = false
             }
-            if (detected != null && quad.isEmpty()) {
+            if (detected != null) {
                 quad = detected.map { corner ->
                     Offset(
                         fit.offsetX + corner.x / bitmap.width * fit.width,
@@ -265,6 +279,40 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = DefaultUnit) {
         )
     }
 
+    /**
+     * The canvas [quad], [segments] and [homography] are currently expressed against.
+     *
+     * All three live in display-space pixels, so they are only meaningful relative to a particular
+     * canvas size — which means a relayout silently invalidates every one of them. That is not
+     * hypothetical: the quad-editing screen grows a button once a quad exists, the Column reflows,
+     * the photo re-aspect-fits into a shorter box, and the quad stays where it was — visibly off the
+     * object by ~180px on a 2048px-tall photo, and calibrating against whatever it now covers.
+     * [onCanvasResized] keeps them in step.
+     */
+    private var displayCanvas: IntSize? = null
+
+    /**
+     * Re-expresses everything held in display space for a new canvas size, so a relayout moves the
+     * quad, the segments and the calibration with the photo instead of leaving them behind.
+     */
+    fun onCanvasResized(newCanvas: IntSize) {
+        val previous = displayCanvas
+        displayCanvas = newCanvas
+        val bitmap = photo ?: return
+        if (previous == null || previous == newCanvas) return
+        if (previous.width == 0 || previous.height == 0 || newCanvas.width == 0 || newCanvas.height == 0) return
+
+        val photoWidth = bitmap.width.toFloat()
+        val photoHeight = bitmap.height.toFloat()
+        fun remap(point: Offset) = remapToCanvas(point, photoWidth, photoHeight, previous, newCanvas)
+
+        if (quad.isNotEmpty()) quad = quad.map(::remap)
+        if (segments.isNotEmpty()) segments = segments.map { it.copy(start = remap(it.start), end = remap(it.end)) }
+        // The calibration was solved from the old quad's coordinates, so it has to be re-solved
+        // rather than reused — a stale homography reports the same wrong millimetres as before.
+        if (homography != null) solveHomography()
+    }
+
     /** Dragging a corner invalidates any prior calibration — it must be confirmed again. */
     fun moveQuadCorner(index: Int, position: Offset) {
         if (index !in quad.indices) return
@@ -281,6 +329,13 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = DefaultUnit) {
     fun confirmReference() {
         if (quad.size != 4) return
         undoRedo.push(snapshotNow())
+        if (!solveHomography()) return
+        isEditingQuad = false
+    }
+
+    /** Maps the current [quad] onto [reference]'s real rectangle. False if the quad is degenerate. */
+    private fun solveHomography(): Boolean {
+        if (quad.size != 4) return false
         val long = reference.longSideMm
         val short = reference.shortSideMm
         val dst = listOf(
@@ -289,9 +344,10 @@ internal class PhotoMeasureState(initialUnit: LengthUnit = DefaultUnit) {
             Vec2(long, short),
             Vec2(0f, short),
         )
-        homography = computeHomography(quad.map { Vec2(it.x, it.y) }, dst) ?: return
-        isEditingQuad = false
+        homography = computeHomography(quad.map { Vec2(it.x, it.y) }, dst) ?: return false
+        return true
     }
+
 
     /**
      * "Chỉnh sửa tỉ lệ" (Edit scale): re-opens the quad editor without discarding the photo or the

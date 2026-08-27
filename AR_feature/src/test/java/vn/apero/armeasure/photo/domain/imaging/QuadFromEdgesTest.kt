@@ -112,13 +112,14 @@ class QuadFromEdgesTest {
     }
 
     @Test
-    fun `rejects a trapezoid whose opposite sides are badly imbalanced`() {
-        // A real rectangle under perspective still has roughly-matched opposite sides. A quad
-        // built from two lines that AREN'T actually parallel (allowed into the same "primary"
-        // group by angleToleranceDegrees's tolerance, e.g. one edge partly occluded/misread as a
-        // tilted line) produces a lopsided trapezoid instead — one side ~32% longer than its
-        // "opposite". Real case that motivated this: sides 56px vs 89px on an otherwise
-        // plausible-looking candidate.
+    fun `accepts a perspective trapezoid whose opposite sides differ`() {
+        // Was `rejects a trapezoid whose opposite sides are badly imbalanced`, asserting null at a 32%
+        // mismatch. That assertion predated perspective support and is now wrong: a rectangle on a
+        // table shot from a low angle projects to exactly this shape, and rejecting it rejects the
+        // case the general-quad fit was added to handle. The mismatch bound moved to 50% in
+        // isPlausibleReferenceQuad; four genuinely unrelated lines still fail it.
+        //
+        // With these lines the mismatch equals sin(tilt), so 19 degrees gives 32.6%.
         val tiltRadians = 19f * (Math.PI / 180.0).toFloat()
         val left = HoughLine(rho = 0f, thetaRadians = 0f, votes = 100) // x = 0
         val right = HoughLine(rho = 100f, thetaRadians = tiltRadians, votes = 100) // tilted "right" edge
@@ -126,7 +127,8 @@ class QuadFromEdgesTest {
         val bottom = HoughLine(rho = 100f, thetaRadians = (Math.PI / 2).toFloat(), votes = 100) // y = 100
         val tap = Vec2(40f, 50f)
 
-        assertNull(quadFromLines(listOf(left, right, top, bottom), tap))
+        val quad = quadFromLines(listOf(left, right, top, bottom), tap)
+        requireNotNull(quad) { "a 32% opposite-side mismatch is a real perspective trapezoid, not junk" }
     }
 
     @Test
@@ -160,7 +162,7 @@ class QuadFromEdgesTest {
         val edges = cannyEdges(image)
         val lines = houghLines(edges, width, height)
         val tapPoint = Vec2((rectLeft + rectRight) / 2f, (rectTop + rectBottom) / 2f)
-        val quad = quadFromLines(lines, tapPoint, expectedAspectRatio = 1.333f)
+        val quad = quadFromLines(lines, tapPoint, targetAspectRatio = 1.333f)
 
         requireNotNull(quad) { "a correct aspect-ratio hint should not reject the true rectangle" }
     }
@@ -180,7 +182,7 @@ class QuadFromEdgesTest {
         val tapPoint = Vec2((rectLeft + rectRight) / 2f, (rectTop + rectBottom) / 2f)
         // Known object is a 5:1 sliver — nothing like the 1.33 square-ish rectangle actually
         // drawn, so the aspect-ratio constraint should reject the only candidate outright.
-        val quad = quadFromLines(lines, tapPoint, expectedAspectRatio = 5f)
+        val quad = quadFromLines(lines, tapPoint, targetAspectRatio = 5f)
 
         assertNull(quad)
     }

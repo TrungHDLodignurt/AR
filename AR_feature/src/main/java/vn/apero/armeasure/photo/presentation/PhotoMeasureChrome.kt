@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -209,7 +210,7 @@ private fun SaveButton(enabled: Boolean, onClick: () -> Unit) {
  * [Text]'s content up into a node sized to the full box, matching every other chrome element here
  * ([ChromeLightButton]-style buttons already do this by attaching semantics to their outer box). */
 @Composable
-internal fun InstructionBox(text: String, modifier: Modifier = Modifier) {
+internal fun InstructionBox(text: String, modifier: Modifier = Modifier, sizingText: String? = null) {
     Box(
         modifier = modifier
             .padding(horizontal = 12.dp, vertical = 16.dp)
@@ -222,6 +223,21 @@ internal fun InstructionBox(text: String, modifier: Modifier = Modifier) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
+        // The caller's alternative wording, laid out but never drawn: the box then measures to the
+        // taller of the two, so swapping `text` (place -> adjust, once a quad exists) cannot change
+        // this box's height and reflow whatever sits below it. `defaultMinSize` alone only covers
+        // the 1-vs-2-line case; a long custom reference name can push one variant to a third line.
+        if (sizingText != null) {
+            Text(
+                text = sizingText,
+                // Cleared, or the merged node would read both wordings out to TalkBack.
+                modifier = Modifier.clearAndSetSemantics {},
+                color = Color.Transparent,
+                fontSize = 14.sp,
+                lineHeight = 19.6.sp,
+                textAlign = TextAlign.Center,
+            )
+        }
         Text(
             text = text,
             color = Color.White,
