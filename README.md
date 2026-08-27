@@ -1,10 +1,14 @@
 # AR Tape Measure — Android demo
 
-Measure real distances through the camera. Kotlin + Jetpack Compose, one Activity.
+Measure real distances through the camera. Kotlin + Jetpack Compose, one library module
+(`AR_feature`) embedded in a minimal demo host.
 
 Replicates the UX of Apple's built-in Measure app: centred reticle, `+` to commit a point,
 dashed rubber-band line while aiming, solid line with a distance pill once committed, chained
-polyline, undo / clear, and a `Level` tab.
+polyline, undo **and redo**. The demo host's **Measure** tab renders the module's own hub, which
+offers **AR Measure** (Distance / Distance chain / Box / Cylinder, switchable mid-session over one shared ARCore
+session — see `AR_feature/README.md` §12) and **Picture Measure** (calibrate against a reference
+object in a photo — a card, an A4 sheet, or a custom object — no AR needed).
 
 ## Read this before trusting a number
 
@@ -25,23 +29,38 @@ wrong by 3 cm ruins the job.
 The reference video that shaped this UI was shot on an iPhone with LiDAR. The UX is
 reproducible on Android; **that accuracy is not.**
 
+## Module layout
+
+The repo is two modules: one library module holds all feature code, `:app` is nav only.
+
+| Module | Package | Contents | JVM tests |
+|---|---|---|---|
+| [`:AR_feature`](AR_feature/README.md) | `vn.apero.armeasure.*` | `common` (LengthUnit, formatters, LabelPill) + `ar` (Distance/Distance chain/Box/Cylinder + ARCore infra) + `photo` (Canny/Hough/Homography photo-reference measuring). Public API is exactly 3 symbols: `ArMeasureHub` (the entry composable), `ArMeasureConfig`, `MeasurementImageSaver` — everything else is `internal` | 102 |
+| `:app` | `vn.quancua.artapemeasure` | `MainActivity` + tab nav only, wires `:AR_feature` | 0 |
+
+`AR_feature/README.md` (linked above) is a self-contained integration guide for pulling the
+module into another app: exact `settings.gradle.kts`/`build.gradle.kts` lines, the
+`gradle/libs.versions.toml` block to append, the manifest/permission story, and every public
+signature with a copy-pasteable call example.
+
 ## Build & run
 
 Requires a **real device** — the ARCore emulator replays a synthetic scene, so any number it
 gives describes the simulation, not a sensor.
 
 ```bash
-./gradlew :app:assembleDebug          # APK -> app/build/outputs/apk/debug/
-./gradlew :app:testDebugUnitTest      # 17 pure-maths tests, no device needed
-./gradlew :app:installDebug           # to a connected device
+./gradlew assembleDebug                          # whole app APK -> app/build/outputs/apk/debug/
+./gradlew testDebugUnitTest                      # all 102 pure-maths tests, no device needed
+./gradlew :app:installDebug                      # to a connected device
+./gradlew :AR_feature:testDebugUnitTest          # same 102 tests, feature module only
 ```
 
 Toolchain (verified working, not guessed):
 
 | | |
 |---|---|
-| Gradle | 9.5.0 (wrapper) — AGP 9.3.1 refuses 9.4 |
-| AGP | 9.3.1 — **ships built-in Kotlin**, so no `kotlin-android` plugin |
+| Gradle | 9.4.1 (wrapper) |
+| AGP | 9.2.0-rc01 — **ships built-in Kotlin**, so no `kotlin-android` plugin; pinned to the highest version Android Studio AI-253 (2025.3) accepts for IDE sync |
 | Kotlin | 2.4.10 |
 | Compose BOM | 2026.05.01 — 2026.08.00 needs `compileSdk 37` |
 | compileSdk / minSdk | 36 / 24 |
@@ -50,16 +69,23 @@ Toolchain (verified working, not guessed):
 ## How it works
 
 ```
-MainActivity              one Activity; ARCore install gate, camera permission, tab switch
-└── MeasureScreen         ARSceneView (camera + tracking + hit tests) under a 2D overlay
-    ├── MeasureFrameLoop  per-frame: resolve reticle -> refresh anchors -> build overlay
-    ├── MeasureOverlay    Canvas: lines, label pills, endpoint dots, reticle
-    ├── MeasureHit        hit resolution, in accuracy order
-    ├── PoseProjector     world -> screen, allocation-free
-    ├── MeasureState      anchors, units, per-frame overlay snapshot
-    └── MeasureMath       pure arithmetic — the only unit-tested part
-└── LevelScreen           gravity vector only; no AR, works on every device
+MainActivity (:app)         Home/Measure tab switch only; Measure renders ArMeasureHub()
+└── ArMeasureHub             module entry composable — AR Measure card + Picture Measure card,
+    │                        hides the AR card when ArAvailability.Unsupported
+    ├── ArCameraActivity     module-owned; ARCore install gate, camera permission, then:
+    │   └── ArCameraScreen   ONE ARSceneView + ONE Engine shared by all 4 AR tools; a
+    │       │                bottom-sheet tool switch swaps overlay/state, never remounts the view
+    │       ├── MeasureFrameLoop / MeasureOverlay / MeasureHit / MeasureState / MeasureMath
+    │       │                (Distance and Distance chain — one holder each, the only difference
+    │       │                 is MeasureMath's segmentIndexPairs: start/end pairs vs a polyline)
+    │       ├── ShapeFrameLoop / ShapeOverlay / ShapeMeasureState / ShapeMath                (Box, Cylinder)
+    │       └── PoseProjector  world -> screen, allocation-free, shared by both tools above
+    └── ArPhotoActivity      module-owned; constructs its own CustomReferenceStore, then:
+        └── PhotoMeasureScreen  calibrate against a photographed reference object; no ARCore
 ```
+
+Full detail, including the shared-session structural rules and why two earlier fixes there were
+reverted, lives in `AR_feature/README.md` §12 — not duplicated here.
 
 ### Nothing is drawn as 3D geometry
 
@@ -96,11 +122,22 @@ published to Compose only past a **1 mm dead-band** — otherwise the number fli
 rate for jitter nobody can see. 1 mm is far below the accuracy floor, so nothing observable is
 discarded.
 
+### Editing a placed point
+
+Press and drag any committed dot to move it: it re-resolves against the surface under the
+finger every frame (the same accuracy-ordered hit test the reticle uses), the touched
+segment's label updates live, and the anchor is only replaced on release — cancel the drag
+and the point never moved. The reference app hides the exact same information behind its
+own fingertip with a live magnified crop of the camera feed rendered by a GPU shader; this
+app lifts a second copy of the dot above the touch point instead, which answers the same
+question ("where will this land") without a per-frame texture read-back.
+
 ## Deliberately not implemented
 
 Shutter capture (button is rendered inert rather than lying about being wired), edge snapping
-to floor/wall seams, position smoothing on the reticle, closed-loop perimeter, bounding box,
-coaching overlay, area measurement.
+to floor/wall seams, position smoothing on the reticle, closed-loop perimeter, coaching overlay,
+area measurement, Floor Plan / Angle / Vertical-Wall modes (Distance, Distance chain, Box and
+Cylinder are done — see the diagram above).
 
 Each is a separate step, and none of them matter until the accuracy table below has numbers.
 
