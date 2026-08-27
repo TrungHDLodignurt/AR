@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.google.ar.core.TrackingFailureReason
 import vn.apero.armeasure.R
+import vn.apero.armeasure.ar.domain.geometry.hasOpenSegment
 import vn.apero.armeasure.ar.presentation.ruler.MeasureState
 import vn.apero.armeasure.ar.presentation.shapes.ShapeKind
 import vn.apero.armeasure.ar.presentation.shapes.ShapeMeasureState
@@ -22,6 +23,7 @@ internal fun hintFor(
     tool: MeasureTool,
     sessionState: ArSessionState,
     distance: MeasureState,
+    distanceChain: MeasureState,
     box: ShapeMeasureState,
     cylinder: ShapeMeasureState,
 ): String? {
@@ -37,7 +39,8 @@ internal fun hintFor(
         if (res != null) return stringResource(res)
     }
     return when (tool) {
-        MeasureTool.DistanceChain -> hintForDistance(sessionState, distance)
+        MeasureTool.Distance -> hintForDistance(sessionState, distance)
+        MeasureTool.DistanceChain -> hintForDistance(sessionState, distanceChain)
         MeasureTool.Box -> hintForShape(sessionState, box)
         MeasureTool.Cylinder -> hintForShape(sessionState, cylinder)
     }
@@ -55,6 +58,18 @@ private fun hintForDistance(sessionState: ArSessionState, state: MeasureState): 
     !sessionState.anyPlaneTracked -> stringResource(R.string.armeasure_hint_move_to_find_surface)
     state.live == null -> stringResource(R.string.armeasure_hint_aim_at_surface)
     state.points.isEmpty() -> stringResource(R.string.armeasure_hint_tap_to_start)
+    // The unchained tool needs to say which end of a segment the next tap places — nothing else on
+    // screen distinguishes "about to close this segment" from "about to start a new one", and
+    // guessing wrong costs the user an undo. The hit source stays in the string either way: a
+    // reading you cannot attribute is a reading you cannot calibrate.
+    !state.chained -> state.lastSource?.let {
+        val res = if (hasOpenSegment(state.points.size, chained = false)) {
+            R.string.armeasure_hint_segment_awaiting_end
+        } else {
+            R.string.armeasure_hint_segment_done
+        }
+        stringResource(res, it.label)
+    }
     // Once measuring, show what the last point was resolved from: a reading you cannot
     // attribute is a reading you cannot calibrate.
     else -> state.lastSource?.let {

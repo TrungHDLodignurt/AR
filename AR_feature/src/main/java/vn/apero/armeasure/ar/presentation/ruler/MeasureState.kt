@@ -48,8 +48,17 @@ internal data class OverlayFrame(
  * A plain state holder rather than a ViewModel: nothing here outlives the screen and nothing
  * needs to survive process death — a half-finished measurement is not worth restoring, since
  * the ARCore session that gave the anchors meaning is gone anyway.
+ *
+ * One class serves both distance tools, mirroring how `ShapeMeasureState` serves Box and Cylinder:
+ * [chained] is the entire difference. Everything else here — undo/redo over the original anchors,
+ * drag-to-edit, the steadiness gate, anchor lifetime — is pairing-agnostic, and a second class
+ * would only duplicate the anchor-detach paths that keep ARCore's frame budget honest.
+ *
+ * @param chained true for the polyline tool, where each committed point continues the line; false
+ *   for the independent-segment tool, where points are consumed in start/end pairs. See
+ *   [vn.apero.armeasure.ar.domain.geometry.segmentIndexPairs].
  */
-internal class MeasureState {
+internal class MeasureState(val chained: Boolean) {
 
     val points = mutableStateListOf<MeasuredPoint>()
 

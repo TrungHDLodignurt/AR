@@ -307,7 +307,7 @@ call site) and — a known limitation, not yet fixed — `QuadEditorCanvas.kt`'s
 
 ## 11. Cold-start warm-up
 
-The first AR screen mounted in a process (whichever of Distance/Box/Cylinder the user opens
+The first AR screen mounted in a process (whichever of Distance/Distance chain/Box/Cylinder the user opens
 first) waits a fixed **2 s** before ever mounting `ARSceneView`, via a shared, process-global,
 one-shot gate (`ArWarmupGate.rememberArWarmedUp()`).
 
@@ -324,7 +324,7 @@ never pay it again in the same process.
 ## 12. One shared ARCore session
 
 `ArCameraScreen` mounts exactly **one** `rememberEngine()` and exactly one `ARSceneView(...)`
-call site for all three AR tools (Distance, Box, Cylinder) — a bottom-sheet tool switch changes
+call site for all four AR tools (Distance, Distance chain, Box, Cylinder) — a bottom-sheet tool switch changes
 which overlay/state machine is active without unmounting the view, so tracked planes survive a
 tool swap. This is the single most important section for anyone touching the camera screen: two
 earlier fix attempts during development shipped, then had to be **reverted** after on-device
@@ -349,9 +349,9 @@ The structural rules that keep this from recurring, enforced by code comment in
 `ArCameraScreen.kt` and worth restating here: the Engine/MaterialLoader constructors run exactly
 once, outside any remount block; the `ARSceneView` call sits outside every `when (tool)` branch,
 and `tool` never appears inside a `key(...)`; `ArWarmupGate` (§11) is consulted once, before the
-view ever mounts, for any of the three tools.
+view ever mounts, for any of the four tools.
 
-One consequence of "one session for three tools": the session config (`PlaneFindingMode
+One consequence of "one session for four tools": the session config (`PlaneFindingMode
 .HORIZONTAL_AND_VERTICAL`, `DepthMode.AUTOMATIC` where supported) is the heaviest union all three
 tools could need, even though Box/Cylinder's height step is an **analytic construction-plane
 ray-cast that needs no depth image at all** — `DepthMode.AUTOMATIC` there is pure thermal cost
@@ -446,7 +446,7 @@ Stated plainly, not buried:
   nothing ever deletes it — low risk (cache dir, OS can reclaim under pressure), but unbounded
   growth for the life of the install.
 - **AR has no terminal state and produces no saved artifact.** Only the Picture Measure path ends
-  in a file (§9); a Distance/Box/Cylinder result exists only on screen as a toast/label and is
+  in a file (§9); a Distance/Distance chain/Box/Cylinder result exists only on screen as a toast/label and is
   gone once the Activity closes. Frame capture to the gallery and any saved-measurement list are
   both explicitly out of scope.
 - **Accuracy**: this is a layout tool, not a caliper. On a phone with no depth sensor (most
@@ -454,7 +454,7 @@ Stated plainly, not buried:
   and cannot be calibrated away. Device certification is itself a gate before accuracy is even a
   question — see `plans/reports/report-260824-1520-arcore-hardware-limitation.md` for the full
   breakdown of why an otherwise-capable device can still be `Unsupported`.
-- **Thermal cost**: one ARCore session config serves Distance, Box and Cylinder, so it is
+- **Thermal cost**: one ARCore session config serves all four tools, so it is
   necessarily the heaviest union any single tool needs — `DepthMode.AUTOMATIC` (§12) is pure heat
   for Box/Cylinder's height step, which never reads a depth image.
 - **Picture Measure needs the reference object visible in the same photo** as whatever is being

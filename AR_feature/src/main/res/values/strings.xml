@@ -7,6 +7,8 @@
     <string name="armeasure_hint_reading_unsteady">Can\'t lock this surface — too shiny or plain to measure</string>
     <string name="armeasure_hint_dragging_point">Move over a surface, then release to reposition</string>
     <string name="armeasure_hint_point_on_surface">Point %1$d on %2$s</string>
+    <string name="armeasure_hint_segment_awaiting_end">Start on %1$s — tap + to set the end</string>
+    <string name="armeasure_hint_segment_done">End on %1$s — tap + to start a new segment</string>
     <string name="armeasure_hint_shape_awaiting_origin">Tap + to place the %1$s\'s %2$s</string>
     <string name="armeasure_hint_shape_sizing_edge_u">Move to draw the first edge, tap + to fix it</string>
     <string name="armeasure_hint_shape_sizing_edge_v">Move to draw the second edge, tap + to fix it</string>
@@ -55,6 +57,7 @@
 
     <string name="armeasure_mode_sheet_title">Measure mode</string>
     <string name="armeasure_mode_distance">Distance</string>
+    <string name="armeasure_mode_distance_chain">Distance chain</string>
     <string name="armeasure_mode_box">Box</string>
     <string name="armeasure_mode_cylinder">Cylinder</string>
 

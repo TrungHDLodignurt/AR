@@ -136,3 +136,33 @@ internal fun measurePointsMoved(
     }
     return false
 }
+
+/**
+ * Which point pairs form the drawn segments, for a measurement of [pointCount] points.
+ *
+ * The single place the two distance tools differ. Chained: every point continues the line, so
+ * point *i* is both the end of one segment and the start of the next. Unchained: points are
+ * consumed two at a time — tap a start, tap an end, and the next tap begins a fresh, unconnected
+ * segment.
+ *
+ * Pure and pairing is the whole behavioural delta between the tools, so it lives here rather than
+ * inline at the three call sites that need it (segment build, rubber-band gate, result emission),
+ * which would otherwise drift apart. A trailing unpaired point in the unchained case is not a
+ * segment yet and is simply absent from the result.
+ */
+internal fun segmentIndexPairs(pointCount: Int, chained: Boolean): List<Pair<Int, Int>> {
+    if (pointCount < 2) return emptyList()
+    val step = if (chained) 1 else 2
+    return (0 until pointCount - 1 step step).map { it to it + 1 }
+}
+
+/**
+ * True when the next committed point closes a segment rather than starting one.
+ *
+ * Drives the dashed rubber band: it must trail the reticle only while a segment is actually open.
+ * In the unchained tool an even, non-zero point count means every segment is closed, so drawing a
+ * band from the last point would claim a connection that does not exist — which is the exact
+ * confusion the unchained tool exists to avoid.
+ */
+internal fun hasOpenSegment(pointCount: Int, chained: Boolean): Boolean =
+    if (chained) pointCount > 0 else pointCount % 2 == 1

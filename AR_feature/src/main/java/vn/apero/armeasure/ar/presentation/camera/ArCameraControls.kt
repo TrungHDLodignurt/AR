@@ -12,6 +12,7 @@ import vn.apero.armeasure.ar.data.arcore.PoseProjector
 import vn.apero.armeasure.ar.domain.geometry.length
 import vn.apero.armeasure.ar.domain.geometry.measureDistanceMeters
 import vn.apero.armeasure.ar.domain.geometry.nearestIndexWithin
+import vn.apero.armeasure.ar.domain.geometry.segmentIndexPairs
 import vn.apero.armeasure.ar.presentation.ruler.MeasureOverlay
 import vn.apero.armeasure.ar.presentation.ruler.MeasureState
 import vn.apero.armeasure.ar.presentation.shapes.ShapeBase
@@ -20,8 +21,13 @@ import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.MeasurementResult
 
 /**
- * Bottom-bar "+" handling for Distance, folded out of [ArCameraScreen] to keep that file's
- * orchestration readable. Unchanged from the old `MeasureScreen.kt`'s `onAddPoint` body.
+ * Bottom-bar "+" handling for both distance tools, folded out of [ArCameraScreen] to keep that
+ * file's orchestration readable.
+ *
+ * A result is emitted only for a point that actually *closed* a segment. The old "two or more
+ * points" test was equivalent while the only tool was the chained one, but in the unchained tool a
+ * point that opens a new segment would have reported the gap between the previous segment's end and
+ * this new start — a length that is never drawn and that the user never asked to measure.
  */
 internal fun commitDistancePoint(
     state: MeasureState,
@@ -30,11 +36,15 @@ internal fun commitDistancePoint(
     onResult: (MeasurementResult) -> Unit,
 ) {
     val committed = state.commitLivePoint(session)
-    if (committed && state.worldPoints.size >= 2) {
-        val points = state.worldPoints
-        val meters = measureDistanceMeters(points[points.size - 2], points[points.size - 1])
-        onResult(MeasurementResult.Distance(meters, unit))
-    }
+    if (!committed) return
+    val points = state.worldPoints
+    // The last pair only counts as this commit's segment when it ends on the point just placed.
+    val closed = segmentIndexPairs(points.size, state.chained)
+        .lastOrNull()
+        ?.takeIf { (_, end) -> end == points.lastIndex }
+        ?: return
+    val meters = measureDistanceMeters(points[closed.first], points[closed.second])
+    onResult(MeasurementResult.Distance(meters, unit))
 }
 
 /**

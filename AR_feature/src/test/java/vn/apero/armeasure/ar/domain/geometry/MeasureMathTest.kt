@@ -157,4 +157,65 @@ class MeasureMathTest {
         val positions = listOf(0f to 0f)
         assertEquals(0, nearestIndexWithin(positions, touch = 10f to 0f, maxDistancePx = 10f))
     }
+
+    // --- Segment pairing: the entire behavioural difference between the two distance tools. ---
+    // Wrong pairing draws a line the user never asked for, or hides one they did, and every label
+    // stays plausible either way — the same failure mode as a wrong distance formula.
+
+    @Test
+    fun `chained pairing walks consecutive points`() {
+        assertEquals(emptyList<Pair<Int, Int>>(), segmentIndexPairs(0, chained = true))
+        assertEquals(emptyList<Pair<Int, Int>>(), segmentIndexPairs(1, chained = true))
+        assertEquals(listOf(0 to 1), segmentIndexPairs(2, chained = true))
+        assertEquals(listOf(0 to 1, 1 to 2), segmentIndexPairs(3, chained = true))
+        assertEquals(listOf(0 to 1, 1 to 2, 2 to 3), segmentIndexPairs(4, chained = true))
+        assertEquals(listOf(0 to 1, 1 to 2, 2 to 3, 3 to 4), segmentIndexPairs(5, chained = true))
+    }
+
+    @Test
+    fun `unchained pairing consumes points two at a time`() {
+        assertEquals(emptyList<Pair<Int, Int>>(), segmentIndexPairs(0, chained = false))
+        assertEquals(emptyList<Pair<Int, Int>>(), segmentIndexPairs(1, chained = false))
+        assertEquals(listOf(0 to 1), segmentIndexPairs(2, chained = false))
+        assertEquals(listOf(0 to 1), segmentIndexPairs(3, chained = false))
+        assertEquals(listOf(0 to 1, 2 to 3), segmentIndexPairs(4, chained = false))
+        assertEquals(listOf(0 to 1, 2 to 3), segmentIndexPairs(5, chained = false))
+    }
+
+    @Test
+    fun `unchained pairing never joins one segment's end to the next segment's start`() {
+        // 1 to 2 is the pair that would appear if the step were 1 — the exact bug the tool exists
+        // to avoid, and the one a shared point list would reintroduce.
+        assertFalse(segmentIndexPairs(4, chained = false).contains(1 to 2))
+    }
+
+    @Test
+    fun `an open segment is one awaiting its end point`() {
+        assertFalse(hasOpenSegment(0, chained = false))
+        assertTrue(hasOpenSegment(1, chained = false))
+        assertFalse(hasOpenSegment(2, chained = false))
+        assertTrue(hasOpenSegment(3, chained = false))
+        assertFalse(hasOpenSegment(4, chained = false))
+    }
+
+    @Test
+    fun `a chain is open from its very first point onward`() {
+        assertFalse(hasOpenSegment(0, chained = true))
+        assertTrue(hasOpenSegment(1, chained = true))
+        assertTrue(hasOpenSegment(2, chained = true))
+        assertTrue(hasOpenSegment(3, chained = true))
+    }
+
+    @Test
+    fun `unchained leaves a point unpaired exactly when a segment is open`() {
+        // Ties the two functions together for the unchained tool: a trailing point that no pair
+        // claims is precisely the point the rubber band should be drawn from. The chained tool has
+        // no equivalent invariant — its band trails the last point forever, since that point is
+        // always the start of the next segment.
+        for (count in 0..8) {
+            val lastPaired = segmentIndexPairs(count, chained = false).lastOrNull()?.second
+            val trailingPointUnpaired = count > 0 && lastPaired != count - 1
+            assertEquals("count=$count", trailingPointUnpaired, hasOpenSegment(count, chained = false))
+        }
+    }
 }

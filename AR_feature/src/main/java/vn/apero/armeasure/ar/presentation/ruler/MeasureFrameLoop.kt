@@ -10,7 +10,9 @@ import vn.apero.armeasure.ar.data.arcore.SurfaceSample
 import vn.apero.armeasure.ar.data.arcore.resolveSurface
 import vn.apero.armeasure.ar.data.arcore.toVec3
 import vn.apero.armeasure.ar.data.arcore.PoseProjector
+import vn.apero.armeasure.ar.domain.geometry.hasOpenSegment
 import vn.apero.armeasure.ar.domain.geometry.measureDistanceMeters
+import vn.apero.armeasure.ar.domain.geometry.segmentIndexPairs
 import vn.apero.armeasure.ar.presentation.camera.ArSessionState
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.formatLength
@@ -135,17 +137,17 @@ internal fun buildOverlay(
     val projected = world.map { projector.project(it, width, height) }
 
     val committed = buildList {
-        for (i in 0 until projected.size - 1) {
+        for ((i, j) in segmentIndexPairs(projected.size, state.chained)) {
             // A null projection means the point is behind the camera: skip the segment rather
             // than clamping it to an edge, which would draw a line that is simply not there.
             val start = projected[i] ?: continue
-            val end = projected[i + 1] ?: continue
+            val end = projected[j] ?: continue
             add(
                 Segment2D(
                     start = start,
                     end = end,
                     midpoint = (start + end) / 2f,
-                    label = formatLength(measureDistanceMeters(world[i], world[i + 1]), unit),
+                    label = formatLength(measureDistanceMeters(world[i], world[j]), unit),
                 ),
             )
         }
@@ -174,6 +176,10 @@ private fun buildLiveSegment(
     unit: LengthUnit,
 ): Segment2D? {
     val sample = state.live ?: return null
+    // Only while a segment is actually open. In the unchained tool an even point count means every
+    // segment is closed, and a band trailing the reticle from the last point would claim a
+    // connection to the next measurement that does not exist.
+    if (!hasOpenSegment(state.worldPoints.size, state.chained)) return null
     val lastWorld = state.worldPoints.lastOrNull() ?: return null
     val lastScreen = projector.project(lastWorld, width, height) ?: return null
     val center = Offset(width / 2f, height / 2f)

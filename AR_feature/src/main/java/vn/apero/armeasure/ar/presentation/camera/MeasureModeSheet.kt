@@ -26,16 +26,21 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import vn.apero.armeasure.R
 import vn.apero.armeasure.common.ui.ArMeasureTokens
 
 /**
- * The AR tool picker — exactly the three v1 tools (Distance / Box / Cylinder). The original mock
+ * The AR tool picker — Distance / Distance chain / Box / Cylinder on a 2x2 grid. The original mock
  * (`ebVJf`) lists six more entries (Angle, Polyline, Polyline smooth, Square, Poly smooth,
  * Auto-Detection); those are deliberately **not** implemented per phase-06 decision 3. Do not
  * "restore" them, disabled or otherwise — the phase's success criteria grep for their names.
+ *
+ * Two rows of two rather than a `LazyVerticalGrid`: four fixed items never benefit from lazy
+ * layout, and an unbounded-height grid inside a bottom sheet fights the `skipPartiallyExpanded`
+ * assumption below that this content never exceeds half the screen.
  *
  * Selection is signalled by fill AND stroke AND label colour, not colour alone (insight 3): the
  * mock's olive-stroke-only cue is a colour-blind failure the UI review flagged.
@@ -98,11 +103,21 @@ internal fun MeasureModeSheet(
                     Text(text = "×", color = ArMeasureTokens.TextSecondary, fontSize = 22.sp)
                 }
             }
+            // Top row measures lengths, bottom row measures volumes — grouped by what the tool
+            // does, so the pair a user is choosing between sits side by side.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                ModeCard(MeasureTool.DistanceChain, "↔", selected, onSelect, Modifier.weight(1f))
+                ModeCard(MeasureTool.Distance, "↔", selected, onSelect, Modifier.weight(1f))
+                // A distinct glyph, not a second "↔": with only fill/stroke/label colour marking
+                // the selection, two identical glyphs would undo the colour-blind fix above.
+                ModeCard(MeasureTool.DistanceChain, "⋯", selected, onSelect, Modifier.weight(1f))
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 ModeCard(MeasureTool.Box, "□", selected, onSelect, Modifier.weight(1f))
                 ModeCard(MeasureTool.Cylinder, "○", selected, onSelect, Modifier.weight(1f))
             }
@@ -123,8 +138,10 @@ private fun ModeCard(
     val iconColor = if (isSelected) ArMeasureTokens.Signature else ArMeasureTokens.TextPrimary
     val labelColor = if (isSelected) ArMeasureTokens.SignatureText else ArMeasureTokens.TextSecondary
     Column(
+        // 78dp, not the 70dp of the old three-across row: at half the width "Distance chain" needs
+        // two lines, and the icon plus two 12sp lines does not fit inside 70dp.
         modifier = modifier
-            .height(70.dp)
+            .height(78.dp)
             .clip(RoundedCornerShape(percent = 50))
             .background(if (isSelected) ArMeasureTokens.SignatureMuted else ArMeasureTokens.BgSurface)
             .border(
@@ -144,13 +161,18 @@ private fun ModeCard(
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             color = labelColor,
-            modifier = Modifier.clearAndSetSemantics {},
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            modifier = Modifier
+                .padding(horizontal = 8.dp)
+                .clearAndSetSemantics {},
         )
     }
 }
 
 private fun modeLabelRes(tool: MeasureTool): Int = when (tool) {
-    MeasureTool.DistanceChain -> R.string.armeasure_mode_distance
+    MeasureTool.Distance -> R.string.armeasure_mode_distance
+    MeasureTool.DistanceChain -> R.string.armeasure_mode_distance_chain
     MeasureTool.Box -> R.string.armeasure_mode_box
     MeasureTool.Cylinder -> R.string.armeasure_mode_cylinder
 }

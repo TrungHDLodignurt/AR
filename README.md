@@ -6,7 +6,7 @@ Measure real distances through the camera. Kotlin + Jetpack Compose, one library
 Replicates the UX of Apple's built-in Measure app: centred reticle, `+` to commit a point,
 dashed rubber-band line while aiming, solid line with a distance pill once committed, chained
 polyline, undo **and redo**. The demo host's **Measure** tab renders the module's own hub, which
-offers **AR Measure** (Distance / Box / Cylinder, switchable mid-session over one shared ARCore
+offers **AR Measure** (Distance / Distance chain / Box / Cylinder, switchable mid-session over one shared ARCore
 session — see `AR_feature/README.md` §12) and **Picture Measure** (calibrate against a reference
 object in a photo — a card, an A4 sheet, or a custom object — no AR needed).
 
@@ -35,7 +35,7 @@ The repo is two modules: one library module holds all feature code, `:app` is na
 
 | Module | Package | Contents | JVM tests |
 |---|---|---|---|
-| [`:AR_feature`](AR_feature/README.md) | `vn.apero.armeasure.*` | `common` (LengthUnit, formatters, LabelPill) + `ar` (Distance/Box/Cylinder + ARCore infra) + `photo` (Canny/Hough/Homography photo-reference measuring). Public API is exactly 3 symbols: `ArMeasureHub` (the entry composable), `ArMeasureConfig`, `MeasurementImageSaver` — everything else is `internal` | 102 |
+| [`:AR_feature`](AR_feature/README.md) | `vn.apero.armeasure.*` | `common` (LengthUnit, formatters, LabelPill) + `ar` (Distance/Distance chain/Box/Cylinder + ARCore infra) + `photo` (Canny/Hough/Homography photo-reference measuring). Public API is exactly 3 symbols: `ArMeasureHub` (the entry composable), `ArMeasureConfig`, `MeasurementImageSaver` — everything else is `internal` | 102 |
 | `:app` | `vn.quancua.artapemeasure` | `MainActivity` + tab nav only, wires `:AR_feature` | 0 |
 
 `AR_feature/README.md` (linked above) is a self-contained integration guide for pulling the
@@ -73,9 +73,11 @@ MainActivity (:app)         Home/Measure tab switch only; Measure renders ArMeas
 └── ArMeasureHub             module entry composable — AR Measure card + Picture Measure card,
     │                        hides the AR card when ArAvailability.Unsupported
     ├── ArCameraActivity     module-owned; ARCore install gate, camera permission, then:
-    │   └── ArCameraScreen   ONE ARSceneView + ONE Engine shared by all 3 AR tools; a
+    │   └── ArCameraScreen   ONE ARSceneView + ONE Engine shared by all 4 AR tools; a
     │       │                bottom-sheet tool switch swaps overlay/state, never remounts the view
-    │       ├── MeasureFrameLoop / MeasureOverlay / MeasureHit / MeasureState / MeasureMath  (Distance)
+    │       ├── MeasureFrameLoop / MeasureOverlay / MeasureHit / MeasureState / MeasureMath
+    │       │                (Distance and Distance chain — one holder each, the only difference
+    │       │                 is MeasureMath's segmentIndexPairs: start/end pairs vs a polyline)
     │       ├── ShapeFrameLoop / ShapeOverlay / ShapeMeasureState / ShapeMath                (Box, Cylinder)
     │       └── PoseProjector  world -> screen, allocation-free, shared by both tools above
     └── ArPhotoActivity      module-owned; constructs its own CustomReferenceStore, then:
@@ -134,8 +136,8 @@ question ("where will this land") without a per-frame texture read-back.
 
 Shutter capture (button is rendered inert rather than lying about being wired), edge snapping
 to floor/wall seams, position smoothing on the reticle, closed-loop perimeter, coaching overlay,
-area measurement, Floor Plan / Angle / Vertical-Wall / Chain modes (Box and Cylinder are done —
-see the diagram above).
+area measurement, Floor Plan / Angle / Vertical-Wall modes (Distance, Distance chain, Box and
+Cylinder are done — see the diagram above).
 
 Each is a separate step, and none of them matter until the accuracy table below has numbers.
 

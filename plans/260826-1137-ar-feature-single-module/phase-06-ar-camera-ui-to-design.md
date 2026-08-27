@@ -67,6 +67,12 @@ crosshair, the toast, and a terminal state the design does not have.
 ## Requirements
 
 **Functional**
+> **Superseded 2026-08-27:** the sheet now carries **4** cards on a 2x2 grid — Distance /
+> Distance chain / Box / Cylinder — after the chained tool was split from a new
+> independent-segment tool. The "no other entries" rule below still stands for the six mock
+> entries (Angle, Polyline, Polyline smooth, Square, Poly smooth, Auto-Detection); only the
+> card *count* changed. See `plans/reports/brainstormer-260827-1647-ar-distance-single-segment-mode.md`.
+
 - `MeasureModeSheet`: 3 cards — Distance / Box / Cylinder. **No other entries, not even disabled
   ones** (decision 3). Opened by `ModeBtn`, dismissed by its `×` or a scrim tap.
 - Top bar: Back (finishes the Activity), undo/redo group, `UnitBtn` opening the phase-02 `UnitMenu`.
