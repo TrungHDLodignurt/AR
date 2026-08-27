@@ -142,6 +142,19 @@ they are not part of the contract and may be renamed or restructured without not
 `vn.apero.armeasure.ar.presentation.host.ArCameraActivity`,
 `vn.apero.armeasure.photo.presentation.ArPhotoActivity`. `ArMeasureHub` starts both internally.
 
+**Both of these Activities hide the system navigation bar** (transient-by-swipe:
+`WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE` +
+`hide(Type.navigationBars())`, re-applied on `onResume`/`onWindowFocusChanged` since a hidden bar
+returns after user interaction), never the status bar. The shared logic lives in one place —
+`internal abstract class ArNavBarHidingActivity` in `common/ui`, which both Activities extend —
+rather than duplicated per-Activity lifecycle overrides. `ArMeasureHub` itself does none of
+this: it is embedded in the *host's own* Activity, so it simply inherits whatever bar behaviour
+that host Activity already applies. This means a host that shows system bars everywhere will
+still see the bar hide specifically inside these two module-owned, full-screen camera/photo
+screens — a deliberate choice (the mock shows no nav bar on any screen, and these are full-screen
+capture tasks), not a bug. If a host ever needs this configurable, that is a future
+`ArMeasureConfig` field, not something added speculatively now.
+
 ## 5. Host wiring
 
 ```kotlin

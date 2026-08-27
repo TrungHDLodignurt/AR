@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +21,7 @@ import vn.apero.armeasure.ar.ArAvailability
 import vn.apero.armeasure.ar.ArMeasureKit
 import vn.apero.armeasure.ar.presentation.camera.ArCameraScreen
 import vn.apero.armeasure.common.ui.ArMeasureTheme
+import vn.apero.armeasure.common.ui.ArNavBarHidingActivity
 
 /**
  * Module-owned, full-screen AR camera Activity — the hub only decides whether to show the card
@@ -38,7 +38,7 @@ import vn.apero.armeasure.common.ui.ArMeasureTheme
  * behind "entering Photo tears AR down": there is no teardown code to write as long as this
  * Activity is not `singleTask`/retained (it is not — see the manifest).
  */
-internal class ArCameraActivity : ComponentActivity() {
+internal class ArCameraActivity : ArNavBarHidingActivity() {
 
     private var arAvailability by mutableStateOf(ArAvailability.Checking)
     private var cameraGranted by mutableStateOf(false)
@@ -50,6 +50,7 @@ internal class ArCameraActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        hideNavigationBar()
 
         cameraGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED

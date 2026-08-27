@@ -19,6 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import vn.apero.armeasure.ar.presentation.host.ArMeasureHub
 import vn.quancua.artapemeasure.ui.AppTab
 import vn.quancua.artapemeasure.ui.AppTabBar
@@ -35,9 +37,36 @@ class MainActivity : ComponentActivity() {
         // non-auto style (dark/light) sets that flag false, giving a genuinely transparent bar so
         // the app's own capsule nav (AppTabBar) reads as the visual bottom, per design.
         enableEdgeToEdge(navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
+        hideNavigationBar()
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) { AppRoot() }
         }
+    }
+
+    // Mirrors the module's own ArNavBarHidingActivity (AR_feature is a separate module, so this
+    // is intentionally a small, standalone duplicate rather than a shared dependency): this demo
+    // host hides the navigation bar so it is a faithful reference integration matching the design
+    // mock (no nav bar on any screen) and the module's own ArCameraActivity/ArPhotoActivity. The
+    // transparent SystemBarStyle above is kept — it only stops the platform's contrast scrim, it
+    // does not hide the bar by itself. Re-applied on onResume/onWindowFocusChanged because a
+    // hidden bar returns after user interaction.
+    private fun hideNavigationBar() {
+        runCatching {
+            val controller = WindowInsetsControllerCompat(window, window.decorView)
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.navigationBars())
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        hideNavigationBar()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideNavigationBar()
     }
 }
 

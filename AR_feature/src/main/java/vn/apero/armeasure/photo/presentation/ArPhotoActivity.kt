@@ -3,7 +3,6 @@ package vn.apero.armeasure.photo.presentation
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import vn.apero.armeasure.ArMeasureConfig
 import vn.apero.armeasure.common.ui.ArMeasureTheme
+import vn.apero.armeasure.common.ui.ArNavBarHidingActivity
 import vn.apero.armeasure.photo.data.CustomReferenceStore
 import vn.apero.armeasure.photo.data.MediaStoreImageSaver
 
@@ -24,11 +24,12 @@ import vn.apero.armeasure.photo.data.MediaStoreImageSaver
  * no host Activity for the module to receive a store from, there is no host left to construct it,
  * and [CustomReferenceStore] was already `internal`, so no encapsulation is actually lost.
  */
-internal class ArPhotoActivity : ComponentActivity() {
+internal class ArPhotoActivity : ArNavBarHidingActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        hideNavigationBar()
 
         setContent {
             ArMeasureTheme(dark = false) {
