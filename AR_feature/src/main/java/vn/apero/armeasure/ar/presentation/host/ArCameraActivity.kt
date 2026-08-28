@@ -3,6 +3,8 @@ package vn.apero.armeasure.ar.presentation.host
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -77,7 +79,7 @@ internal class ArCameraActivity : ArNavBarHidingActivity() {
                         // rememberArAvailability, or the next onResume after requestInstall
                         // below. Same blank placeholder either way.
                         arAvailability != ArAvailability.Ready -> Box(Modifier.fillMaxSize())
-                        !cameraGranted -> CameraDenied()
+                        !cameraGranted -> CameraDenied(onOpenSettings = ::openAppSettings)
                         else -> ArCameraScreen(onClose = { finish() })
                     }
                 }
@@ -92,11 +94,26 @@ internal class ArCameraActivity : ArNavBarHidingActivity() {
      */
     override fun onResume() {
         super.onResume()
+        // Re-read, do not trust what onCreate saw. Android stops showing the system prompt after two
+        // denials, so the only route left is the app's settings page — and coming back from it used
+        // to leave this screen still saying "permission needed" with the permission already granted,
+        // which is a dead end with no way out but killing the app.
+        cameraGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
         // requestInstall stays on the main thread — it may start an Activity, and it is cheap when
         // there is nothing to install. checkAvailability does not: see ArAvailabilityGate's header
         // for what it costs, which is why it is dispatched instead of called here.
         if (!ArMeasureKit.requestInstall(this)) {
             lifecycleScope.launch { arAvailability = checkArAvailabilityOffMain(this@ArCameraActivity) }
+        }
+    }
+
+    /** The app's own settings page — the only route to the permission once the prompt stops appearing. */
+    private fun openAppSettings() {
+        runCatching {
+            startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)),
+            )
         }
     }
 

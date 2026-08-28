@@ -73,6 +73,7 @@
     <string name="armeasure_ar_unsupported_details">Details</string>
     <string name="armeasure_ar_unsupported_use_photo">Use Picture Measure</string>
     <string name="armeasure_camera_denied_title">Camera permission needed</string>
+    <string name="armeasure_camera_denied_open_settings">Open settings</string>
     <string name="armeasure_camera_denied_body">Measuring uses the camera to understand the room. Grant camera access in Settings to continue.</string>
 
     <string name="armeasure_photo_instruction_place">Tap on the %1$s to mark it, then adjust its size</string>
