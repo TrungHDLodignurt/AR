@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="armeasure_hint_warming_up">正在准备相机…</string>
+    <string name="armeasure_hint_scanning">正在寻找平面…</string>
     <string name="armeasure_hint_move_to_find_surface">移动手机以寻找平面</string>
     <string name="armeasure_hint_aim_at_surface">对准平面</string>
     <string name="armeasure_hint_tap_to_start">点按 + 添加点</string>
     <string name="armeasure_hint_reading_unsteady">无法锁定该平面，表面太光滑或缺少纹理</string>
     <string name="armeasure_hint_dragging_point">移到平面上，松手即可重新定位</string>
+    <string name="armeasure_hint_snapped">已吸附到点 %1$d</string>
     <string name="armeasure_hint_point_on_surface">%2$s 上的第 %1$d 个点</string>
     <string name="armeasure_hint_segment_awaiting_end">起点在%1$s，点按 + 设置终点</string>
     <string name="armeasure_hint_segment_done">终点在%1$s，点按 + 开始新线段</string>

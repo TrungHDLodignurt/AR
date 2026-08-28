@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="armeasure_hint_warming_up">Kamera wird vorbereitet…</string>
+    <string name="armeasure_hint_scanning">Suche nach einer Fläche…</string>
     <string name="armeasure_hint_move_to_find_surface">Handy bewegen, um eine Fläche zu finden</string>
     <string name="armeasure_hint_aim_at_surface">Auf eine Fläche zielen</string>
     <string name="armeasure_hint_tap_to_start">Auf + tippen, um einen Punkt zu setzen</string>
     <string name="armeasure_hint_reading_unsteady">Fläche nicht erfassbar – zu glänzend oder zu glatt</string>
     <string name="armeasure_hint_dragging_point">Über eine Fläche bewegen, dann loslassen</string>
+    <string name="armeasure_hint_snapped">An Punkt %1$d ausgerichtet</string>
     <string name="armeasure_hint_point_on_surface">Punkt %1$d auf %2$s</string>
     <string name="armeasure_hint_segment_awaiting_end">Start auf %1$s – + tippen für das Ende</string>
     <string name="armeasure_hint_segment_done">Ende auf %1$s – + tippen für neue Strecke</string>

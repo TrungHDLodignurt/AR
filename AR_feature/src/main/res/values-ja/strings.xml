@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="armeasure_hint_warming_up">カメラを準備しています…</string>
+    <string name="armeasure_hint_scanning">平面を探しています…</string>
     <string name="armeasure_hint_move_to_find_surface">スマホを動かして面を探してください</string>
     <string name="armeasure_hint_aim_at_surface">面に向けてください</string>
     <string name="armeasure_hint_tap_to_start">+ をタップしてポイントを追加</string>
     <string name="armeasure_hint_reading_unsteady">この面は認識できません — 光沢が強いか模様がなさすぎます</string>
     <string name="armeasure_hint_dragging_point">面の上に移動して、離すと位置が変わります</string>
+    <string name="armeasure_hint_snapped">ポイント %1$d にスナップ</string>
     <string name="armeasure_hint_point_on_surface">%2$s 上のポイント %1$d</string>
     <string name="armeasure_hint_segment_awaiting_end">%1$s から開始 — + をタップして終点を設定</string>
     <string name="armeasure_hint_segment_done">%1$s で終了 — + をタップして次の線分を開始</string>

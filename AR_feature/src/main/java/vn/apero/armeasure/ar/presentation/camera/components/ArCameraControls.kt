@@ -2,8 +2,11 @@ package vn.apero.armeasure.ar.presentation.camera.components
 
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -41,6 +44,16 @@ internal fun DistanceOverlay(
     modifier: Modifier,
 ) {
     val frames = viewModel.frames
+
+    // One tick when the lock is taken, none while it is held. Keyed on the index so moving from one
+    // point straight to another still ticks, and reading it here — in composition — is what keeps
+    // the 30-60 Hz frame loop free of any notion of feedback.
+    val haptic = LocalHapticFeedback.current
+    val snappedIndex = frames.snappedIndex
+    LaunchedEffect(snappedIndex) {
+        if (snappedIndex != null) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
+
     MeasureOverlay(
         frameProvider = { frames.overlay },
         modifier = modifier.pointerInput(Unit) {

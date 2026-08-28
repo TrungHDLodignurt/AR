@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="armeasure_hint_warming_up">Getting the camera ready…</string>
+    <string name="armeasure_hint_scanning">Looking for a surface…</string>
     <string name="armeasure_hint_move_to_find_surface">Move your phone to find a surface</string>
     <string name="armeasure_hint_aim_at_surface">Aim at a surface</string>
     <string name="armeasure_hint_tap_to_start">Tap + to add a point</string>
     <string name="armeasure_hint_reading_unsteady">Can\'t lock this surface — too shiny or plain to measure</string>
     <string name="armeasure_hint_dragging_point">Move over a surface, then release to reposition</string>
+    <string name="armeasure_hint_snapped">Snapped to point %1$d</string>
     <string name="armeasure_hint_point_on_surface">Point %1$d on %2$s</string>
     <string name="armeasure_hint_segment_awaiting_end">Start on %1$s — tap + to set the end</string>
     <string name="armeasure_hint_segment_done">End on %1$s — tap + to start a new segment</string>

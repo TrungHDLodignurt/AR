@@ -106,6 +106,7 @@ internal class MeasureViewModel(
         session: Session,
         frame: Frame,
         viewSize: IntSize,
+        density: Float,
     ) = onMeasureFrame(
         frames = frames,
         points = points,
@@ -116,6 +117,7 @@ internal class MeasureViewModel(
         session = session,
         frame = frame,
         viewSize = viewSize,
+        density = density,
     )
 
     private fun commitLivePoint(unit: LengthUnit) {

@@ -8,6 +8,7 @@ import vn.apero.armeasure.ar.data.arcore.SurfaceSample
 import vn.apero.armeasure.ar.domain.geometry.Vec3
 import vn.apero.armeasure.ar.domain.geometry.measurePointsMoved
 import vn.apero.armeasure.ar.domain.steadiness.SteadinessGate
+import vn.apero.armeasure.ar.presentation.camera.components.PlaneDots
 
 /** One screen-space segment ready to draw, with its label already formatted. */
 internal data class Segment2D(
@@ -31,6 +32,16 @@ internal data class OverlayFrame(
     val reticleOnSurface: Boolean = false,
     /** Screen position of the point currently being dragged, or null when nothing is. */
     val draggingPoint: Offset? = null,
+    /**
+     * The surface affordance under everything else — empty whenever the reticle resolved without a
+     * plane normal (a depth-map or feature-point reading), which is correct rather than missing:
+     * there is no plane to paint.
+     */
+    val planeDots: PlaneDots = PlaneDots.Empty,
+    /** The reticle's projected world-space ring, or empty to fall back to the flat dot. */
+    val reticleRing: List<Offset> = emptyList(),
+    /** True while the reticle is locked onto an existing point — drawn as a double ring. */
+    val snapped: Boolean = false,
 )
 
 /**
@@ -110,8 +121,34 @@ internal class MeasureFrameStream {
     var dragTouchPosition by mutableStateOf<Offset?>(null)
         private set
 
+    /**
+     * Index of the existing point the reticle is currently locked onto, or null when it is free.
+     *
+     * Read in composition (to fire one haptic tick per lock) as well as inside the frame loop, and
+     * carried across frames because the release decision depends on what was held last frame — see
+     * [vn.apero.armeasure.ar.domain.geometry.snapTarget].
+     */
+    var snappedIndex by mutableStateOf<Int?>(null)
+        private set
+
+    /**
+     * Whether the reading is trustworthy enough to commit — the steadiness gate, or a snap.
+     *
+     * A snap bypasses the gate deliberately. The gate exists to distrust a *live depth estimate*,
+     * which on a glossy or blank surface has been measured swinging metres between frames. A
+     * snapped reading is not that: its position is an anchor ARCore has already placed and refined.
+     * Asking the gate about it would make the user watch a visible lock refuse their tap for the
+     * five frames the gate needs to agree with something it was never uncertain about.
+     */
+    val commitReady: Boolean get() = liveStable || snappedIndex != null
+
     /** Whether the bottom "+" button should be tappable right now. */
-    val addEnabled: Boolean get() = draggingIndex == null && live != null && liveStable
+    val addEnabled: Boolean get() = draggingIndex == null && live != null && commitReady
+
+    /** Records this frame's snap decision. See [snappedIndex]. */
+    fun noteSnap(index: Int?) {
+        snappedIndex = index
+    }
 
     /** Feeds one frame's reading into [live] and the steadiness gate behind [liveStable]. */
     fun noteLiveSample(sample: SurfaceSample?, distanceMeters: Float?) {
@@ -170,5 +207,7 @@ internal class MeasureFrameStream {
     fun onActivated() {
         steadinessGate.reset()
         live = null
+        // Otherwise the incoming tool inherits a lock resolved against the outgoing tool's points.
+        snappedIndex = null
     }
 }

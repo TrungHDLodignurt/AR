@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="armeasure_hint_warming_up">Camera wordt gereedgemaakt…</string>
+    <string name="armeasure_hint_scanning">Op zoek naar een oppervlak…</string>
     <string name="armeasure_hint_move_to_find_surface">Beweeg de telefoon om een oppervlak te vinden</string>
     <string name="armeasure_hint_aim_at_surface">Richt op een oppervlak</string>
     <string name="armeasure_hint_tap_to_start">Tik op + om een punt te zetten</string>
     <string name="armeasure_hint_reading_unsteady">Oppervlak niet vast te leggen — te glanzend of te vlak</string>
     <string name="armeasure_hint_dragging_point">Beweeg over een oppervlak en laat los om te verplaatsen</string>
+    <string name="armeasure_hint_snapped">Vastgezet op punt %1$d</string>
     <string name="armeasure_hint_point_on_surface">Punt %1$d op %2$s</string>
     <string name="armeasure_hint_segment_awaiting_end">Start op %1$s — tik + voor het eindpunt</string>
     <string name="armeasure_hint_segment_done">Einde op %1$s — tik + voor een nieuw segment</string>

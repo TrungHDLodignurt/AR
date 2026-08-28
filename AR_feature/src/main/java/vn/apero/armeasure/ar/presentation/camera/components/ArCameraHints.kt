@@ -49,6 +49,10 @@ internal fun distanceHint(
     // Direct manipulation is already happening — nothing about surface-hunting is relevant
     // while the user's finger is on a point they placed a moment ago.
     frames.draggingIndex != null -> stringResource(R.string.armeasure_hint_dragging_point)
+    // Above every surface hint: while the reticle is locked, where it will land is settled, so
+    // advice about finding or steadying a surface is not just redundant but wrong.
+    frames.snappedIndex != null ->
+        stringResource(R.string.armeasure_hint_snapped, frames.snappedIndex!! + 1)
     // Ahead of the plane hint: a reading that will not hold still is a specific, fixable
     // problem, and telling the user to keep hunting for a surface would be misleading when
     // the reticle is already on one that simply cannot be measured.

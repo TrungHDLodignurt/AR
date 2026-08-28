@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="armeasure_hint_warming_up">Готовим камеру…</string>
+    <string name="armeasure_hint_scanning">Поиск поверхности…</string>
     <string name="armeasure_hint_move_to_find_surface">Двигайте телефон, чтобы найти поверхность</string>
     <string name="armeasure_hint_aim_at_surface">Наведите на поверхность</string>
     <string name="armeasure_hint_tap_to_start">Нажмите +, чтобы поставить точку</string>
     <string name="armeasure_hint_reading_unsteady">Поверхность не распознана — слишком блестящая или гладкая</string>
     <string name="armeasure_hint_dragging_point">Наведите на поверхность и отпустите</string>
+    <string name="armeasure_hint_snapped">\u041f\u0440\u0438\u0432\u044f\u0437\u0430\u043d\u043e \u043a \u0442\u043e\u0447\u043a\u0435 %1$d</string>
     <string name="armeasure_hint_point_on_surface">Точка %1$d — %2$s</string>
     <string name="armeasure_hint_segment_awaiting_end">Начало: %1$s — нажмите +, чтобы задать конец</string>
     <string name="armeasure_hint_segment_done">Конец: %1$s — нажмите + для нового отрезка</string>

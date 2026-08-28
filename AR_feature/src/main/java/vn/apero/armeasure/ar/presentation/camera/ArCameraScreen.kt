@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -53,6 +54,7 @@ import vn.apero.armeasure.ar.presentation.camera.components.ArCameraBottomBar
 import vn.apero.armeasure.ar.presentation.camera.components.ArCameraTopBar
 import vn.apero.armeasure.ar.presentation.camera.components.DistanceOverlay
 import vn.apero.armeasure.ar.presentation.camera.components.MeasureModeSheet
+import vn.apero.armeasure.ar.presentation.camera.components.ScanningIndicator
 import vn.apero.armeasure.ar.presentation.camera.components.distanceActions
 import vn.apero.armeasure.ar.presentation.camera.components.result
 import vn.apero.armeasure.ar.presentation.camera.components.shapeActions
@@ -113,6 +115,9 @@ internal fun ArCameraScreen(
     onResult: (MeasurementResult) -> Unit = {},
 ) {
     val context = LocalContext.current
+    // Snap radii are specified in dp; the frame loop is not a composable, so the conversion
+    // factor is captured here once instead of being re-derived per frame.
+    val density = LocalDensity.current.density
     val unitPreference = remember { UnitPreference(context) }
 
     val camera: ArCameraViewModel = viewModel(
@@ -226,8 +231,8 @@ internal fun ArCameraScreen(
 
     Box(modifier = modifier.fillMaxSize().onSizeChanged { viewSize = it }) {
         if (!isWarmedUp) {
-            ARToast(
-                text = stringResource(R.string.armeasure_hint_warming_up),
+            ScanningIndicator(
+                label = stringResource(R.string.armeasure_hint_warming_up),
                 modifier = Modifier.align(Alignment.Center),
             )
             return@Box
@@ -238,7 +243,14 @@ internal fun ArCameraScreen(
                 modifier = Modifier.fillMaxSize(),
                 engine = engine,
                 materialLoader = materialLoader,
-                planeRenderer = true,
+                // Off in favour of our own dot field — see PlaneDotField.kt's KDoc for the whole
+                // argument. Short version: the library's renderer paints the plane's *entire*
+                // extent with a square-grid texture, so aiming at a floor also wireframes every
+                // wall ARCore has found; and PlaneRendererV2's parameters (gridAlpha,
+                // scanPlaneRadius, …) are unreachable because ARSceneScope exposes no renderer
+                // instance. Turning this off also gives up Filament's plane occlusion, which this
+                // 2D-Canvas-over-scene overlay was never using.
+                planeRenderer = false,
                 sessionConfiguration = { configuredSession, config ->
                     // The union of what any of the four tools needs (insight 10) — the two
                     // pre-merge config blocks were already byte-identical.
@@ -264,9 +276,9 @@ internal fun ArCameraScreen(
                     // A direct call, never processIntent: see this file's header.
                     when (tool) {
                         MeasureTool.Distance ->
-                            distance.onFrame(sessionFrames, projector, unit, updatedSession, frame, viewSize)
+                            distance.onFrame(sessionFrames, projector, unit, updatedSession, frame, viewSize, density)
                         MeasureTool.DistanceChain ->
-                            distanceChain.onFrame(sessionFrames, projector, unit, updatedSession, frame, viewSize)
+                            distanceChain.onFrame(sessionFrames, projector, unit, updatedSession, frame, viewSize, density)
                         MeasureTool.Box ->
                             box.onFrame(sessionFrames, projector, unit, updatedSession, frame, viewSize)
                         MeasureTool.Cylinder ->
@@ -339,6 +351,16 @@ internal fun ArCameraScreen(
             onModeClick = { camera.processIntent(ArCameraIntent.ShowModeSheet(true)) },
             modifier = Modifier.align(Alignment.TopCenter),
         )
+
+        // Centre stage while ARCore is still looking for a plane. The bottom hint stays up
+        // alongside it and is not redundant: this says the app is working, the hint says what the
+        // user can do about it.
+        if (sessionFrames.cameraReady && !sessionFrames.anyPlaneTracked && !cameraState.showModeSheet) {
+            ScanningIndicator(
+                label = stringResource(R.string.armeasure_hint_scanning),
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
 
         // Defect 1 of the design update: the mock's toast overlaps the sheet by 52px — hidden
         // here while the sheet is open instead.

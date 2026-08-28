@@ -9,6 +9,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
+import vn.apero.armeasure.ar.presentation.camera.components.PlaneDots
+import vn.apero.armeasure.ar.presentation.camera.components.drawPlaneDots
 import vn.apero.armeasure.ar.presentation.ruler.Segment2D
 import vn.apero.armeasure.ar.presentation.ruler.components.drawReticle
 import vn.apero.armeasure.ar.presentation.ruler.components.drawSegment
@@ -37,6 +39,10 @@ internal data class ShapeOverlayFrame(
     /** The shape currently being sized — dashed, with per-edge labels where they matter. */
     val liveEdges: List<Segment2D> = emptyList(),
     val reticleOnSurface: Boolean = false,
+    /** Same surface affordance the ruler draws — see [PlaneDots]. */
+    val planeDots: PlaneDots = PlaneDots.Empty,
+    /** The reticle's projected world-space ring, or empty to fall back to the flat dot. */
+    val reticleRing: List<Offset> = emptyList(),
 )
 
 /**
@@ -63,6 +69,9 @@ internal fun ShapeOverlay(
     Canvas(modifier = modifier) {
         val frame = frameProvider()
 
+        // Under everything, exactly as in MeasureOverlay.
+        drawPlaneDots(frame.planeDots)
+
         frame.committedEdges.forEach { drawSegment(it, dashed = false) }
         frame.committedHiddenEdges.forEach { drawSegment(it, dashed = true) }
         frame.liveEdges.forEach { drawSegment(it, dashed = true) }
@@ -80,6 +89,7 @@ internal fun ShapeOverlay(
         drawReticle(
             center = Offset(size.width / 2f, size.height / 2f),
             onSurface = frame.reticleOnSurface,
+            ring = frame.reticleRing,
         )
     }
 }

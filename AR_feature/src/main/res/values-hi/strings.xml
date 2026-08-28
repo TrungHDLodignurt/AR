@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="armeasure_hint_warming_up">कैमरा तैयार हो रहा है…</string>
+    <string name="armeasure_hint_scanning">सतह खोज रहे हैं…</string>
     <string name="armeasure_hint_move_to_find_surface">सतह ढूँढने के लिए फ़ोन घुमाएँ</string>
     <string name="armeasure_hint_aim_at_surface">कैमरा किसी सतह पर रखें</string>
     <string name="armeasure_hint_tap_to_start">पॉइंट जोड़ने के लिए + टैप करें</string>
     <string name="armeasure_hint_reading_unsteady">यह सतह पकड़ में नहीं आ रही — बहुत चमकदार या सादी है</string>
     <string name="armeasure_hint_dragging_point">सतह पर ले जाएँ, फिर छोड़कर जगह बदलें</string>
+    <string name="armeasure_hint_snapped">\u092c\u093f\u0902\u0926\u0941 %1$d \u0938\u0947 \u091c\u0941\u0921\u093c\u093e</string>
     <string name="armeasure_hint_point_on_surface">%2$s पर पॉइंट %1$d</string>
     <string name="armeasure_hint_segment_awaiting_end">%1$s से शुरू — अंत तय करने को + टैप करें</string>
     <string name="armeasure_hint_segment_done">%1$s पर अंत — नया सेगमेंट शुरू करने को + टैप करें</string>

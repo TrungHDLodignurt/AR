@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="armeasure_hint_warming_up">جارٍ تجهيز الكاميرا…</string>
+    <string name="armeasure_hint_scanning">جارٍ البحث عن سطح…</string>
     <string name="armeasure_hint_move_to_find_surface">حرّك هاتفك للعثور على سطح</string>
     <string name="armeasure_hint_aim_at_surface">وجّه الكاميرا نحو سطح</string>
     <string name="armeasure_hint_tap_to_start">اضغط + لإضافة نقطة</string>
     <string name="armeasure_hint_reading_unsteady">تعذّر تثبيت السطح — لامع أو خالٍ من التفاصيل</string>
     <string name="armeasure_hint_dragging_point">حرّك فوق سطح ثم ارفع إصبعك لتغيير الموضع</string>
+    <string name="armeasure_hint_snapped">\u0645\u0631\u062a\u0628\u0637 \u0628\u0627\u0644\u0646\u0642\u0637\u0629 %1$d</string>
     <string name="armeasure_hint_point_on_surface">النقطة %1$d على %2$s</string>
     <string name="armeasure_hint_segment_awaiting_end">البداية على %1$s — اضغط + لتحديد النهاية</string>
     <string name="armeasure_hint_segment_done">النهاية على %1$s — اضغط + لبدء قطعة جديدة</string>

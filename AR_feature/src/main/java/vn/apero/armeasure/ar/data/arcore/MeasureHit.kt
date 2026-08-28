@@ -63,6 +63,28 @@ internal class SurfaceSample(
      */
     fun commit(session: Session): Anchor =
         trackable?.createAnchor(pose) ?: hitResult?.createAnchor() ?: session.createAnchor(pose)
+
+    /**
+     * This reading relocated onto [target] — the exact world position of an existing point the
+     * reticle has snapped to.
+     *
+     * Returning a whole sample rather than just drawing the snap is what makes the committed value
+     * trustworthy: [position] and [pose] move together, so the anchor created on tap lands on the
+     * snapped position and the label, the rubber band and the stored measurement all agree. A
+     * snapped point is therefore *identical* to the one it snapped to, which is the entire promise
+     * of the feature — "start again from that corner" has to mean that corner, not 4 px away.
+     *
+     * [hitResult] is dropped: it described where the aim ray met the world, which is no longer
+     * where the point goes, and letting [commit] fall back to it would silently undo the snap.
+     * [trackable] is kept, so the new anchor still rides the same plane as ARCore refines it.
+     */
+    fun snappedTo(target: Vec3): SurfaceSample = SurfaceSample(
+        position = target,
+        source = source,
+        hitResult = null,
+        pose = Pose(floatArrayOf(target.x, target.y, target.z), pose.rotationQuaternion),
+        trackable = trackable,
+    )
 }
 
 /**

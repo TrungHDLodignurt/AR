@@ -34,6 +34,11 @@ import vn.apero.armeasure.ar.presentation.ruler.Segment2D
 import vn.apero.armeasure.ar.presentation.ruler.resolveAt
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.formatLength
+import vn.apero.armeasure.ar.domain.geometry.planeBasis
+import vn.apero.armeasure.ar.presentation.camera.components.MeasuringDotFade
+import vn.apero.armeasure.ar.presentation.camera.components.PlaneDots
+import vn.apero.armeasure.ar.presentation.camera.components.buildPlaneDots
+import vn.apero.armeasure.ar.presentation.camera.components.buildReticleRing
 import vn.apero.armeasure.ar.presentation.shapes.components.ShapeOverlayFrame
 
 /**
@@ -189,6 +194,24 @@ internal fun buildShapeOverlay(
         }
     }
 
+    // Same surface affordance as the ruler. Absent during SizingHeight by construction rather than
+    // by a special case: that phase resolves against an analytic construction plane, not a tracked
+    // Plane, so it carries no planeNormal — and the height axis is not a surface to paint anyway.
+    val basis = sample?.planeNormal?.let { planeBasis(it) }
+    val planeDots = if (sample != null && basis != null) {
+        buildPlaneDots(
+            hit = sample.position,
+            basis = basis,
+            cameraPosition = cameraPosition,
+            projector = projector,
+            viewSize = viewSize,
+            // Dim as soon as there is geometry to read — a finished shape or one under construction.
+            fade = if (shapes.isEmpty() && phase == ShapePhase.AwaitingOrigin) 1f else MeasuringDotFade,
+        )
+    } else {
+        PlaneDots.Empty
+    }
+
     return ShapeOverlayFrame(
         committedEdges = committedEdges,
         committedHiddenEdges = committedHiddenEdges,
@@ -197,6 +220,12 @@ internal fun buildShapeOverlay(
         // Only a reading steady enough to commit earns the solid reticle — same rule as the
         // point-to-point ruler's overlay.
         reticleOnSurface = sample != null && frames.liveStable,
+        planeDots = planeDots,
+        reticleRing = if (sample != null && basis != null) {
+            buildReticleRing(sample.position, basis, projector, viewSize)
+        } else {
+            emptyList()
+        },
     )
 }
 

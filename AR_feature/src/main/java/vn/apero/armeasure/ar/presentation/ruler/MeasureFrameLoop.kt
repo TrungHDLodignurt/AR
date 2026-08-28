@@ -10,10 +10,17 @@ import vn.apero.armeasure.ar.data.arcore.PoseProjector
 import vn.apero.armeasure.ar.data.arcore.SurfaceSample
 import vn.apero.armeasure.ar.data.arcore.resolveSurface
 import vn.apero.armeasure.ar.data.arcore.toVec3
+import vn.apero.armeasure.ar.domain.geometry.Vec3
 import vn.apero.armeasure.ar.domain.geometry.hasOpenSegment
 import vn.apero.armeasure.ar.domain.geometry.measureDistanceMeters
 import vn.apero.armeasure.ar.domain.geometry.segmentIndexPairs
+import vn.apero.armeasure.ar.domain.geometry.snapTarget
+import vn.apero.armeasure.ar.domain.geometry.planeBasis
 import vn.apero.armeasure.ar.presentation.camera.ArSessionFrameStream
+import vn.apero.armeasure.ar.presentation.camera.components.MeasuringDotFade
+import vn.apero.armeasure.ar.presentation.camera.components.PlaneDots
+import vn.apero.armeasure.ar.presentation.camera.components.buildPlaneDots
+import vn.apero.armeasure.ar.presentation.camera.components.buildReticleRing
 import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.formatLength
 
@@ -35,6 +42,18 @@ import vn.apero.armeasure.common.domain.formatLength
  */
 private const val MaxOffRayPx = 12f
 
+/**
+ * Radius the reticle must come within to lock onto an existing point, in dp.
+ *
+ * Tighter than the reference app's 45 dp (`f08.z0 = 45 × density`) on purpose: 28 dp is ~4.6 mm of
+ * glass, close enough that reaching a point is easy and far enough that placing a point deliberately
+ * *near* another one still works. See [snapTarget] for why there are two radii and not one.
+ */
+private const val SnapEnterDp = 28f
+
+/** Radius a held snap must leave before it is dropped. The hysteresis; see [snapTarget]. */
+private const val SnapReleaseDp = 45f
+
 internal fun onMeasureFrame(
     frames: MeasureFrameStream,
     points: List<MeasuredPoint>,
@@ -45,6 +64,7 @@ internal fun onMeasureFrame(
     session: Session,
     frame: Frame,
     viewSize: IntSize,
+    density: Float,
 ) {
     sessionFrames.tracking = frame.camera.trackingState == TrackingState.TRACKING
 
@@ -63,10 +83,22 @@ internal fun onMeasureFrame(
     // Always the screen centre: the reticle lives there, and users aim far more precisely with
     // a centred crosshair than with a fingertip.
     val centre = Offset(viewSize.width / 2f, viewSize.height / 2f)
-    val sample = resolveAt(frame, projector, viewSize, centre, sessionFrames.depthSupported)
+    val cameraPosition = frame.camera.pose.toVec3()
+    val rawSample = resolveAt(frame, projector, viewSize, centre, sessionFrames.depthSupported)
+
+    // Snap before publishing the sample, so every consumer — the rubber band, the label, the
+    // anchor created on tap — sees the snapped position rather than the raw one.
+    val snapped = resolveSnap(frames, chained, projector, viewSize, centre, density)
+    frames.noteSnap(snapped)
+    val sample = if (snapped != null) {
+        rawSample?.snappedTo(frames.worldPoints[snapped])
+    } else {
+        rawSample
+    }
+
     frames.noteLiveSample(
         sample = sample,
-        distanceMeters = sample?.let { measureDistanceMeters(it.position, frame.camera.pose.toVec3()) },
+        distanceMeters = sample?.let { measureDistanceMeters(it.position, cameraPosition) },
     )
 
     // Same resolution the reticle gets, but at the finger's position while an existing point
@@ -79,7 +111,44 @@ internal fun onMeasureFrame(
     // Anchors drift as ARCore refines its map; re-read them, but only publish past 1 mm.
     if (points.isNotEmpty()) frames.refreshWorldPoints(points.map { it.anchor.pose.toVec3() })
 
-    frames.overlay = buildOverlay(frames, chained, projector, viewSize, unit)
+    frames.overlay = buildOverlay(frames, chained, projector, viewSize, unit, cameraPosition)
+}
+
+/**
+ * This frame's snap decision, or null when the reticle is free.
+ *
+ * Suppressed entirely while a point is being dragged: the reticle is not the thing being aimed
+ * then, and snapping one placed point onto another is a different feature with its own questions
+ * (which of the two anchors survives?).
+ *
+ * The unchained tool excludes the open segment's own start. Without that, the tool would helpfully
+ * guide the user into measuring a point against itself and reporting 0 cm.
+ */
+private fun resolveSnap(
+    frames: MeasureFrameStream,
+    chained: Boolean,
+    projector: PoseProjector,
+    viewSize: IntSize,
+    centre: Offset,
+    density: Float,
+): Int? {
+    if (frames.draggingIndex != null) return null
+    val world = frames.worldPoints
+    if (world.isEmpty()) return null
+
+    val positions = world.map { point ->
+        projector.project(point, viewSize.width, viewSize.height)?.let { it.x to it.y }
+    }
+    val excluded = if (hasOpenSegment(world.size, chained)) setOf(world.lastIndex) else emptySet()
+
+    return snapTarget(
+        positions = positions,
+        reticle = centre.x to centre.y,
+        currentlySnapped = frames.snappedIndex,
+        enterPx = SnapEnterDp * density,
+        releasePx = SnapReleaseDp * density,
+        excluded = excluded,
+    )
 }
 
 /**
@@ -118,6 +187,7 @@ internal fun buildOverlay(
     projector: PoseProjector,
     viewSize: IntSize,
     unit: LengthUnit,
+    cameraPosition: Vec3,
 ): OverlayFrame {
     val width = viewSize.width
     val height = viewSize.height
@@ -158,14 +228,42 @@ internal fun buildOverlay(
         null
     }
 
+    // The surface affordance follows whatever the user is manipulating: the reticle normally, the
+    // finger's own reading while a placed point is being dragged — that is where the attention is,
+    // and the reticle is hidden in that case anyway.
+    val focus = if (draggingIndex != null) frames.dragSample else frames.live
+    val basis = focus?.planeNormal?.let { planeBasis(it) }
+    val planeDots = if (focus != null && basis != null) {
+        buildPlaneDots(
+            hit = focus.position,
+            basis = basis,
+            cameraPosition = cameraPosition,
+            projector = projector,
+            viewSize = viewSize,
+            // Dim once a measurement exists: the dots are an aiming aid, not part of the result.
+            fade = if (frames.worldPoints.isEmpty()) 1f else MeasuringDotFade,
+        )
+    } else {
+        PlaneDots.Empty
+    }
+    // No ring while dragging — drawReticle is not called then, so building one would be dead work.
+    val reticleRing = if (focus != null && basis != null && draggingIndex == null) {
+        buildReticleRing(focus.position, basis, projector, viewSize)
+    } else {
+        emptyList()
+    }
+
     return OverlayFrame(
         points = projected.filterNotNull(),
         committed = committed,
         live = live,
         // Only a reading steady enough to commit earns the solid reticle: the dot is a promise
         // that tapping now produces a point worth trusting.
-        reticleOnSurface = draggingIndex == null && frames.live != null && frames.liveStable,
+        reticleOnSurface = draggingIndex == null && frames.live != null && frames.commitReady,
         draggingPoint = draggingIndex?.let { projected.getOrNull(it) },
+        planeDots = planeDots,
+        reticleRing = reticleRing,
+        snapped = frames.snappedIndex != null,
     )
 }
 

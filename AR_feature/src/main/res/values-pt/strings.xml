@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="armeasure_hint_warming_up">Preparando a câmera…</string>
+    <string name="armeasure_hint_scanning">Procurando uma superfície…</string>
     <string name="armeasure_hint_move_to_find_surface">Mova o celular para achar uma superfície</string>
     <string name="armeasure_hint_aim_at_surface">Aponte para uma superfície</string>
     <string name="armeasure_hint_tap_to_start">Toque + para adicionar um ponto</string>
     <string name="armeasure_hint_reading_unsteady">Superfície lisa ou brilhante demais para medir</string>
     <string name="armeasure_hint_dragging_point">Mova sobre uma superfície e solte para reposicionar</string>
+    <string name="armeasure_hint_snapped">Ajustado ao ponto %1$d</string>
     <string name="armeasure_hint_point_on_surface">Ponto %1$d em %2$s</string>
     <string name="armeasure_hint_segment_awaiting_end">Início em %1$s — toque + para marcar o fim</string>
     <string name="armeasure_hint_segment_done">Fim em %1$s — toque + para um novo segmento</string>
