@@ -56,7 +56,6 @@ import vn.apero.armeasure.ar.presentation.camera.components.MeasureModeSheet
 import vn.apero.armeasure.ar.presentation.camera.components.distanceActions
 import vn.apero.armeasure.ar.presentation.camera.components.result
 import vn.apero.armeasure.ar.presentation.camera.components.shapeActions
-import vn.apero.armeasure.ar.presentation.shapes.components.ShapeOverlay
 import vn.apero.armeasure.photo.presentation.redo
 import vn.apero.armeasure.photo.presentation.undo
 

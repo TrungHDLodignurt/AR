@@ -55,4 +55,6 @@ dependencies {
     // parser — this pulls in the real implementation so ReferenceObjectJsonTest can run as
     // plain JUnit with no Robolectric, per this phase's requirement.
     testImplementation(libs.json)
+    // Dispatchers.setMain, so MviViewModelTest can construct a ViewModel without a device.
+    testImplementation(libs.kotlinx.coroutines.test)
 }

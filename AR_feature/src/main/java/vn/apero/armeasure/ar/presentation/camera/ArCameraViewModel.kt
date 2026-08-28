@@ -24,20 +24,21 @@ internal class ArCameraViewModel(
     private val savedState: SavedStateHandle,
 ) : MviViewModel<ArCameraUiState, ArCameraIntent, ArCameraEffect>() {
 
-    init {
-        // Seeded here rather than in createInitialState(): the base class builds its initial state
-        // from a field initializer, which runs *before* a subclass's constructor-parameter fields
-        // are assigned — so reading unitPreference/savedState there would read null. Doing it in an
-        // init block is the one ordering that is guaranteed safe, and it keeps
-        // createInitialState() a pure default.
+    /**
+     * Reads the persisted unit and the restored tool directly, which the base class allows because it
+     * builds its initial state lazily — the first read happens when something collects `state`, by
+     * which point this constructor has finished. An earlier version seeded these from an `init` block
+     * instead, working around a field-initializer ordering trap that no longer exists; that also cost
+     * a redundant state emission and a `persist` at construction.
+     */
+    override fun createInitialState(): ArCameraUiState {
         val restoredTool = savedState.get<String>(KeyTool)
             ?.let { name -> MeasureTool.entries.firstOrNull { it.name == name } }
-        updateState {
-            copy(unit = unitPreference.unit, tool = restoredTool ?: tool)
-        }
+        return ArCameraUiState(
+            unit = unitPreference.unit,
+            tool = restoredTool ?: ArCameraUiState().tool,
+        )
     }
-
-    override fun createInitialState() = ArCameraUiState()
 
     override fun handleIntent(intent: ArCameraIntent) {
         when (intent) {

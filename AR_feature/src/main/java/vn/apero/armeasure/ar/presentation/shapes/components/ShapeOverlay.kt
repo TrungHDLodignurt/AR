@@ -14,8 +14,6 @@ import vn.apero.armeasure.ar.presentation.ruler.components.drawReticle
 import vn.apero.armeasure.ar.presentation.ruler.components.drawSegment
 import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.common.ui.drawLabelPill
-import vn.apero.armeasure.ar.presentation.ruler.components.drawReticle
-import vn.apero.armeasure.ar.presentation.ruler.components.drawSegment
 
 /**
  * Everything the box/cylinder overlay needs for one frame, in screen pixels — the wireframe

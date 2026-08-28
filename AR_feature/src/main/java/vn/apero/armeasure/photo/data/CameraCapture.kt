@@ -19,6 +19,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import vn.apero.armeasure.R
 
 /**
@@ -133,10 +135,11 @@ private fun createCameraCaptureUri(context: Context): Uri {
  * user picked, and deleting one of those would destroy a real photo out of the user's library. The
  * authority check is what separates the two.
  */
-internal fun discardCameraCapture(context: Context, uri: Uri) {
-    if (uri.authority != fileProviderAuthority(context)) return
-    val name = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: return
+internal suspend fun discardCameraCapture(context: Context, uri: Uri) = withContext(Dispatchers.IO) {
+    if (uri.authority != fileProviderAuthority(context)) return@withContext
+    val name = uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: return@withContext
     runCatching { File(captureDir(context), name).delete() }
+    Unit
 }
 
 private fun captureDir(context: Context) = File(context.cacheDir, "camera-capture")

@@ -18,6 +18,17 @@ match a string passed positionally into a custom drawing helper, e.g.
 edge) shipped past that grep for this reason — a real, user-facing violation of the module's
 English-only/resource-driven-string decision that the audit had marked "should be empty".
 
+**Confirmed blind spot found 2026-08-28 (README §16 audit 4, "Resource prefix intact"):** the
+documented check is `every <string name= starts with armeasure_` — it only inspects `<string>`.
+`res/values/themes.xml` declares `<style name="Theme.ArMeasure">`, unprefixed despite
+`resourcePrefix = "armeasure_"`, and it is the style both module Activities use in the manifest.
+So the audit passes forever while the invariant named in its own title is violated. Sweep all
+resource types, not just strings. Same session: audit 8's stated expected output ("`git grep -c
+'rememberEngine\|ARSceneView('` → 1 each") is impossible — `-c` counts matching *lines* for the
+combined pattern, so it prints one number per file (3); the underlying invariant was fine but the
+documented expectation was never achievable. Audit 9's "only two `::class.java` hits" also
+undercounts: `Intent(context, X::class.java)` in `newIntent` companions matches too.
+
 **Why:** the module's invariants are real and worth enforcing, but every one of these audits is
 only as good as its regex. An audit "passing" is not the same as the invariant holding.
 

@@ -34,7 +34,12 @@ internal abstract class MviViewModel<S : MviState, I : MviIntent, E : MviEffect>
      * collects `state` removes it, by which point the subclass is fully built.
      */
     private val _state: MutableStateFlow<S> by lazy { MutableStateFlow(createInitialState()) }
-    val state: StateFlow<S> get() = _state.asStateFlow()
+    /**
+     * Lazy, not a `get()` accessor. `asStateFlow()` builds a new read-only wrapper on every call, and
+     * Compose uses the flow instance itself as a restart key inside `collectAsStateWithLifecycle` —
+     * so an accessor made every recomposition cancel and restart collection. Held once instead.
+     */
+    val state: StateFlow<S> by lazy { _state.asStateFlow() }
     val stateValue: S get() = _state.value
 
     private val _effect = Channel<E>(Channel.Factory.BUFFERED)

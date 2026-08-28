@@ -67,6 +67,8 @@ json = "20240303"
 # Google warns of backward-incompatible change, which is why the Canny+Hough detector is kept as a
 # fallback rather than deleted.
 mlkitSubjectSegmentation = "16.0.0-beta1"
+# Test-only.
+coroutinesTest = "1.7.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -79,6 +81,10 @@ androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lif
 sceneview-ar = { group = "io.github.sceneview", name = "arsceneview", version.ref = "arsceneview" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 json = { group = "org.json", name = "json", version.ref = "json" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-savedstate = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-savedstate", version.ref = "lifecycle" }
+mlkit-subject-segmentation = { group = "com.google.android.gms", name = "play-services-mlkit-subject-segmentation", version.ref = "mlkitSubjectSegmentation" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -531,7 +537,7 @@ Stated plainly, not buried:
   used everywhere else (`ColorDot`, `CmUnitBadge`, etc.). A magnifier loupe may be intended to
   compensate; that tradeoff is not written down anywhere in the code, so treat it as open, not
   intentional.
-- **The `camera-capture/` cache directory is never cleaned.** Every "take a photo" round trip
+- **The `camera-capture/` cache directory is swept before each capture and the file is deleted once decoded.** Every "take a photo" round trip
   (custom reference object registration, or the main photo picker) writes a new file there and
   nothing ever deletes it — low risk (cache dir, OS can reclaim under pressure), but unbounded
   growth for the life of the install.

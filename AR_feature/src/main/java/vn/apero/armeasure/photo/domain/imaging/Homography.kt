@@ -4,21 +4,14 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
- * Pure planar-homography maths — no Android types, unit-testable like `MeasureMath`.
+ * The 3x3 projective map from the photo's own pixel grid to the reference object's real millimetres.
  *
- * This is the mechanism behind "measure from a photo with a reference object": the reference
- * app (ARuler's "Photoruler") reconstructs the same mapping by decomposing vanishing points
- * from a quad's two pairs of opposite sides. A direct 4-point homography (below) is the
- * standard, better-known equivalent — given the 4 image-space corners of a rectangle whose
- * real size is known, it is *the* unique planar projective map from "pixels in the photo" to
- * "millimetres on that rectangle's plane". Decomposing vanishing points first is an
- * implementation detail of how they got there, not a different result — this file reaches the
- * same destination by a standard route instead of reproducing their exact steps.
- *
- * Coordinate space is deliberately unspecified: [computeHomography] only cares that [src] and
- * the quad corners it is later applied to live in the *same* pixel space as each other (screen
- * display coordinates work fine — there is no need to map back to the bitmap's native pixel
- * grid, because the solve happens fresh from whatever space the quad was last dragged in).
+ * **The source space is bitmap pixels, and that is not incidental.** `PhotoMeasureState` used to hold
+ * the quad in screen coordinates, which meant every relayout invalidated the calibration along with
+ * it — a button appearing once shifted a quad about 180px off its object, and the same reflow
+ * corrupted a hand-captured measurement fixture badly enough to waste a session of tuning. Solving
+ * from the photo's own grid removes the dependency entirely: nothing about the canvas can change the
+ * answer. Do not "simplify" this by feeding it display coordinates.
  */
 
 internal data class Vec2(val x: Float, val y: Float)

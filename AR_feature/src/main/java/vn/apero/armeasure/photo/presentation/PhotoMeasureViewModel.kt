@@ -74,8 +74,17 @@ internal class PhotoMeasureViewModel(
      * patches — each of which existed here because a user hit the bug first. The list itself, and
      * what is deliberately left out of it, is `PhotoMeasureSavedState.kt`.
      */
+    /**
+     * Only writes what changed. `persist` runs after every `updateState`, and a corner drag calls
+     * that 60 to 120 times a second — none of these four fields can change during a drag, so without
+     * this the drag path pays four `SavedStateHandle` writes per pointer event to store what is
+     * already there. The drag deliberately bypasses the intent channel to avoid exactly that kind of
+     * per-frame cost.
+     */
     override fun persist(state: State) {
-        state.saveableFields().forEach { (key, value) -> savedState[key] = value }
+        state.saveableFields().forEach { (key, value) ->
+            if (savedState.get<Any?>(key) != value) savedState[key] = value
+        }
     }
 
     /**
@@ -191,7 +200,13 @@ internal class PhotoMeasureViewModel(
         // no ratio, so the fallback box is used rather than a detection against the wrong shape.
         val reference = stateValue.reference
         viewModelScope.launch {
-            if (bitmap != null && reference != null) {
+            // Re-checked inside the launch, not only before it: the outer guard runs at tap time and
+            // the tap surface stays live for the whole detection, so a second tap during a run that
+            // can take seconds used to start a second segmenter and Canny pass in parallel — another
+            // scaled bitmap, another megapixel FloatArray, another flood fill. The quad was never
+            // wrong (the write is guarded), but memory spiked and whichever finished first cleared
+            // the spinner while the other was still working.
+            if (bitmap != null && reference != null && !stateValue.isDetectingQuad) {
                 updateState { copy(isDetectingQuad = true) }
                 val targetRatio = reference.longSideMm / reference.shortSideMm
                 val detected = try {

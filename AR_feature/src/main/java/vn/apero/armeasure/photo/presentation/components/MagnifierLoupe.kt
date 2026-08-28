@@ -46,7 +46,7 @@ internal fun MagnifierLoupe(photo: ImageBitmap, fit: FittedRect, target: Offset,
             .border(2.dp, LoupeRingColor, CircleShape),
     ) {
         Canvas(Modifier.size(LoupeDiameter)) {
-            // Same display-space -> bitmap-pixel conversion as QuadCrop.kt, then a square crop
+            // Same display-space -> bitmap-pixel conversion as PhotoCoordinates.kt, then a square crop
             // sized so that stretching it back up to the loupe's diameter reads as `Zoom`x
             // larger than it looked in the main canvas (not just "larger than the bitmap").
             val displayScale = fit.width / photo.width

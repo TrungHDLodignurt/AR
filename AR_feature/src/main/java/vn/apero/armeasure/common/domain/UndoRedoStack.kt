@@ -5,29 +5,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 /**
- * A bounded undo/redo history, generic over the entry type so all three measure tools' state
- * ViewModels for the AR ruler, the shapes and the photo screen share one tested
- * implementation instead of three bespoke ones.
+ * A bounded redo history, generic over the entry type, shared by the AR ruler and shape ViewModels.
  *
- * Pure Kotlin — the only non-JVM dependency is [mutableStateOf] for [canUndo]/[canRedo], so the
- * toolbar buttons that read them recompose without polling. Compiles into the JVM test source
- * set; no Android, ARCore or Compose UI import beyond that.
+ * **Only the redo half is in use.** Both callers keep their own unbounded "currently active" list
+ * (`points`, `shapes`) rather than mirroring it here, so what this stack holds is the entries that
+ * have been undone — bounded by [maxDepth] and normally empty. That is deliberate: an overflow
+ * eviction can then never detach an ARCore anchor that is still on screen, which is what [onEvict]
+ * is for. In practice the live members are [pushRedo], [popRedo], [dropRedo], [canRedo], [any],
+ * [clear] and [drainWithoutEviction].
  *
- * [push]/[undo]/[redo]/[clear] are the self-contained, textbook pair-of-deques operations most
- * callers want. The lower-level [pushUndo]/[popUndo]/[pushRedo]/[popRedo]/[dropRedo] exist for two
- * different callers that cannot use the textbook four directly:
- *  - the AR ruler and shape ViewModels keep their own unbounded "currently active" list
- *    (`points`, `shapes`) rather than mirroring it a second time in here — for them only the redo
- *    side (bounded by [maxDepth], normally empty) belongs in this stack, so an overflow eviction
- *    can never detach something still on screen.
- *  - the photo screen undoes by restoring a whole-state snapshot, which needs the *current*
- *    state captured into the opposite side at undo/redo time — something the textbook [undo]/
- *    [redo] (which just relocates the same entry it was given) cannot do on its own.
+ * The textbook [push]/[undo]/[redo] pair-of-deques operations and [pushUndo]/[popUndo] have **no
+ * callers** and [undoDeque] is permanently empty. The photo screen used them until it moved its
+ * undo and redo stacks inside its own immutable `State` during the MVI conversion. They are kept
+ * because they are tested and cost nothing; delete them if nothing has adopted them by the next
+ * clean-up.
  *
- * @param onEvict called exactly once for every entry this stack releases without the caller ever
- *   seeing it again — on [maxDepth] overflow, on [dropRedo]/[push] discarding stale redo entries,
- *   and on [clear]. Release resources here (e.g. detach an ARCore anchor); an entry handed back by
- *   [undo]/[redo]/[popUndo]/[popRedo] is NOT evicted — the caller owns it again.
+ * Pure Kotlin — the only non-JVM dependency is [mutableStateOf] for [canUndo]/[canRedo], so a
+ * toolbar button reading them recomposes without polling. Compiles into the JVM test source set; no
+ * Android, ARCore or Compose UI import beyond that.
  */
 internal class UndoRedoStack<T>(
     private val maxDepth: Int = 20,

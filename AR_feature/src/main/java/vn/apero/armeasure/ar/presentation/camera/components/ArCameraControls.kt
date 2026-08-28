@@ -21,7 +21,6 @@ import vn.apero.armeasure.ar.domain.geometry.nearestIndexWithin
 import vn.apero.armeasure.ar.presentation.ruler.components.MeasureOverlay
 import vn.apero.armeasure.ar.presentation.ruler.MeasureViewModel
 import vn.apero.armeasure.ar.presentation.camera.ArSessionFrameStream
-import vn.apero.armeasure.ar.presentation.ruler.components.MeasureOverlay
 
 /**
  * Distance's overlay plus its point-drag gesture handling.

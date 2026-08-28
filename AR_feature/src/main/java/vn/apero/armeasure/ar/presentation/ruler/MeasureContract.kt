@@ -26,9 +26,11 @@ internal class MeasuredPoint(val anchor: Anchor, val source: HitSource)
  *
  * The tool's pairing rule (`chained`) is deliberately NOT here: it is fixed at construction and can
  * never change, so it is configuration on [MeasureViewModel], not state. It also *cannot* be here —
- * the base class calls `createInitialState()` from its own field initializer, i.e. before a
- * subclass's constructor-parameter fields are guaranteed assigned, so an initial state built from a
- * constructor argument is a trap. Keep this state's initial value constructor-independent.
+ * `chained`/`kind` are ViewModel configuration rather than state: they never change for the
+ * lifetime of the instance, so putting them in an immutable state object would copy them on every
+ * update for nothing. (An earlier note here warned that `createInitialState()` could not read a
+ * constructor argument at all — that was true when the base built its state from a field
+ * initializer, and stopped being true once `_state` became lazy.)
  */
 internal data class MeasureUiState(
     val pointCount: Int = 0,
