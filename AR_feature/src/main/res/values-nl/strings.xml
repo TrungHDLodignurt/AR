@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="armeasure_hint_warming_up">Camera wordt gereedgemaakt…</string>
+    <string name="armeasure_hint_move_to_find_surface">Beweeg de telefoon om een oppervlak te vinden</string>
+    <string name="armeasure_hint_aim_at_surface">Richt op een oppervlak</string>
+    <string name="armeasure_hint_tap_to_start">Tik op + om een punt te zetten</string>
+    <string name="armeasure_hint_reading_unsteady">Oppervlak niet vast te leggen — te glanzend of te vlak</string>
+    <string name="armeasure_hint_dragging_point">Beweeg over een oppervlak en laat los om te verplaatsen</string>
+    <string name="armeasure_hint_point_on_surface">Punt %1$d op %2$s</string>
+    <string name="armeasure_hint_segment_awaiting_end">Start op %1$s — tik + voor het eindpunt</string>
+    <string name="armeasure_hint_segment_done">Einde op %1$s — tik + voor een nieuw segment</string>
+    <string name="armeasure_hint_shape_awaiting_origin">Tik + om de %2$s van de %1$s te plaatsen</string>
+    <string name="armeasure_hint_shape_sizing_edge_u">Beweeg om de eerste zijde te tekenen, tik + om vast te zetten</string>
+    <string name="armeasure_hint_shape_sizing_edge_v">Beweeg om de tweede zijde te tekenen, tik + om vast te zetten</string>
+    <string name="armeasure_hint_shape_sizing_circle">Beweeg om de basis te schalen, tik + om vast te zetten</string>
+    <string name="armeasure_hint_shape_sizing_height">Kantel omhoog voor de hoogte, tik + om de %1$s af te ronden</string>
+
+    <string name="armeasure_tracking_bad_state">AR-sessiefout — start opnieuw</string>
+    <string name="armeasure_tracking_insufficient_light">Te weinig licht — zoek een lichtere plek</string>
+    <string name="armeasure_tracking_excessive_motion">Te snelle beweging — rustiger bewegen</string>
+    <string name="armeasure_tracking_insufficient_features">Te weinig detail — richt op een oppervlak met meer structuur</string>
+    <string name="armeasure_tracking_camera_unavailable">Camera niet beschikbaar — sluit andere camera-apps</string>
+
+    <string name="armeasure_unit_cm">Centimeters</string>
+    <string name="armeasure_unit_m">Meters</string>
+    <string name="armeasure_unit_inch">Inches</string>
+    <string name="armeasure_unit_ft">Voet</string>
+    <string name="armeasure_unit_menu_title">Lengte-eenheid</string>
+
+    <string name="armeasure_action_undo">Ongedaan maken</string>
+    <string name="armeasure_action_redo">Opnieuw</string>
+    <string name="armeasure_action_back">Terug</string>
+    <string name="armeasure_action_clear">Wissen</string>
+    <string name="armeasure_action_capture">Punt toevoegen</string>
+    <string name="armeasure_action_open_mode_sheet">Meetmodus kiezen</string>
+    <string name="armeasure_action_close_sheet">Sluiten</string>
+    <string name="armeasure_action_cancel">Annuleren</string>
+    <string name="armeasure_toast_point_added">Punt toegevoegd</string>
+
+    <string name="armeasure_reference_title">Referentieobject kiezen</string>
+    <string name="armeasure_reference_subtitle">Kies een referentieobject dat samen met het te meten object op de foto past.</string>
+    <string name="armeasure_reference_add_card_label">Nieuw object</string>
+    <string name="armeasure_reference_edit_cd">%1$s bewerken</string>
+    <string name="armeasure_reference_sheet_title_add">Nieuw referentieobject</string>
+    <string name="armeasure_reference_sheet_title_edit">Referentieobject bewerken</string>
+    <string name="armeasure_reference_name_label">Naam</string>
+    <string name="armeasure_reference_name_placeholder">bijv. Telefoon</string>
+    <string name="armeasure_reference_length_label">Lengte</string>
+    <string name="armeasure_reference_width_label">Breedte</string>
+    <string name="armeasure_reference_unit_selector_cd">Eenheid wijzigen</string>
+    <string name="armeasure_reference_delete">Verwijderen</string>
+    <string name="armeasure_reference_delete_confirm_title">Dit object verwijderen?</string>
+    <string name="armeasure_reference_delete_confirm_body">Dit kan niet ongedaan worden gemaakt.</string>
+    <string name="armeasure_reference_delete_confirm_action">Verwijderen</string>
+    <string name="armeasure_reference_cta_add">Toevoegen</string>
+    <string name="armeasure_reference_cta_save">Opslaan</string>
+
+    <string name="armeasure_mode_sheet_title">Meetmodus</string>
+    <string name="armeasure_mode_distance">Afstand</string>
+    <string name="armeasure_mode_distance_chain">Afstandsreeks</string>
+    <string name="armeasure_mode_box">Doos</string>
+    <string name="armeasure_mode_cylinder">Cilinder</string>
+
+    <string name="armeasure_hub_title">Meten</string>
+    <string name="armeasure_hub_subtitle">Kies een manier van meten</string>
+    <string name="armeasure_hub_ar_card_title">AR-meting</string>
+    <string name="armeasure_hub_ar_card_desc">Richt de camera en meet in de ruimte</string>
+    <string name="armeasure_hub_photo_card_title">Fotometing</string>
+    <string name="armeasure_hub_photo_card_desc">Meet op een foto met een referentieobject</string>
+
+    <string name="armeasure_ar_unsupported_title">AR niet beschikbaar</string>
+    <string name="armeasure_ar_unsupported_body">Dit toestel ondersteunt ARCore niet, dus meten met de camera kan niet. Fotometing werkt wel.</string>
+    <string name="armeasure_ar_unsupported_details">Details</string>
+    <string name="armeasure_ar_unsupported_use_photo">Fotometing gebruiken</string>
+    <string name="armeasure_camera_denied_title">Cameratoegang nodig</string>
+    <string name="armeasure_photo_discard_title">Deze meting verwijderen?</string>
+    <string name="armeasure_photo_discard_body">De foto, de kalibratie en alle gemeten lijnen gaan verloren. Dit kan niet ongedaan worden gemaakt.</string>
+    <string name="armeasure_photo_discard_confirm">Verwijderen</string>
+    <string name="armeasure_photo_discard_cancel">Doorgaan met meten</string>
+    <string name="armeasure_camera_denied_open_settings">Instellingen openen</string>
+    <string name="armeasure_camera_denied_body">Meten gebruikt de camera om de ruimte te herkennen. Geef cameratoegang in Instellingen.</string>
+
+    <string name="armeasure_photo_instruction_place">Tik op de %1$s om te markeren en pas de grootte aan</string>
+    <string name="armeasure_photo_instruction_adjust">Houd vast en sleep de hoeken naar de %1$s</string>
+    <string name="armeasure_photo_confirm_cd">Referentieobject bevestigen</string>
+    <string name="armeasure_photo_detecting_edges">Randen zoeken…</string>
+    <string name="armeasure_photo_close_cd">Sluiten</string>
+
+    <string name="armeasure_photo_pick_sheet_title">Foto kiezen</string>
+    <string name="armeasure_photo_pick_camera">Foto maken</string>
+    <string name="armeasure_photo_pick_gallery">Kies uit galerij</string>
+
+    <string name="armeasure_photo_waiting_title">Maak een foto met %1$s</string>
+    <string name="armeasure_photo_waiting_body">Op de foto moeten zowel %1$s als het te meten object staan.</string>
+    <string name="armeasure_photo_waiting_pick_cta">Foto kiezen</string>
+    <string name="armeasure_photo_waiting_change_reference">Ander referentieobject</string>
+
+    <string name="armeasure_photo_toolbar_line_segment">Lijnsegment</string>
+    <string name="armeasure_photo_toolbar_edit_scale">Schaal aanpassen</string>
+
+    <string name="armeasure_photo_line_draw_title">Lengte</string>
+    <string name="armeasure_photo_segment_discard_cd">Segment annuleren</string>
+    <string name="armeasure_photo_segment_confirm_cd">Segment bevestigen</string>
+    <string name="armeasure_photo_segment_delete_cd">Segment verwijderen</string>
+
+    <string name="armeasure_photo_save_cta">Opslaan</string>
+    <string name="armeasure_photo_save_success">Opgeslagen in Afbeeldingen</string>
+    <string name="armeasure_photo_save_failure">Foto niet opgeslagen</string>
+    <string name="armeasure_photo_save_unsupported">Opslaan vereist Android 10+</string>
+
+    <string name="armeasure_color_red">Rood</string>
+    <string name="armeasure_color_orange">Oranje</string>
+    <string name="armeasure_color_yellow">Geel</string>
+    <string name="armeasure_color_green">Groen</string>
+    <string name="armeasure_color_purple">Paars</string>
+    <!-- Interpolated into the hint strings above. -->
+    <string name="armeasure_shape_name_box">doos</string>
+    <string name="armeasure_shape_name_cylinder">cilinder</string>
+    <string name="armeasure_shape_part_corner">hoek</string>
+    <string name="armeasure_shape_part_center">midden</string>
+    <string name="armeasure_source_plane">oppervlak</string>
+    <string name="armeasure_source_depth">dieptekaart</string>
+    <string name="armeasure_source_feature_point">kenmerkpunt</string>
+    <string name="armeasure_reference_builtin_a4">A4-vel</string>
+    <string name="armeasure_reference_builtin_card">betaalpas</string>
+</resources>

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="armeasure_hint_warming_up">Préparation de la caméra…</string>
+    <string name="armeasure_hint_move_to_find_surface">Déplacer le téléphone pour trouver une surface</string>
+    <string name="armeasure_hint_aim_at_surface">Viser une surface</string>
+    <string name="armeasure_hint_tap_to_start">Appuyer sur + pour ajouter un point</string>
+    <string name="armeasure_hint_reading_unsteady">Surface trop brillante ou trop unie pour mesurer</string>
+    <string name="armeasure_hint_dragging_point">Passer sur une surface, puis relâcher pour repositionner</string>
+    <string name="armeasure_hint_point_on_surface">Point %1$d sur %2$s</string>
+    <string name="armeasure_hint_segment_awaiting_end">Début sur %1$s — appuyer sur + pour la fin</string>
+    <string name="armeasure_hint_segment_done">Fin sur %1$s — appuyer sur + pour un nouveau segment</string>
+    <string name="armeasure_hint_shape_awaiting_origin">Appuyer sur + pour placer %2$s de %1$s</string>
+    <string name="armeasure_hint_shape_sizing_edge_u">Déplacer pour tracer le premier bord, + pour valider</string>
+    <string name="armeasure_hint_shape_sizing_edge_v">Déplacer pour tracer le second bord, + pour valider</string>
+    <string name="armeasure_hint_shape_sizing_circle">Déplacer pour régler la base, + pour valider</string>
+    <string name="armeasure_hint_shape_sizing_height">Incliner vers le haut pour la hauteur, + pour finir %1$s</string>
+
+    <string name="armeasure_tracking_bad_state">Erreur de session AR — redémarrer</string>
+    <string name="armeasure_tracking_insufficient_light">Trop sombre — chercher plus de lumière</string>
+    <string name="armeasure_tracking_excessive_motion">Mouvement trop rapide — ralentir</string>
+    <string name="armeasure_tracking_insufficient_features">Trop peu de détails — viser une surface texturée</string>
+    <string name="armeasure_tracking_camera_unavailable">Caméra indisponible — fermer les autres apps photo</string>
+
+    <string name="armeasure_unit_cm">Centimètres</string>
+    <string name="armeasure_unit_m">Mètres</string>
+    <string name="armeasure_unit_inch">Pouces</string>
+    <string name="armeasure_unit_ft">Pieds</string>
+    <string name="armeasure_unit_menu_title">Unité de longueur</string>
+
+    <string name="armeasure_action_undo">Annuler</string>
+    <string name="armeasure_action_redo">Rétablir</string>
+    <string name="armeasure_action_back">Retour</string>
+    <string name="armeasure_action_clear">Effacer</string>
+    <string name="armeasure_action_capture">Ajouter un point</string>
+    <string name="armeasure_action_open_mode_sheet">Choisir le mode de mesure</string>
+    <string name="armeasure_action_close_sheet">Fermer</string>
+    <string name="armeasure_action_cancel">Annuler</string>
+    <string name="armeasure_toast_point_added">Point ajouté</string>
+
+    <string name="armeasure_reference_title">Choisir un objet de référence</string>
+    <string name="armeasure_reference_subtitle">Choisir un objet de référence à photographier avec ce que vous voulez mesurer.</string>
+    <string name="armeasure_reference_add_card_label">Ajouter un objet</string>
+    <string name="armeasure_reference_edit_cd">Modifier %1$s</string>
+    <string name="armeasure_reference_sheet_title_add">Nouvel objet de référence</string>
+    <string name="armeasure_reference_sheet_title_edit">Modifier l\'objet de référence</string>
+    <string name="armeasure_reference_name_label">Nom</string>
+    <string name="armeasure_reference_name_placeholder">ex. Téléphone</string>
+    <string name="armeasure_reference_length_label">Longueur</string>
+    <string name="armeasure_reference_width_label">Largeur</string>
+    <string name="armeasure_reference_unit_selector_cd">Changer d\'unité</string>
+    <string name="armeasure_reference_delete">Supprimer</string>
+    <string name="armeasure_reference_delete_confirm_title">Supprimer cet objet ?</string>
+    <string name="armeasure_reference_delete_confirm_body">Action irréversible.</string>
+    <string name="armeasure_reference_delete_confirm_action">Supprimer</string>
+    <string name="armeasure_reference_cta_add">Ajouter</string>
+    <string name="armeasure_reference_cta_save">Enregistrer</string>
+
+    <string name="armeasure_mode_sheet_title">Mode de mesure</string>
+    <string name="armeasure_mode_distance">Distance</string>
+    <string name="armeasure_mode_distance_chain">Chaîne de distances</string>
+    <string name="armeasure_mode_box">Boîte</string>
+    <string name="armeasure_mode_cylinder">Cylindre</string>
+
+    <string name="armeasure_hub_title">Mesurer</string>
+    <string name="armeasure_hub_subtitle">Choisir une façon de mesurer</string>
+    <string name="armeasure_hub_ar_card_title">Mesure AR</string>
+    <string name="armeasure_hub_ar_card_desc">Viser avec la caméra et mesurer en réel</string>
+    <string name="armeasure_hub_photo_card_title">Mesure sur photo</string>
+    <string name="armeasure_hub_photo_card_desc">Mesurer sur une photo avec un objet de référence</string>
+
+    <string name="armeasure_ar_unsupported_title">AR non disponible</string>
+    <string name="armeasure_ar_unsupported_body">Cet appareil ne gère pas ARCore : la mesure par caméra est indisponible. La mesure sur photo fonctionne.</string>
+    <string name="armeasure_ar_unsupported_details">Détails</string>
+    <string name="armeasure_ar_unsupported_use_photo">Utiliser la mesure sur photo</string>
+    <string name="armeasure_camera_denied_title">Autorisation caméra requise</string>
+    <string name="armeasure_photo_discard_title">Abandonner cette mesure ?</string>
+    <string name="armeasure_photo_discard_body">La photo, le calibrage et toutes les lignes mesurées seront perdus. Action irréversible.</string>
+    <string name="armeasure_photo_discard_confirm">Abandonner</string>
+    <string name="armeasure_photo_discard_cancel">Continuer à mesurer</string>
+    <string name="armeasure_camera_denied_open_settings">Ouvrir les paramètres</string>
+    <string name="armeasure_camera_denied_body">La mesure utilise la caméra pour analyser la pièce. Autoriser l\'accès dans les paramètres.</string>
+
+    <string name="armeasure_photo_instruction_place">Appuyer sur %1$s pour le marquer, puis ajuster sa taille</string>
+    <string name="armeasure_photo_instruction_adjust">Faire glisser les coins pour épouser %1$s</string>
+    <string name="armeasure_photo_confirm_cd">Confirmer l\'objet de référence</string>
+    <string name="armeasure_photo_detecting_edges">Détection des bords…</string>
+    <string name="armeasure_photo_close_cd">Fermer</string>
+
+    <string name="armeasure_photo_pick_sheet_title">Choisir une photo</string>
+    <string name="armeasure_photo_pick_camera">Prendre une photo</string>
+    <string name="armeasure_photo_pick_gallery">Choisir dans la galerie</string>
+
+    <string name="armeasure_photo_waiting_title">Prendre une photo avec %1$s</string>
+    <string name="armeasure_photo_waiting_body">La photo doit montrer %1$s et l\'objet à mesurer.</string>
+    <string name="armeasure_photo_waiting_pick_cta">Choisir une photo</string>
+    <string name="armeasure_photo_waiting_change_reference">Changer d\'objet de référence</string>
+
+    <string name="armeasure_photo_toolbar_line_segment">Segment</string>
+    <string name="armeasure_photo_toolbar_edit_scale">Modifier l\'échelle</string>
+
+    <string name="armeasure_photo_line_draw_title">Longueur</string>
+    <string name="armeasure_photo_segment_discard_cd">Abandonner le segment</string>
+    <string name="armeasure_photo_segment_confirm_cd">Confirmer le segment</string>
+    <string name="armeasure_photo_segment_delete_cd">Supprimer le segment</string>
+
+    <string name="armeasure_photo_save_cta">Enregistrer</string>
+    <string name="armeasure_photo_save_success">Enregistré dans Images</string>
+    <string name="armeasure_photo_save_failure">Échec de l\'enregistrement</string>
+    <string name="armeasure_photo_save_unsupported">Nécessite Android 10+</string>
+
+    <string name="armeasure_color_red">Rouge</string>
+    <string name="armeasure_color_orange">Orange</string>
+    <string name="armeasure_color_yellow">Jaune</string>
+    <string name="armeasure_color_green">Vert</string>
+    <string name="armeasure_color_purple">Violet</string>
+    <!-- Interpolated into the hint strings above. -->
+    <string name="armeasure_shape_name_box">boîte</string>
+    <string name="armeasure_shape_name_cylinder">cylindre</string>
+    <string name="armeasure_shape_part_corner">coin</string>
+    <string name="armeasure_shape_part_center">centre</string>
+    <string name="armeasure_source_plane">surface</string>
+    <string name="armeasure_source_depth">carte de profondeur</string>
+    <string name="armeasure_source_feature_point">point caractéristique</string>
+    <string name="armeasure_reference_builtin_a4">feuille A4</string>
+    <string name="armeasure_reference_builtin_card">carte bancaire</string>
+</resources>

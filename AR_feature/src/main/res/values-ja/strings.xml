@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="armeasure_hint_warming_up">カメラを準備しています…</string>
+    <string name="armeasure_hint_move_to_find_surface">スマホを動かして面を探してください</string>
+    <string name="armeasure_hint_aim_at_surface">面に向けてください</string>
+    <string name="armeasure_hint_tap_to_start">+ をタップしてポイントを追加</string>
+    <string name="armeasure_hint_reading_unsteady">この面は認識できません — 光沢が強いか模様がなさすぎます</string>
+    <string name="armeasure_hint_dragging_point">面の上に移動して、離すと位置が変わります</string>
+    <string name="armeasure_hint_point_on_surface">%2$s 上のポイント %1$d</string>
+    <string name="armeasure_hint_segment_awaiting_end">%1$s から開始 — + をタップして終点を設定</string>
+    <string name="armeasure_hint_segment_done">%1$s で終了 — + をタップして次の線分を開始</string>
+    <string name="armeasure_hint_shape_awaiting_origin">+ をタップして%1$sの%2$sを配置</string>
+    <string name="armeasure_hint_shape_sizing_edge_u">動かして1本目の辺を描き、+ をタップして確定</string>
+    <string name="armeasure_hint_shape_sizing_edge_v">動かして2本目の辺を描き、+ をタップして確定</string>
+    <string name="armeasure_hint_shape_sizing_circle">動かして底面の大きさを決め、+ をタップして確定</string>
+    <string name="armeasure_hint_shape_sizing_height">上に傾けて高さを決め、+ をタップして%1$sを完成</string>
+
+    <string name="armeasure_tracking_bad_state">ARセッションのエラー — 再起動してください</string>
+    <string name="armeasure_tracking_insufficient_light">光が足りません — 明るい場所でお試しください</string>
+    <string name="armeasure_tracking_excessive_motion">動きが速すぎます — ゆっくり動かしてください</string>
+    <string name="armeasure_tracking_insufficient_features">特徴が足りません — 模様のある面に向けてください</string>
+    <string name="armeasure_tracking_camera_unavailable">カメラを使用できません — 他のカメラアプリを終了してください</string>
+
+    <string name="armeasure_unit_cm">センチメートル</string>
+    <string name="armeasure_unit_m">メートル</string>
+    <string name="armeasure_unit_inch">インチ</string>
+    <string name="armeasure_unit_ft">フィート</string>
+    <string name="armeasure_unit_menu_title">長さの単位</string>
+
+    <string name="armeasure_action_undo">元に戻す</string>
+    <string name="armeasure_action_redo">やり直す</string>
+    <string name="armeasure_action_back">戻る</string>
+    <string name="armeasure_action_clear">消去</string>
+    <string name="armeasure_action_capture">ポイント追加</string>
+    <string name="armeasure_action_open_mode_sheet">測定モードを選択</string>
+    <string name="armeasure_action_close_sheet">閉じる</string>
+    <string name="armeasure_action_cancel">キャンセル</string>
+    <string name="armeasure_toast_point_added">ポイントを追加しました</string>
+
+    <string name="armeasure_reference_title">基準物を選択</string>
+    <string name="armeasure_reference_subtitle">測りたい物と一緒に撮影できる基準物を選んでください。</string>
+    <string name="armeasure_reference_add_card_label">新しい物を追加</string>
+    <string name="armeasure_reference_edit_cd">%1$sを編集</string>
+    <string name="armeasure_reference_sheet_title_add">新しい基準物</string>
+    <string name="armeasure_reference_sheet_title_edit">基準物を編集</string>
+    <string name="armeasure_reference_name_label">名前</string>
+    <string name="armeasure_reference_name_placeholder">例: スマホ</string>
+    <string name="armeasure_reference_length_label">長さ</string>
+    <string name="armeasure_reference_width_label">幅</string>
+    <string name="armeasure_reference_unit_selector_cd">単位を変更</string>
+    <string name="armeasure_reference_delete">削除</string>
+    <string name="armeasure_reference_delete_confirm_title">この物を削除しますか？</string>
+    <string name="armeasure_reference_delete_confirm_body">元に戻せません。</string>
+    <string name="armeasure_reference_delete_confirm_action">削除</string>
+    <string name="armeasure_reference_cta_add">追加</string>
+    <string name="armeasure_reference_cta_save">保存</string>
+
+    <string name="armeasure_mode_sheet_title">測定モード</string>
+    <string name="armeasure_mode_distance">距離</string>
+    <string name="armeasure_mode_distance_chain">連続距離</string>
+    <string name="armeasure_mode_box">直方体</string>
+    <string name="armeasure_mode_cylinder">円柱</string>
+
+    <string name="armeasure_hub_title">測定</string>
+    <string name="armeasure_hub_subtitle">測り方を選んでください</string>
+    <string name="armeasure_hub_ar_card_title">AR測定</string>
+    <string name="armeasure_hub_ar_card_desc">カメラを向けて実空間で測定します</string>
+    <string name="armeasure_hub_photo_card_title">写真で測定</string>
+    <string name="armeasure_hub_photo_card_desc">基準物を使って写真から測定します</string>
+
+    <string name="armeasure_ar_unsupported_title">ARを利用できません</string>
+    <string name="armeasure_ar_unsupported_body">この端末はARCoreに対応していないため、カメラでの測定は利用できません。写真で測定はご利用いただけます。</string>
+    <string name="armeasure_ar_unsupported_details">詳細</string>
+    <string name="armeasure_ar_unsupported_use_photo">写真で測定を使う</string>
+    <string name="armeasure_camera_denied_title">カメラの許可が必要です</string>
+    <string name="armeasure_photo_discard_title">この測定を破棄しますか？</string>
+    <string name="armeasure_photo_discard_body">写真、キャリブレーション、測定したすべての線が失われます。元に戻せません。</string>
+    <string name="armeasure_photo_discard_confirm">破棄</string>
+    <string name="armeasure_photo_discard_cancel">測定を続ける</string>
+    <string name="armeasure_camera_denied_open_settings">設定を開く</string>
+    <string name="armeasure_camera_denied_body">測定では部屋を認識するためにカメラを使用します。続けるには設定でカメラへのアクセスを許可してください。</string>
+
+    <string name="armeasure_photo_instruction_place">%1$sをタップして印を付け、大きさを調整してください</string>
+    <string name="armeasure_photo_instruction_adjust">角を長押しでドラッグして%1$sに合わせてください</string>
+    <string name="armeasure_photo_confirm_cd">基準物を確定</string>
+    <string name="armeasure_photo_detecting_edges">輪郭を検出中…</string>
+    <string name="armeasure_photo_close_cd">閉じる</string>
+
+    <string name="armeasure_photo_pick_sheet_title">写真を選択</string>
+    <string name="armeasure_photo_pick_camera">写真を撮る</string>
+    <string name="armeasure_photo_pick_gallery">ギャラリーから選択</string>
+
+    <string name="armeasure_photo_waiting_title">%1$sと一緒に撮影</string>
+    <string name="armeasure_photo_waiting_body">%1$sと測りたい物の両方が写るように撮影してください。</string>
+    <string name="armeasure_photo_waiting_pick_cta">写真を選択</string>
+    <string name="armeasure_photo_waiting_change_reference">基準物を変更</string>
+
+    <string name="armeasure_photo_toolbar_line_segment">線分</string>
+    <string name="armeasure_photo_toolbar_edit_scale">縮尺を編集</string>
+
+    <string name="armeasure_photo_line_draw_title">長さ</string>
+    <string name="armeasure_photo_segment_discard_cd">線分を破棄</string>
+    <string name="armeasure_photo_segment_confirm_cd">線分を確定</string>
+    <string name="armeasure_photo_segment_delete_cd">線分を削除</string>
+
+    <string name="armeasure_photo_save_cta">保存</string>
+    <string name="armeasure_photo_save_success">Picturesに保存しました</string>
+    <string name="armeasure_photo_save_failure">写真を保存できませんでした</string>
+    <string name="armeasure_photo_save_unsupported">保存にはAndroid 10以上が必要です</string>
+
+    <string name="armeasure_color_red">赤</string>
+    <string name="armeasure_color_orange">オレンジ</string>
+    <string name="armeasure_color_yellow">黄</string>
+    <string name="armeasure_color_green">緑</string>
+    <string name="armeasure_color_purple">紫</string>
+    <!-- Interpolated into the hint strings above. -->
+    <string name="armeasure_shape_name_box">直方体</string>
+    <string name="armeasure_shape_name_cylinder">円柱</string>
+    <string name="armeasure_shape_part_corner">角</string>
+    <string name="armeasure_shape_part_center">中心</string>
+    <string name="armeasure_source_plane">平面</string>
+    <string name="armeasure_source_depth">深度マップ</string>
+    <string name="armeasure_source_feature_point">特徴点</string>
+    <string name="armeasure_reference_builtin_a4">A4 用紙</string>
+    <string name="armeasure_reference_builtin_card">クレジットカード</string>
+</resources>

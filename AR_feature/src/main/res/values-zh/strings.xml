@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="armeasure_hint_warming_up">正在准备相机…</string>
+    <string name="armeasure_hint_move_to_find_surface">移动手机以寻找平面</string>
+    <string name="armeasure_hint_aim_at_surface">对准平面</string>
+    <string name="armeasure_hint_tap_to_start">点按 + 添加点</string>
+    <string name="armeasure_hint_reading_unsteady">无法锁定该平面，表面太光滑或缺少纹理</string>
+    <string name="armeasure_hint_dragging_point">移到平面上，松手即可重新定位</string>
+    <string name="armeasure_hint_point_on_surface">%2$s 上的第 %1$d 个点</string>
+    <string name="armeasure_hint_segment_awaiting_end">起点在%1$s，点按 + 设置终点</string>
+    <string name="armeasure_hint_segment_done">终点在%1$s，点按 + 开始新线段</string>
+    <string name="armeasure_hint_shape_awaiting_origin">点按 + 放置%1$s的%2$s</string>
+    <string name="armeasure_hint_shape_sizing_edge_u">移动以绘制第一条边，点按 + 确定</string>
+    <string name="armeasure_hint_shape_sizing_edge_v">移动以绘制第二条边，点按 + 确定</string>
+    <string name="armeasure_hint_shape_sizing_circle">移动以调整底面大小，点按 + 确定</string>
+    <string name="armeasure_hint_shape_sizing_height">向上抬起设置高度，点按 + 完成%1$s</string>
+
+    <string name="armeasure_tracking_bad_state">AR 会话出错，请重新启动</string>
+    <string name="armeasure_tracking_insufficient_light">光线不足，请换到更亮的地方</string>
+    <string name="armeasure_tracking_excessive_motion">移动太快，请放慢速度</string>
+    <string name="armeasure_tracking_insufficient_features">细节不足，请对准纹理更丰富的平面</string>
+    <string name="armeasure_tracking_camera_unavailable">相机不可用，请关闭其他相机应用</string>
+
+    <string name="armeasure_unit_cm">厘米</string>
+    <string name="armeasure_unit_m">米</string>
+    <string name="armeasure_unit_inch">英寸</string>
+    <string name="armeasure_unit_ft">英尺</string>
+    <string name="armeasure_unit_menu_title">长度单位</string>
+
+    <string name="armeasure_action_undo">撤销</string>
+    <string name="armeasure_action_redo">重做</string>
+    <string name="armeasure_action_back">返回</string>
+    <string name="armeasure_action_clear">清除</string>
+    <string name="armeasure_action_capture">添加点</string>
+    <string name="armeasure_action_open_mode_sheet">选择测量模式</string>
+    <string name="armeasure_action_close_sheet">关闭</string>
+    <string name="armeasure_action_cancel">取消</string>
+    <string name="armeasure_toast_point_added">已添加点</string>
+
+    <string name="armeasure_reference_title">选择参照物</string>
+    <string name="armeasure_reference_subtitle">选择一个可以和待测物体一起拍进照片的参照物。</string>
+    <string name="armeasure_reference_add_card_label">添加新物体</string>
+    <string name="armeasure_reference_edit_cd">编辑%1$s</string>
+    <string name="armeasure_reference_sheet_title_add">新建参照物</string>
+    <string name="armeasure_reference_sheet_title_edit">编辑参照物</string>
+    <string name="armeasure_reference_name_label">名称</string>
+    <string name="armeasure_reference_name_placeholder">例如：手机</string>
+    <string name="armeasure_reference_length_label">长度</string>
+    <string name="armeasure_reference_width_label">宽度</string>
+    <string name="armeasure_reference_unit_selector_cd">更改单位</string>
+    <string name="armeasure_reference_delete">删除</string>
+    <string name="armeasure_reference_delete_confirm_title">要删除该物体吗？</string>
+    <string name="armeasure_reference_delete_confirm_body">此操作无法撤销。</string>
+    <string name="armeasure_reference_delete_confirm_action">删除</string>
+    <string name="armeasure_reference_cta_add">添加</string>
+    <string name="armeasure_reference_cta_save">保存</string>
+
+    <string name="armeasure_mode_sheet_title">测量模式</string>
+    <string name="armeasure_mode_distance">距离</string>
+    <string name="armeasure_mode_distance_chain">连续距离</string>
+    <string name="armeasure_mode_box">长方体</string>
+    <string name="armeasure_mode_cylinder">圆柱体</string>
+
+    <string name="armeasure_hub_title">测量</string>
+    <string name="armeasure_hub_subtitle">选择测量方式</string>
+    <string name="armeasure_hub_ar_card_title">AR 测量</string>
+    <string name="armeasure_hub_ar_card_desc">用相机在真实空间中测量</string>
+    <string name="armeasure_hub_photo_card_title">照片测量</string>
+    <string name="armeasure_hub_photo_card_desc">借助参照物在照片中测量</string>
+
+    <string name="armeasure_ar_unsupported_title">无法使用 AR</string>
+    <string name="armeasure_ar_unsupported_body">此设备不支持 ARCore，无法使用相机测量。照片测量仍可正常使用。</string>
+    <string name="armeasure_ar_unsupported_details">详情</string>
+    <string name="armeasure_ar_unsupported_use_photo">使用照片测量</string>
+    <string name="armeasure_camera_denied_title">需要相机权限</string>
+    <string name="armeasure_photo_discard_title">要放弃本次测量吗？</string>
+    <string name="armeasure_photo_discard_body">照片、校准和已测量的所有线段都会丢失，此操作无法撤销。</string>
+    <string name="armeasure_photo_discard_confirm">放弃</string>
+    <string name="armeasure_photo_discard_cancel">继续测量</string>
+    <string name="armeasure_camera_denied_open_settings">打开设置</string>
+    <string name="armeasure_camera_denied_body">测量需要用相机识别房间。请在设置中授予相机权限以继续。</string>
+
+    <string name="armeasure_photo_instruction_place">点按%1$s进行标记，然后调整大小</string>
+    <string name="armeasure_photo_instruction_adjust">按住并拖动角点，对齐%1$s</string>
+    <string name="armeasure_photo_confirm_cd">确认参照物</string>
+    <string name="armeasure_photo_detecting_edges">正在检测边缘…</string>
+    <string name="armeasure_photo_close_cd">关闭</string>
+
+    <string name="armeasure_photo_pick_sheet_title">选择照片</string>
+    <string name="armeasure_photo_pick_camera">拍照</string>
+    <string name="armeasure_photo_pick_gallery">从相册选择</string>
+
+    <string name="armeasure_photo_waiting_title">用%1$s拍一张照片</string>
+    <string name="armeasure_photo_waiting_body">照片中需要同时拍到%1$s和待测物体。</string>
+    <string name="armeasure_photo_waiting_pick_cta">选择照片</string>
+    <string name="armeasure_photo_waiting_change_reference">更换参照物</string>
+
+    <string name="armeasure_photo_toolbar_line_segment">线段</string>
+    <string name="armeasure_photo_toolbar_edit_scale">编辑比例</string>
+
+    <string name="armeasure_photo_line_draw_title">长度</string>
+    <string name="armeasure_photo_segment_discard_cd">放弃线段</string>
+    <string name="armeasure_photo_segment_confirm_cd">确认线段</string>
+    <string name="armeasure_photo_segment_delete_cd">删除线段</string>
+
+    <string name="armeasure_photo_save_cta">保存</string>
+    <string name="armeasure_photo_save_success">已保存到相册</string>
+    <string name="armeasure_photo_save_failure">照片保存失败</string>
+    <string name="armeasure_photo_save_unsupported">保存需要 Android 10 及以上</string>
+
+    <string name="armeasure_color_red">红色</string>
+    <string name="armeasure_color_orange">橙色</string>
+    <string name="armeasure_color_yellow">黄色</string>
+    <string name="armeasure_color_green">绿色</string>
+    <string name="armeasure_color_purple">紫色</string>
+    <!-- Interpolated into the hint strings above. -->
+    <string name="armeasure_shape_name_box">长方体</string>
+    <string name="armeasure_shape_name_cylinder">圆柱体</string>
+    <string name="armeasure_shape_part_corner">角</string>
+    <string name="armeasure_shape_part_center">中心</string>
+    <string name="armeasure_source_plane">平面</string>
+    <string name="armeasure_source_depth">深度图</string>
+    <string name="armeasure_source_feature_point">特征点</string>
+    <string name="armeasure_reference_builtin_a4">A4 纸</string>
+    <string name="armeasure_reference_builtin_card">银行卡</string>
+</resources>

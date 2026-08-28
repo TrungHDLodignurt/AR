@@ -126,10 +126,10 @@ before assuming compatibility, do not just take the version number on faith.
   code does not need to change anything to *consume* this module; the conflict is only ever within
   one module's own plugin block.
 
-## 4. Public API — exactly 3 symbols
+## 4. Public API — exactly 4 symbols
 
 Everything else in the module is `internal` (verified: `git grep` for top-level
-non-`internal` declarations under `AR_feature/src/main` returns only these three, plus the two
+non-`internal` declarations under `AR_feature/src/main` returns only these four, plus the two
 manifest-declared Activities below). `ArMeasureHub` lives at
 `vn.apero.armeasure.ar.presentation.host.ArMeasureHub` — import that full path, not the package
 root (see §5 for the exact `import` line).
@@ -139,13 +139,21 @@ root (see §5 for the exact `import` line).
 fun ArMeasureHub(modifier: Modifier = Modifier)
 
 object ArMeasureConfig {
-    fun setImageSaver(saver: MeasurementImageSaver)   // one-shot; throws if called twice
+    fun setImageSaver(saver: MeasurementImageSaver)          // one-shot; throws if called twice
+    fun setContextWrapper(wrapper: ArMeasureContextWrapper)  // one-shot; throws if called twice
 }
 
 fun interface MeasurementImageSaver {
     suspend fun save(bitmap: Bitmap, fileName: String): Uri?
 }
+
+fun interface ArMeasureContextWrapper {
+    fun wrap(base: Context): Context
+}
 ```
+
+`setContextWrapper` is **required on any host with an in-app language picker** and unnecessary on
+every other host — see §10.
 
 Two Activities are declared in the manifest but are **not** API — do not launch them directly,
 they are not part of the contract and may be renamed or restructured without notice:
@@ -324,12 +332,37 @@ until then, the module's own default (`MediaStoreImageSaver`) writes into
 
 ## 10. Strings + resources
 
-Every user-facing string is a resource under `values/` (English default; no `values-xx/` ships —
-which locales to add is entirely the host's call), every name prefixed `armeasure_`
-(`resourcePrefix` is enforced at the module level, so a collision with a host's own resource name
-is impossible). Two narrow, documented exceptions where a literal ships instead: the
-`ReferenceObject` built-in labels ("A4 paper", "Payment card" — no `Context` available at that
-call site) and — a known limitation, not yet fixed — `QuadEditorCanvas.kt`'s edge labels (see §17).
+Every user-facing string is a resource, every name prefixed `armeasure_` (`resourcePrefix` is
+enforced at the module level, so a collision with a host's own resource name is impossible).
+**108 strings in 11 locales** as of 2026-08-28: `values/` (English) plus `values-ar`, `-de`, `-es`,
+`-fr`, `-hi`, `-ja`, `-nl`, `-pt`, `-ru`, `-zh`. A host whose locale list is narrower loses the extras
+to its own resource filter, which costs nothing; a host with a locale the module lacks falls back to
+English for the module's screens only.
+
+One known exception still ships a literal: `QuadEditorCanvas.kt` draws two Vietnamese edge labels
+straight into the `Canvas` (see §17).
+
+### The host's language, which is not the device's language
+
+A host that switches language with the platform's per-app languages
+(`AppCompatDelegate.setApplicationLocales`) needs nothing here — that applies process-wide.
+
+A host that instead wraps each Activity's context (`attachBaseContext` +
+`createConfigurationContext`, the pattern in `AIP936-AIHomeDesign`'s `BaseComposeActivity`) reaches
+only Activities extending *its* base class. `ArCameraActivity` and `ArPhotoActivity` do not, so
+without the hook below they render in the **device** locale while the rest of the app renders in the
+user's choice — the Measure tab comes up translated and every screen it opens comes up in English.
+Install it once, from `Application.onCreate`:
+
+```kotlin
+ArMeasureConfig.setContextWrapper { base ->
+    localeManager.syncLocale()             // whatever the host's own base Activity already does
+    localeManager.updateLocale(base)
+}
+```
+
+`ArMeasureHub` needs no equivalent: it is composed inside the host's own Activity and so already
+reads that Activity's context.
 
 ## 11. Cold-start warm-up
 
@@ -514,10 +547,10 @@ final verification pass):
 |---|---|---|
 | 1 | No string literals in Kotlin | `git grep -nE 'Text\(\s*"|text = "|label = "' AR_feature/src/main` → only glyphs |
 | 2 | No Vietnamese literals in code | `grep -rnP '"[^"]*[àáảãạăâđèéẻêềếệìíỉòóỏôồốơớùúủưứỳýỵ]' AR_feature/src/main --include=*.kt` → every hit must be inside a comment. The pattern cannot tell a KDoc quotation from a UI string, and several KDocs legitimately quote the Vietnamese design (`"điện thoại"`, `"Chỉnh sửa tỉ lệ"`, `"Lưu"`), so read the hits rather than counting them. A hit in a `stringResource`, `Text(` or any non-comment line is a real failure |
-| 3 | English-only locale | `ls AR_feature/src/main/res/ | grep values-` → nothing |
+| 3 | Locales complete and consistent | every `values-*/strings.xml` declares the same `<string name=` set as `values/`, in the same count (108 × 11 today). A missing name silently falls back to English for that locale only, which no build or lint step reports |
 | 4 | Resource prefix intact | every `<string name=` starts with `armeasure_` |
 | 5 | No `ar` ↔ `photo` cross-import | `git grep -n 'import vn.apero.armeasure.ar\.' AR_feature/src/main/java/vn/apero/armeasure/photo` and the mirror → both empty (Kotlin `internal` no longer enforces this boundary post-merge — it is convention only) |
-| 6 | Public API is 3 symbols | re-run the grep in §4 |
+| 6 | Public API is 4 symbols | re-run the grep in §4 |
 | 7 | No debug logging of user content | `grep -rn 'Log\.' AR_feature/src/main --include=*.kt` → only the six deliberate lines in `SegmentQuad.kt` and `CameraCapture.kt`, none of which logs user content. They are kept because both are silent-fallback paths: without them an unavailable segmentation model is indistinguishable from one that ran and found nothing, and a lost camera destination Uri looks identical to a cancelled capture. Any other hit, or any of these gaining a filename, Uri or measurement, is a failure |
 | 8 | One Engine, one `ARSceneView` | `git grep -c 'rememberEngine\|ARSceneView(' AR_feature/src/main` → 1 each |
 | 9 | Reflection sweep | `git grep -n '::class.java\|Class.forName\|reflect\|Gson\|kotlinx.serialization\|getIdentifier' AR_feature/src/main` → only the two documented `Plane::class.java` lookups |
@@ -532,7 +565,10 @@ Stated plainly, not buried:
   photo dimension labels repeat the unit on both sides (`"21 cm × 30 cm"` rather than `"21 × 30
   cm"`); `QuadEditorCanvas.kt` still draws two hardcoded Vietnamese labels ("cạnh dài" / "cạnh
   ngắn" — "long edge"/"short edge") directly into the `Canvas`, shown to every user regardless of
-  locale — a real gap in decision 14 (English-default, resource-driven strings), not yet fixed.
+  locale — a real gap in decision 14 (resource-driven strings), not yet fixed. It is now the **only**
+  such literal: the nine others (built-in reference names, shape and shape-part nouns, hit-source
+  names) moved into `strings.xml` on 2026-08-28, after they were found rendering English inside
+  translated sentences ("用Payment card拍一张照片").
 - **`DragHandle`'s touch target is 28dp**, under this module's own documented ≥48dp convention
   used everywhere else (`ColorDot`, `CmUnitBadge`, etc.). A magnifier loupe may be intended to
   compensate; that tradeoff is not written down anywhere in the code, so treat it as open, not

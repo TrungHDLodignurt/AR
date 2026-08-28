@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="armeasure_hint_warming_up">Готовим камеру…</string>
+    <string name="armeasure_hint_move_to_find_surface">Двигайте телефон, чтобы найти поверхность</string>
+    <string name="armeasure_hint_aim_at_surface">Наведите на поверхность</string>
+    <string name="armeasure_hint_tap_to_start">Нажмите +, чтобы поставить точку</string>
+    <string name="armeasure_hint_reading_unsteady">Поверхность не распознана — слишком блестящая или гладкая</string>
+    <string name="armeasure_hint_dragging_point">Наведите на поверхность и отпустите</string>
+    <string name="armeasure_hint_point_on_surface">Точка %1$d — %2$s</string>
+    <string name="armeasure_hint_segment_awaiting_end">Начало: %1$s — нажмите +, чтобы задать конец</string>
+    <string name="armeasure_hint_segment_done">Конец: %1$s — нажмите + для нового отрезка</string>
+    <string name="armeasure_hint_shape_awaiting_origin">Нажмите +: %1$s — %2$s</string>
+    <string name="armeasure_hint_shape_sizing_edge_u">Проведите первую грань, нажмите +</string>
+    <string name="armeasure_hint_shape_sizing_edge_v">Проведите вторую грань, нажмите +</string>
+    <string name="armeasure_hint_shape_sizing_circle">Задайте размер основания, нажмите +</string>
+    <string name="armeasure_hint_shape_sizing_height">Наклоните вверх для высоты, + — готово (%1$s)</string>
+
+    <string name="armeasure_tracking_bad_state">Ошибка AR — перезапустите</string>
+    <string name="armeasure_tracking_insufficient_light">Мало света — выберите место посветлее</string>
+    <string name="armeasure_tracking_excessive_motion">Слишком быстро — двигайтесь медленнее</string>
+    <string name="armeasure_tracking_insufficient_features">Мало деталей — наведите на фактурную поверхность</string>
+    <string name="armeasure_tracking_camera_unavailable">Камера занята — закройте другие приложения</string>
+
+    <string name="armeasure_unit_cm">Сантиметры</string>
+    <string name="armeasure_unit_m">Метры</string>
+    <string name="armeasure_unit_inch">Дюймы</string>
+    <string name="armeasure_unit_ft">Футы</string>
+    <string name="armeasure_unit_menu_title">Единица длины</string>
+
+    <string name="armeasure_action_undo">Отменить</string>
+    <string name="armeasure_action_redo">Вернуть</string>
+    <string name="armeasure_action_back">Назад</string>
+    <string name="armeasure_action_clear">Очистить</string>
+    <string name="armeasure_action_capture">Добавить точку</string>
+    <string name="armeasure_action_open_mode_sheet">Выбрать режим измерения</string>
+    <string name="armeasure_action_close_sheet">Закрыть</string>
+    <string name="armeasure_action_cancel">Отмена</string>
+    <string name="armeasure_toast_point_added">Точка добавлена</string>
+
+    <string name="armeasure_reference_title">Выберите эталон</string>
+    <string name="armeasure_reference_subtitle">Выберите эталон, который поместится на фото рядом с измеряемым объектом.</string>
+    <string name="armeasure_reference_add_card_label">Добавить объект</string>
+    <string name="armeasure_reference_edit_cd">Изменить: %1$s</string>
+    <string name="armeasure_reference_sheet_title_add">Новый эталон</string>
+    <string name="armeasure_reference_sheet_title_edit">Изменить эталон</string>
+    <string name="armeasure_reference_name_label">Название</string>
+    <string name="armeasure_reference_name_placeholder">напр. Телефон</string>
+    <string name="armeasure_reference_length_label">Длина</string>
+    <string name="armeasure_reference_width_label">Ширина</string>
+    <string name="armeasure_reference_unit_selector_cd">Сменить единицу</string>
+    <string name="armeasure_reference_delete">Удалить</string>
+    <string name="armeasure_reference_delete_confirm_title">Удалить объект?</string>
+    <string name="armeasure_reference_delete_confirm_body">Это действие необратимо.</string>
+    <string name="armeasure_reference_delete_confirm_action">Удалить</string>
+    <string name="armeasure_reference_cta_add">Добавить</string>
+    <string name="armeasure_reference_cta_save">Сохранить</string>
+
+    <string name="armeasure_mode_sheet_title">Режим измерения</string>
+    <string name="armeasure_mode_distance">Расстояние</string>
+    <string name="armeasure_mode_distance_chain">Цепочка</string>
+    <string name="armeasure_mode_box">Коробка</string>
+    <string name="armeasure_mode_cylinder">Цилиндр</string>
+
+    <string name="armeasure_hub_title">Измерение</string>
+    <string name="armeasure_hub_subtitle">Выберите способ измерения</string>
+    <string name="armeasure_hub_ar_card_title">AR-измерение</string>
+    <string name="armeasure_hub_ar_card_desc">Наведите камеру и измеряйте в пространстве</string>
+    <string name="armeasure_hub_photo_card_title">Измерение по фото</string>
+    <string name="armeasure_hub_photo_card_desc">Измерение на фото по эталону</string>
+
+    <string name="armeasure_ar_unsupported_title">AR недоступен</string>
+    <string name="armeasure_ar_unsupported_body">Устройство не поддерживает ARCore, измерение камерой недоступно. Измерение по фото работает.</string>
+    <string name="armeasure_ar_unsupported_details">Подробнее</string>
+    <string name="armeasure_ar_unsupported_use_photo">Измерить по фото</string>
+    <string name="armeasure_camera_denied_title">Нужен доступ к камере</string>
+    <string name="armeasure_photo_discard_title">Удалить измерение?</string>
+    <string name="armeasure_photo_discard_body">Фото, калибровка и все измеренные линии будут потеряны. Это действие необратимо.</string>
+    <string name="armeasure_photo_discard_confirm">Удалить</string>
+    <string name="armeasure_photo_discard_cancel">Продолжить</string>
+    <string name="armeasure_camera_denied_open_settings">Открыть настройки</string>
+    <string name="armeasure_camera_denied_body">Для измерения нужна камера — она считывает пространство. Разрешите доступ в настройках.</string>
+
+    <string name="armeasure_photo_instruction_place">Нажмите на объект (%1$s), затем задайте размер</string>
+    <string name="armeasure_photo_instruction_adjust">Перетащите углы по контуру объекта (%1$s)</string>
+    <string name="armeasure_photo_confirm_cd">Подтвердить эталон</string>
+    <string name="armeasure_photo_detecting_edges">Ищем границы…</string>
+    <string name="armeasure_photo_close_cd">Закрыть</string>
+
+    <string name="armeasure_photo_pick_sheet_title">Выберите фото</string>
+    <string name="armeasure_photo_pick_camera">Сделать фото</string>
+    <string name="armeasure_photo_pick_gallery">Выбрать из галереи</string>
+
+    <string name="armeasure_photo_waiting_title">Фото с эталоном: %1$s</string>
+    <string name="armeasure_photo_waiting_body">На фото должны быть измеряемый объект и эталон: %1$s.</string>
+    <string name="armeasure_photo_waiting_pick_cta">Выбрать фото</string>
+    <string name="armeasure_photo_waiting_change_reference">Сменить эталон</string>
+
+    <string name="armeasure_photo_toolbar_line_segment">Отрезок</string>
+    <string name="armeasure_photo_toolbar_edit_scale">Изменить масштаб</string>
+
+    <string name="armeasure_photo_line_draw_title">Длина</string>
+    <string name="armeasure_photo_segment_discard_cd">Отменить отрезок</string>
+    <string name="armeasure_photo_segment_confirm_cd">Подтвердить отрезок</string>
+    <string name="armeasure_photo_segment_delete_cd">Удалить отрезок</string>
+
+    <string name="armeasure_photo_save_cta">Сохранить</string>
+    <string name="armeasure_photo_save_success">Сохранено в «Картинки»</string>
+    <string name="armeasure_photo_save_failure">Не удалось сохранить фото</string>
+    <string name="armeasure_photo_save_unsupported">Нужен Android 10+</string>
+
+    <string name="armeasure_color_red">Красный</string>
+    <string name="armeasure_color_orange">Оранжевый</string>
+    <string name="armeasure_color_yellow">Жёлтый</string>
+    <string name="armeasure_color_green">Зелёный</string>
+    <string name="armeasure_color_purple">Фиолетовый</string>
+    <!-- Interpolated into the hint strings above. -->
+    <string name="armeasure_shape_name_box">параллелепипед</string>
+    <string name="armeasure_shape_name_cylinder">цилиндр</string>
+    <string name="armeasure_shape_part_corner">угол</string>
+    <string name="armeasure_shape_part_center">центр</string>
+    <string name="armeasure_source_plane">плоскость</string>
+    <string name="armeasure_source_depth">карта глубины</string>
+    <string name="armeasure_source_feature_point">характерная точка</string>
+    <string name="armeasure_reference_builtin_a4">лист A4</string>
+    <string name="armeasure_reference_builtin_card">банковская карта</string>
+</resources>

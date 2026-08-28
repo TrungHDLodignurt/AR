@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="armeasure_hint_warming_up">جارٍ تجهيز الكاميرا…</string>
+    <string name="armeasure_hint_move_to_find_surface">حرّك هاتفك للعثور على سطح</string>
+    <string name="armeasure_hint_aim_at_surface">وجّه الكاميرا نحو سطح</string>
+    <string name="armeasure_hint_tap_to_start">اضغط + لإضافة نقطة</string>
+    <string name="armeasure_hint_reading_unsteady">تعذّر تثبيت السطح — لامع أو خالٍ من التفاصيل</string>
+    <string name="armeasure_hint_dragging_point">حرّك فوق سطح ثم ارفع إصبعك لتغيير الموضع</string>
+    <string name="armeasure_hint_point_on_surface">النقطة %1$d على %2$s</string>
+    <string name="armeasure_hint_segment_awaiting_end">البداية على %1$s — اضغط + لتحديد النهاية</string>
+    <string name="armeasure_hint_segment_done">النهاية على %1$s — اضغط + لبدء قطعة جديدة</string>
+    <string name="armeasure_hint_shape_awaiting_origin">اضغط + لتحديد %2$s الخاص بـ %1$s</string>
+    <string name="armeasure_hint_shape_sizing_edge_u">حرّك لرسم الحافة الأولى، ثم اضغط + لتثبيتها</string>
+    <string name="armeasure_hint_shape_sizing_edge_v">حرّك لرسم الحافة الثانية، ثم اضغط + لتثبيتها</string>
+    <string name="armeasure_hint_shape_sizing_circle">حرّك لتحديد حجم القاعدة، ثم اضغط + لتثبيتها</string>
+    <string name="armeasure_hint_shape_sizing_height">ارفع الهاتف لتحديد الارتفاع، ثم اضغط + لإنهاء %1$s</string>
+
+    <string name="armeasure_tracking_bad_state">خطأ في جلسة AR — أعد التشغيل</string>
+    <string name="armeasure_tracking_insufficient_light">الإضاءة غير كافية — جرّب مكانًا أكثر إضاءة</string>
+    <string name="armeasure_tracking_excessive_motion">الحركة سريعة جدًا — تمهّل قليلًا</string>
+    <string name="armeasure_tracking_insufficient_features">التفاصيل غير كافية — وجّه نحو سطح أكثر تفاصيل</string>
+    <string name="armeasure_tracking_camera_unavailable">الكاميرا غير متاحة — أغلق تطبيقات الكاميرا الأخرى</string>
+
+    <string name="armeasure_unit_cm">سنتيمتر</string>
+    <string name="armeasure_unit_m">متر</string>
+    <string name="armeasure_unit_inch">بوصة</string>
+    <string name="armeasure_unit_ft">قدم</string>
+    <string name="armeasure_unit_menu_title">وحدة الطول</string>
+
+    <string name="armeasure_action_undo">تراجع</string>
+    <string name="armeasure_action_redo">إعادة</string>
+    <string name="armeasure_action_back">رجوع</string>
+    <string name="armeasure_action_clear">مسح</string>
+    <string name="armeasure_action_capture">إضافة نقطة</string>
+    <string name="armeasure_action_open_mode_sheet">اختر وضع القياس</string>
+    <string name="armeasure_action_close_sheet">إغلاق</string>
+    <string name="armeasure_action_cancel">إلغاء</string>
+    <string name="armeasure_toast_point_added">تمت إضافة النقطة</string>
+
+    <string name="armeasure_reference_title">اختر عنصرًا مرجعيًا</string>
+    <string name="armeasure_reference_subtitle">اختر عنصرًا مرجعيًا يمكنك تصويره مع الشيء المراد قياسه.</string>
+    <string name="armeasure_reference_add_card_label">إضافة عنصر جديد</string>
+    <string name="armeasure_reference_edit_cd">تعديل %1$s</string>
+    <string name="armeasure_reference_sheet_title_add">عنصر مرجعي جديد</string>
+    <string name="armeasure_reference_sheet_title_edit">تعديل العنصر المرجعي</string>
+    <string name="armeasure_reference_name_label">الاسم</string>
+    <string name="armeasure_reference_name_placeholder">مثال: هاتف</string>
+    <string name="armeasure_reference_length_label">الطول</string>
+    <string name="armeasure_reference_width_label">العرض</string>
+    <string name="armeasure_reference_unit_selector_cd">تغيير الوحدة</string>
+    <string name="armeasure_reference_delete">حذف</string>
+    <string name="armeasure_reference_delete_confirm_title">حذف هذا العنصر؟</string>
+    <string name="armeasure_reference_delete_confirm_body">لا يمكن التراجع عن ذلك.</string>
+    <string name="armeasure_reference_delete_confirm_action">حذف</string>
+    <string name="armeasure_reference_cta_add">إضافة</string>
+    <string name="armeasure_reference_cta_save">حفظ</string>
+
+    <string name="armeasure_mode_sheet_title">وضع القياس</string>
+    <string name="armeasure_mode_distance">المسافة</string>
+    <string name="armeasure_mode_distance_chain">سلسلة مسافات</string>
+    <string name="armeasure_mode_box">صندوق</string>
+    <string name="armeasure_mode_cylinder">أسطوانة</string>
+
+    <string name="armeasure_hub_title">القياس</string>
+    <string name="armeasure_hub_subtitle">اختر طريقة القياس</string>
+    <string name="armeasure_hub_ar_card_title">القياس بالواقع المعزز</string>
+    <string name="armeasure_hub_ar_card_desc">وجّه الكاميرا وقِس في المساحة الحقيقية</string>
+    <string name="armeasure_hub_photo_card_title">القياس بالصورة</string>
+    <string name="armeasure_hub_photo_card_desc">قِس من صورة باستخدام عنصر مرجعي</string>
+
+    <string name="armeasure_ar_unsupported_title">الواقع المعزز غير متاح</string>
+    <string name="armeasure_ar_unsupported_body">هذا الجهاز لا يدعم ARCore، لذا القياس بالكاميرا غير متاح. القياس بالصورة ما زال يعمل.</string>
+    <string name="armeasure_ar_unsupported_details">التفاصيل</string>
+    <string name="armeasure_ar_unsupported_use_photo">استخدم القياس بالصورة</string>
+    <string name="armeasure_camera_denied_title">مطلوب إذن الكاميرا</string>
+    <string name="armeasure_photo_discard_title">تجاهل هذا القياس؟</string>
+    <string name="armeasure_photo_discard_body">ستفقد الصورة والمعايرة وكل الخطوط التي قِستها. لا يمكن التراجع عن ذلك.</string>
+    <string name="armeasure_photo_discard_confirm">تجاهل</string>
+    <string name="armeasure_photo_discard_cancel">متابعة القياس</string>
+    <string name="armeasure_camera_denied_open_settings">فتح الإعدادات</string>
+    <string name="armeasure_camera_denied_body">يستخدم القياس الكاميرا لفهم الغرفة. امنح إذن الكاميرا من الإعدادات للمتابعة.</string>
+
+    <string name="armeasure_photo_instruction_place">اضغط على %1$s لتحديده، ثم اضبط حجمه</string>
+    <string name="armeasure_photo_instruction_adjust">اسحب الزوايا لتطابق %1$s</string>
+    <string name="armeasure_photo_confirm_cd">تأكيد العنصر المرجعي</string>
+    <string name="armeasure_photo_detecting_edges">جارٍ اكتشاف الحواف…</string>
+    <string name="armeasure_photo_close_cd">إغلاق</string>
+
+    <string name="armeasure_photo_pick_sheet_title">اختر صورة</string>
+    <string name="armeasure_photo_pick_camera">التقاط صورة</string>
+    <string name="armeasure_photo_pick_gallery">اختر من المعرض</string>
+
+    <string name="armeasure_photo_waiting_title">التقط صورة مع %1$s</string>
+    <string name="armeasure_photo_waiting_body">يجب أن تظهر الصورة %1$s والشيء المراد قياسه معًا.</string>
+    <string name="armeasure_photo_waiting_pick_cta">اختر صورة</string>
+    <string name="armeasure_photo_waiting_change_reference">تغيير العنصر المرجعي</string>
+
+    <string name="armeasure_photo_toolbar_line_segment">قطعة مستقيمة</string>
+    <string name="armeasure_photo_toolbar_edit_scale">تعديل المقياس</string>
+
+    <string name="armeasure_photo_line_draw_title">الطول</string>
+    <string name="armeasure_photo_segment_discard_cd">تجاهل القطعة</string>
+    <string name="armeasure_photo_segment_confirm_cd">تأكيد القطعة</string>
+    <string name="armeasure_photo_segment_delete_cd">حذف القطعة</string>
+
+    <string name="armeasure_photo_save_cta">حفظ</string>
+    <string name="armeasure_photo_save_success">تم الحفظ في الصور</string>
+    <string name="armeasure_photo_save_failure">تعذّر حفظ الصورة</string>
+    <string name="armeasure_photo_save_unsupported">الحفظ يتطلب Android 10 أو أحدث</string>
+
+    <string name="armeasure_color_red">أحمر</string>
+    <string name="armeasure_color_orange">برتقالي</string>
+    <string name="armeasure_color_yellow">أصفر</string>
+    <string name="armeasure_color_green">أخضر</string>
+    <string name="armeasure_color_purple">بنفسجي</string>
+    <!-- Interpolated into the hint strings above. -->
+    <string name="armeasure_shape_name_box">صندوق</string>
+    <string name="armeasure_shape_name_cylinder">أسطوانة</string>
+    <string name="armeasure_shape_part_corner">الزاوية</string>
+    <string name="armeasure_shape_part_center">المركز</string>
+    <string name="armeasure_source_plane">سطح مستوٍ</string>
+    <string name="armeasure_source_depth">خريطة العمق</string>
+    <string name="armeasure_source_feature_point">نقطة مميزة</string>
+    <string name="armeasure_reference_builtin_a4">ورقة A4</string>
+    <string name="armeasure_reference_builtin_card">بطاقة دفع</string>
+</resources>
