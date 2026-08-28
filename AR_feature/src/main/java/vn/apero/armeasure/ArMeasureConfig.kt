@@ -1,5 +1,6 @@
 package vn.apero.armeasure
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 
@@ -14,6 +15,26 @@ import android.net.Uri
  */
 fun interface MeasurementImageSaver {
     suspend fun save(bitmap: Bitmap, fileName: String): Uri?
+}
+
+/**
+ * Wraps a base [Context] so this module's own Activities render in the language the host app is
+ * actually showing.
+ *
+ * Needed because an in-app language picker is not the same thing as the device language. A host
+ * that switches language by wrapping each Activity's context — `attachBaseContext` plus
+ * `createConfigurationContext`, which is what `AIP936-AIHomeDesign`'s `BaseComposeActivity` does —
+ * only reaches Activities that extend *its* base class. This module's `ArCameraActivity` and
+ * `ArPhotoActivity` do not, so without this hook they fall back to the **device** locale while the
+ * rest of the app is in the user's chosen one: the hub, embedded in the host's own Activity, comes
+ * up translated and the screen it opens comes up in English.
+ *
+ * A host that instead uses the platform's per-app languages
+ * (`AppCompatDelegate.setApplicationLocales`) needs none of this — that applies process-wide, to
+ * every Activity, and this hook can be left unset.
+ */
+fun interface ArMeasureContextWrapper {
+    fun wrap(base: Context): Context
 }
 
 /**
@@ -50,5 +71,31 @@ object ArMeasureConfig {
     fun setImageSaver(saver: MeasurementImageSaver) {
         check(this.saver == null) { "ArMeasureConfig.setImageSaver was already called once" }
         this.saver = saver
+    }
+
+    @Volatile
+    private var contextWrapper: ArMeasureContextWrapper? = null
+
+    /**
+     * `null` until a host calls [setContextWrapper], in which case the module's Activities take the
+     * base context unchanged — correct for a host with no in-app language picker, and for one using
+     * the platform's per-app languages.
+     */
+    internal fun wrapContext(base: Context): Context =
+        contextWrapper?.let { runCatching { it.wrap(base) }.getOrDefault(base) } ?: base
+
+    /**
+     * Installs the host's [ArMeasureContextWrapper], once, from `Application.onCreate`.
+     *
+     * Typically one line delegating to whatever the host's own base Activity already does, e.g.
+     * `ArMeasureConfig.setContextWrapper { base -> localeManager.syncLocale(); localeManager.updateLocale(base) }`.
+     *
+     * Throws on a second call, for the same reason [setImageSaver] does: swapping it mid-process
+     * would leave already-created Activities on the old locale and new ones on another, which reads
+     * as a random half-translated app rather than as the misconfiguration it is.
+     */
+    fun setContextWrapper(wrapper: ArMeasureContextWrapper) {
+        check(this.contextWrapper == null) { "ArMeasureConfig.setContextWrapper was already called once" }
+        this.contextWrapper = wrapper
     }
 }

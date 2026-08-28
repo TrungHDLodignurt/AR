@@ -1,5 +1,10 @@
 package vn.apero.armeasure.photo.domain.imaging
 
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import vn.apero.armeasure.R
+
 /**
  * A rectangle of known real-world size, used to calibrate a still photo.
  *
@@ -18,6 +23,13 @@ package vn.apero.armeasure.photo.domain.imaging
 internal data class ReferenceObject(
     val id: String,
     val label: String,
+    /**
+     * Set for the built-ins only, so their names follow the app's language. Custom objects carry a
+     * user-typed [label] and leave this null. Read it through `displayLabel()` rather than
+     * directly — [label] stays the fallback, and it is what `ReferenceObjectJson` persists (only
+     * custom objects are ever persisted, so a resource id never needs serialising).
+     */
+    @StringRes val labelRes: Int? = null,
     val shortSideMm: Float,
     val longSideMm: Float,
     val isBuiltIn: Boolean = false,
@@ -25,9 +37,28 @@ internal data class ReferenceObject(
 
 /** ISO 216 A4 and ISO/IEC 7810 ID-1 (payment card) — the same two defaults ARuler ships. */
 internal val builtInReferenceObjects = listOf(
-    ReferenceObject(id = "builtin:a4", label = "A4 paper", shortSideMm = 210f, longSideMm = 297f, isBuiltIn = true),
-    ReferenceObject(id = "builtin:card", label = "Payment card", shortSideMm = 53.98f, longSideMm = 85.60f, isBuiltIn = true),
+    ReferenceObject(
+        id = "builtin:a4",
+        label = "A4 paper",
+        labelRes = R.string.armeasure_reference_builtin_a4,
+        shortSideMm = 210f,
+        longSideMm = 297f,
+        isBuiltIn = true,
+    ),
+    ReferenceObject(
+        id = "builtin:card",
+        label = "Payment card",
+        labelRes = R.string.armeasure_reference_builtin_card,
+        shortSideMm = 53.98f,
+        longSideMm = 85.60f,
+        isBuiltIn = true,
+    ),
 )
+
+/** The name to show the user: the localised one for a built-in, the typed one for a custom object. */
+@Composable
+internal fun ReferenceObject.displayLabel(): String =
+    labelRes?.let { stringResource(it) } ?: label
 
 /**
  * Null when either side is non-positive — a degenerate rectangle can't calibrate anything.

@@ -66,12 +66,12 @@ internal fun distanceHint(
         } else {
             R.string.armeasure_hint_segment_done
         }
-        stringResource(res, it.label)
+        stringResource(res, stringResource(it.labelRes))
     }
     // Once measuring, show what the last point was resolved from: a reading you cannot
     // attribute is a reading you cannot calibrate.
     else -> state.lastSource?.let {
-        stringResource(R.string.armeasure_hint_point_on_surface, state.pointCount, it.label)
+        stringResource(R.string.armeasure_hint_point_on_surface, state.pointCount, stringResource(it.labelRes))
     }
 }
 
@@ -88,8 +88,11 @@ internal fun shapeHint(
     if (!sessionFrames.anyPlaneTracked) return stringResource(R.string.armeasure_hint_move_to_find_surface)
     if (frames.live == null) return stringResource(R.string.armeasure_hint_aim_at_surface)
 
-    val shapeName = kind.label.lowercase()
-    val originNoun = if (kind == ShapeKind.Box) "corner" else "center"
+    val shapeName = stringResource(kind.nameRes)
+    val originNoun = stringResource(
+        if (kind == ShapeKind.Box) R.string.armeasure_shape_part_corner
+        else R.string.armeasure_shape_part_center
+    )
     return when (state.phase) {
         is ShapePhase.AwaitingOrigin ->
             stringResource(R.string.armeasure_hint_shape_awaiting_origin, shapeName, originNoun)

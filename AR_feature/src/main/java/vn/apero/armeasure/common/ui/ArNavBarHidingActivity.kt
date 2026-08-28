@@ -1,6 +1,8 @@
 package vn.apero.armeasure.common.ui
 
+import android.content.Context
 import androidx.activity.ComponentActivity
+import vn.apero.armeasure.ArMeasureConfig
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
@@ -27,6 +29,20 @@ import androidx.core.view.WindowInsetsControllerCompat
  * a belt-and-braces call, not a required one.
  */
 internal abstract class ArNavBarHidingActivity : ComponentActivity() {
+
+    /**
+     * Routes the base context through the host's [vn.apero.armeasure.ArMeasureContextWrapper], if it
+     * installed one, so these Activities render in the language the host is showing rather than the
+     * device's.
+     *
+     * The hub needs no equivalent: it is composed inside the *host's* Activity and so already reads
+     * whatever context that Activity was given. These two Activities are the only ones the host's
+     * own base class never reaches, which is exactly why the module used to come up in English on a
+     * host whose language had been switched in-app.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(ArMeasureConfig.wrapContext(newBase))
+    }
 
     override fun onResume() {
         super.onResume()

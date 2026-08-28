@@ -1,6 +1,8 @@
 package vn.apero.armeasure.ar.presentation.shapes
 
+import androidx.annotation.StringRes
 import com.google.ar.core.Anchor
+import vn.apero.armeasure.R
 import vn.apero.armeasure.ar.domain.geometry.PlaneBasis
 import vn.apero.armeasure.ar.domain.geometry.Vec3
 import vn.apero.armeasure.common.domain.LengthUnit
@@ -13,7 +15,10 @@ import vn.apero.armeasure.common.presentation.mvi.MviState
  * Which shape a [ShapeMeasureViewModel] is building. Box and Cylinder share every state transition
  * — only which pure-math functions turn the live reading into a base differ.
  */
-internal enum class ShapeKind(val label: String) { Box("Box"), Cylinder("Cylinder") }
+internal enum class ShapeKind(@StringRes val nameRes: Int) {
+    Box(R.string.armeasure_shape_name_box),
+    Cylinder(R.string.armeasure_shape_name_cylinder),
+}
 
 /**
  * A committed base: a box's two independently drawn edge vectors (see

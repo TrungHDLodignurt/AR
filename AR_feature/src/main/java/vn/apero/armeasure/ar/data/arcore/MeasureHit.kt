@@ -12,15 +12,17 @@ import com.google.ar.core.Trackable
 import com.google.ar.core.TrackingState
 import io.github.sceneview.ar.arcore.hitTestDepth
 import vn.apero.armeasure.ar.domain.geometry.Ray3
+import androidx.annotation.StringRes
+import vn.apero.armeasure.R
 import vn.apero.armeasure.ar.domain.geometry.Vec3
 import vn.apero.armeasure.ar.domain.geometry.intersectRayPlane
 import vn.apero.armeasure.ar.domain.geometry.normalized
 
 /** Where a measured point's 3D position came from. Order is accuracy order, best first. */
-internal enum class HitSource(val label: String) {
-    Plane("plane"),
-    Depth("depth map"),
-    FeaturePoint("feature point"),
+internal enum class HitSource(@StringRes val labelRes: Int) {
+    Plane(R.string.armeasure_source_plane),
+    Depth(R.string.armeasure_source_depth),
+    FeaturePoint(R.string.armeasure_source_feature_point),
 }
 
 internal fun Pose.toVec3(): Vec3 = Vec3(tx(), ty(), tz())

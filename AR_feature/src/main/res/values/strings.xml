@@ -113,4 +113,18 @@
     <string name="armeasure_color_yellow">Yellow</string>
     <string name="armeasure_color_green">Green</string>
     <string name="armeasure_color_purple">Purple</string>
+    <!-- Values interpolated into the hint strings above. They live here, not as Kotlin
+         literals, because a hardcoded literal stays English inside an otherwise translated
+         sentence. Lowercase where the sentence puts them mid-phrase. -->
+    <string name="armeasure_shape_name_box">box</string>
+    <string name="armeasure_shape_name_cylinder">cylinder</string>
+    <string name="armeasure_shape_part_corner">corner</string>
+    <string name="armeasure_shape_part_center">center</string>
+    <string name="armeasure_source_plane">plane</string>
+    <string name="armeasure_source_depth">depth map</string>
+    <string name="armeasure_source_feature_point">feature point</string>
+
+    <!-- The two built-in reference objects. Custom objects carry a user-typed name instead. -->
+    <string name="armeasure_reference_builtin_a4">A4 paper</string>
+    <string name="armeasure_reference_builtin_card">Payment card</string>
 </resources>

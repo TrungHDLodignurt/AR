@@ -30,6 +30,7 @@ import vn.apero.armeasure.common.domain.LengthUnit
 import vn.apero.armeasure.common.domain.formatLength
 import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.photo.domain.imaging.ReferenceObject
+import vn.apero.armeasure.photo.domain.imaging.displayLabel
 
 /** Built-in card: an icon area plus name/dimensions — never editable or deletable. */
 @Composable
@@ -50,7 +51,7 @@ internal fun CustomCard(reference: ReferenceObject, unit: LengthUnit, onClick: (
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = reference.label.take(2).uppercase(),
+                    text = reference.displayLabel().take(2).uppercase(),
                     color = ArMeasureTokens.SignatureText,
                     fontSize = 19.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -58,7 +59,7 @@ internal fun CustomCard(reference: ReferenceObject, unit: LengthUnit, onClick: (
             }
             ReferenceTexts(reference = reference, unit = unit)
         }
-        val editLabel = stringResource(R.string.armeasure_reference_edit_cd, reference.label)
+        val editLabel = stringResource(R.string.armeasure_reference_edit_cd, reference.displayLabel())
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -122,7 +123,7 @@ private fun CardShell(onClick: () -> Unit, contentPadding: Dp = 16.dp, content: 
 @Composable
 private fun ReferenceTexts(reference: ReferenceObject, unit: LengthUnit) {
     Column {
-        Text(text = reference.label, color = ArMeasureTokens.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(text = reference.displayLabel(), color = ArMeasureTokens.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Text(
             text = "${formatLength(reference.shortSideMm / 1000f, unit)} × ${formatLength(reference.longSideMm / 1000f, unit)}",
             color = ArMeasureTokens.TextSecondary,

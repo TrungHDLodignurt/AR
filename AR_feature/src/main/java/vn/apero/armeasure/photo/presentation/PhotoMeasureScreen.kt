@@ -56,6 +56,7 @@ import vn.apero.armeasure.photo.data.discardCameraCapture
 import vn.apero.armeasure.photo.presentation.components.DiscardConfirmDialog
 import vn.apero.armeasure.photo.data.loadRotatedBitmap
 import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
+import vn.apero.armeasure.photo.domain.imaging.displayLabel
 import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.Effect
 import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.Intent
 import vn.apero.armeasure.photo.presentation.components.CheckmarkBtn
@@ -176,7 +177,7 @@ internal fun PhotoMeasureScreen(
             photo == null -> {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1C1C1E))) {
                     WaitingForPhoto(
-                        referenceLabel = reference.label,
+                        referenceLabel = reference.displayLabel(),
                         onPickPhoto = { viewModel.processIntent(Intent.PickPhotoRequested) },
                         onChangeReference = { viewModel.processIntent(Intent.ChangeReference) },
                         onClose = onClose,
@@ -225,8 +226,8 @@ internal fun PhotoMeasureScreen(
                     )
 
                     if (!hasEverCalibrated) {
-                        val placeText = stringResource(R.string.armeasure_photo_instruction_place, reference.label)
-                        val adjustText = stringResource(R.string.armeasure_photo_instruction_adjust, reference.label)
+                        val placeText = stringResource(R.string.armeasure_photo_instruction_place, reference.displayLabel())
+                        val adjustText = stringResource(R.string.armeasure_photo_instruction_adjust, reference.displayLabel())
                         val showPlace = state.quad.isEmpty()
                         // The unused wording is handed over as the sizing ghost so this box always
                         // measures to the taller of the two: the swap the moment a quad appears must

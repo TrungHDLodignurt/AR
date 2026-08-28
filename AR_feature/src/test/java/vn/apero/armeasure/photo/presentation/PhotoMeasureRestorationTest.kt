@@ -32,7 +32,7 @@ class PhotoMeasureRestorationTest {
     /** B1 — reference chosen, no photo yet: the restored state is past the picker with that reference. */
     @Test
     fun `a chosen built-in reference survives and lands past the picker`() {
-        val restored = State().selectReference(ReferenceObject("builtin:a4", "A4 paper", 210f, 297f, isBuiltIn = true))
+        val restored = State().selectReference(ReferenceObject(id = "builtin:a4", label = "A4 paper", shortSideMm = 210f, longSideMm = 297f, isBuiltIn = true))
             .dismissPickPhotoSheet()
             .afterProcessDeath()
 
