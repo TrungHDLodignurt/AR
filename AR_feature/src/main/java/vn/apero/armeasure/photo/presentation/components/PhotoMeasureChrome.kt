@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -308,4 +309,28 @@ private fun ToolbarItem(glyph: String, label: String, onClick: () -> Unit, modif
         }
         Text(label, color = ArMeasureTokens.TextSecondary, fontSize = 12.sp)
     }
+}
+
+/**
+ * Visual check for the open question about the back arrow.
+ *
+ * The `‹` on the left sends `Intent.DiscardPhoto`, which clears the photo, the quad, the calibration,
+ * every committed segment and both undo stacks — with no confirmation. This preview exists so the
+ * distance between it and the undo/redo pair on the right can be judged by eye rather than argued
+ * about: a mis-tap there costs a whole measuring session.
+ */
+@Preview(name = "Photo top nav — back sits beside undo/redo", showBackground = true, widthDp = 400)
+@Composable
+private fun PhotoTopNavPreview() {
+    PhotoTopNav(
+        onBack = {},
+        canUndo = true,
+        onUndo = {},
+        canRedo = true,
+        onRedo = {},
+        showUndoRedoAndSave = true,
+        saveSupported = true,
+        saveEnabled = true,
+        onSave = {},
+    )
 }
