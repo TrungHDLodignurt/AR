@@ -68,3 +68,46 @@ an audit nobody runs, so both were rewritten:
    reference. The structural fix means there is no A4 fallback anywhere, but the specific async
    ordering that caused the original bug involved the custom list, and no custom object existed on
    this device.
+
+---
+
+# Joy_4 run, 2026-08-28
+
+Device: Joy 4, serial `BKB00251473`, 1080x2340, **no ARCore package installed**.
+
+## Passed
+
+| Case | Result |
+|---|---|
+| **R9 / S6** — unsupported-AR device | AR card is visible, tapping it opens "AR not available" with the two stacked buttons. No crash |
+| **S7** — big photo on a low-memory device | full camera capture -> decode -> auto-fit end to end: 0 `OutOfMemoryError`, 0 FATAL, 0 ANR, PSS 146 MB, temp JPEG cleaned up |
+| Auto-fit after capture | quad produced with handles and edge labels, confirm affordance shown |
+| Cold start, release, before vs after the refactor | before 799 / 515 / 558 ms, after 995 / 493 / 527 ms; 0 frame skips either side. Run 1 is first-launch noise; steady state is 537 ms before against 510 ms after — inside noise, no regression |
+
+## X8 cannot be run at all with the current hardware
+
+Not "not yet run" — **unrunnable**, and the scenario's framing of it was wrong.
+
+X8 asks for the ARCore frame budget measured on the device with no headroom. The device with no
+headroom is the Joy_4, and the Joy_4 reports `UNSUPPORTED_DEVICE_NOT_CAPABLE` and has no ARCore
+package, so it cannot run the AR tools at all. The Pixel runs them but has ample headroom, so a clean
+result there proves little.
+
+The two attached devices therefore cover the two halves of the question and neither covers both. To
+discharge the phase-04 gate honestly, what is needed is a **low-end but ARCore-certified** handset.
+Until one is available, "keeping the ARCore frame stream out of MVI `State` was necessary" stays
+reasoning, not evidence — the design is still defensible on the call-site argument, but it has not
+been demonstrated.
+
+## Observed but not conclusive
+
+Frame skips of 49 / 37 / 93 and `Davey!` durations up to 1614 ms during the full photo flow on the
+Joy_4. That was a **debug** build, where overhead dominates — measured earlier on this same device,
+debug cold start is 2.7 s against 648 ms for release. The numbers are recorded so a future release
+build has something to beat, not as a finding.
+
+## Still outstanding after both runs
+
+- **X1**, the ruler measurement — the only check that catches a quad which looks right and measures
+  wrong. Needs a card, a ruler and eyes.
+- Sustained AR tracking under gesture load, on hardware that does not exist in this pair.
