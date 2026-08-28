@@ -19,8 +19,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,6 +53,7 @@ import vn.apero.armeasure.common.domain.formatLength
 import vn.apero.armeasure.common.ui.ArMeasureTokens
 import vn.apero.armeasure.photo.data.CustomReferenceStore
 import vn.apero.armeasure.photo.data.discardCameraCapture
+import vn.apero.armeasure.photo.presentation.components.DiscardConfirmDialog
 import vn.apero.armeasure.photo.data.loadRotatedBitmap
 import vn.apero.armeasure.photo.domain.imaging.builtInReferenceObjects
 import vn.apero.armeasure.photo.presentation.PhotoMeasureContract.Effect
@@ -124,6 +128,9 @@ internal fun PhotoMeasureScreen(
         },
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // Not in State: this is a transient UI question, not something the ViewModel acts on. Saveable
+    // so the question survives the Activity being recreated while it is open.
+    var showDiscardConfirm by rememberSaveable { mutableStateOf(false) }
     val photo by viewModel.photo.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel) {
@@ -198,7 +205,15 @@ internal fun PhotoMeasureScreen(
                 // background around the aspect-fit photo, not a black letterbox.
                 Column(modifier = Modifier.fillMaxSize().background(ArMeasureTokens.BgPrimary)) {
                     PhotoTopNav(
-                        onBack = { viewModel.processIntent(Intent.DiscardPhoto) },
+                        // Confirm only when there is something to lose. Backing out of a photo
+                        // nothing has been done to should not make the user answer a question.
+                        onBack = {
+                            if (state.quad.isNotEmpty() || state.segments.isNotEmpty()) {
+                                showDiscardConfirm = true
+                            } else {
+                                viewModel.processIntent(Intent.DiscardPhoto)
+                            }
+                        },
                         canUndo = state.canUndo,
                         onUndo = { viewModel.processIntent(Intent.Undo) },
                         canRedo = state.canRedo,
@@ -268,6 +283,16 @@ internal fun PhotoMeasureScreen(
                     }
                 }
             }
+        }
+
+        if (showDiscardConfirm) {
+            DiscardConfirmDialog(
+                onDiscard = {
+                    showDiscardConfirm = false
+                    viewModel.processIntent(Intent.DiscardPhoto)
+                },
+                onKeep = { showDiscardConfirm = false },
+            )
         }
 
         if (state.showPickPhotoSheet) {

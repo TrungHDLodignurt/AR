@@ -63,14 +63,14 @@
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.ArMeasure" />
+            android:theme="@style/ArmeasureTheme" />
 
         <activity
             android:name="vn.apero.armeasure.photo.presentation.ArPhotoActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.ArMeasure" />
+            android:theme="@style/ArmeasureTheme" />
 
     </application>
 </manifest>
