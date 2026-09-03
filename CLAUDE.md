@@ -13,21 +13,19 @@ point, so anything a new session must not get wrong belongs here or behind a lin
 2. Read `README.md` for architecture. It is accurate and current; do not re-derive it.
 3. Check state before assuming: `git worktree list`, `git status --short`, `git log --oneline -5`.
    This repo runs **multiple worktrees on different branches at once** — see *Worktrees* below.
-4. Open the relevant `plans/reports/*.md` only when working in that area. They are long; the
-   summaries in this file are enough for orientation.
+4. Open `plans/reports/*.md` only for the area being worked on; they are long.
 
 **At the end of a piece of work**
 
-5. Update this file if any of these changed: an invariant, the verification commands, the state
-   table, an open unknown, or the AIP936 sync position. Editing code without editing this file
-   when one of those moved is what makes the next session repeat a solved problem.
-6. Record only *durable* knowledge. Something true for one afternoon belongs in a report under
-   `plans/reports/`, not here.
-7. Keep this file under ~200 lines. When it grows past that, move detail into `docs/` or
-   `plans/reports/` and leave a one-line pointer.
-
-**What does not belong here:** the user's personal preferences and working style. Those live in
-the private per-project memory directory, not in a committed repo file.
+5. Update this file if any of these changed: an **invariant**, a **verification command**, a
+   **trap**, an **open unknown**, or whether something has been **seen running on a device**.
+   Editing code without editing this file when one of those moved is what makes the next session
+   repeat a solved problem.
+   **Do not** add branches, commit hashes, test counts or sync positions — a command answers each
+   of those, and a written copy only survives until it starts lying.
+6. Record only *durable* knowledge — one afternoon's truth belongs in `plans/reports/`.
+   Personal preferences and working style belong in the private per-project memory, not here.
+7. Keep this under ~220 lines. Past that, move detail out and leave a one-line pointer.
 
 ---
 
@@ -41,29 +39,31 @@ title `ar-tape-measure`, distinguishable only by the path in brackets.
 | `ar-tape-measure/` | `refactor/mvi-alignment` | the measuring app |
 | `ar-tape-measure-air-draw/` | `experiment/air-draw` | + the air-pen experiment |
 
-Consequences that have already caused confusion:
+Consequences already hit:
 
-- A file edited in the wrong directory is on the wrong branch. `AirDrawFrameStream.kt` exists
+- A file edited in the wrong directory lands on the wrong branch. `AirDrawFrameStream.kt` exists
   only in the air-draw worktree; `ArCameraScreen.kt` differs between the two.
-- **This file is per-branch.** A `CLAUDE.md` committed on `refactor/mvi-alignment` does not
-  appear on `experiment/air-draw` until merged. The air-draw worktree has its own.
-- `local.properties` is gitignored, so a new worktree has no SDK path until it is copied in.
+- **This file is per-branch** and does not appear on `experiment/air-draw`; that worktree has its own.
+- `local.properties` is gitignored, so a fresh worktree has no SDK path until it is copied in.
 
 ---
 
-## Current state
+## What no command can tell you
 
-Branch `refactor/mvi-alignment` @ `0115830`. Remote `origin` = `github.com/TrungHDLodignurt/AR`
-(private). `main` and four other branches are pushed.
+Branch, commits, test counts, what is pushed — all from `git status`, `git log` and a test run.
+**Never restated here:** a stale copy of a fact a command answers is worse than no copy, because
+it gets trusted and the check gets skipped. Only what no command knows is written down.
 
-| Feature | Code | Unit tests | On a device |
-|---|---|---|---|
-| Plane dot field + ellipse reticle | done | — | **never seen** |
-| Snap to placed point (28/45 dp) | done | 12 tests | **never seen** |
-| Scanning indicator | done | — | seen, **looks weak** (see below) |
-| Box base as a 3-tap chain | done | 2 tests | **not verified** |
+| Feature | Ever seen running on a device? |
+|---|---|
+| Plane dot field | **no** |
+| World-space ellipse reticle | **no** |
+| Snap to a placed point | **no** |
+| Box base as a 3-tap chain | **no** |
+| Scanning indicator | yes — and it looks weak, below |
 
-`:AR_feature:testDebugUnitTest` — 202 tests, 0 failures, 2 pre-existing skips.
+`origin` here is a **private personal** repo, not the team's. That distinction governs pushing;
+the URL itself is in `git remote -v`.
 
 **Known weak, not yet fixed:** `ScanningIndicator` draws its grid quad only across y 34%→70% of
 its 162 dp box, so the visible graphic is ~58 dp inside a 162 dp footprint, and the dashed
@@ -120,7 +120,7 @@ camera image.** Widen the quad, thicken the strokes, darken the grid.
 
 ```bash
 ./gradlew :AR_feature:compileDebugKotlin        # the gate for UI-only changes
-./gradlew :AR_feature:testDebugUnitTest         # 202 tests
+./gradlew :AR_feature:testDebugUnitTest         # the only honest source of the count
 ANDROID_SERIAL=<serial> ./gradlew :app:installDebug
 ```
 
@@ -139,15 +139,24 @@ Device notes:
 ## Syncing AR_feature into AIP936-AIHomeDesign
 
 `AIP936-AIHomeDesign/AR_feature` is a **file copy**, not a Gradle dependency. Same package
-(`vn.apero.armeasure`), no rename. Last synced at `0115830` → 936 commit `4734d62`.
+(`vn.apero.armeasure`), no rename.
 
-The two commits that carried the overlay work touch **no public API**, so `ArMeasureKit` and
-`ArMeasureConfig` are untouched and the host needs no rewiring.
+**The sync position is already in git and is not restated here** — every sync commit in 936 names
+the source commit it came from, so it can never disagree with reality:
+
+```bash
+git -C <936> log --grep="Syncs AR_feature" --format='%h %s%n%b' -1
+```
+
+Keep writing that line in future sync commits and this file never needs touching for it.
+
+The overlay work so far touches **no public API** (`ArMeasureKit`, `ArMeasureConfig`), so the host
+needs no rewiring. A sync that does change them is a host-side task.
 
 **Protocol — verify before overwriting, every time.**
 
 ```bash
-BASE=<the commit 936 was last synced to>
+BASE=<source commit named in 936's last sync commit message>
 git archive $BASE AR_feature | tar -x -C /tmp/base           # extract the baseline TREE
 git diff --name-only $BASE..HEAD -- AR_feature | sed 's|^AR_feature/||' > /tmp/changed
 # then diff /tmp/base/AR_feature/<f> against 936's <f> for each entry:
@@ -163,7 +172,7 @@ Two traps, both already hit:
   `:app:compileDebugKotlin` — the latter fails with "task is ambiguous", which looks like a build
   break but is not.
 
-Verify in 936 after copying: `:AR_feature:compileDebugKotlin`,
+Verify in 936 after copying, all three: `:AR_feature:compileDebugKotlin`,
 `:AR_feature:testDebugUnitTest`, `:app:compileAppDevDebugKotlin`.
 
 936's remote is the shared team repo `AperoVN/AIP936-AIHomeDesign`. **Never push it without
