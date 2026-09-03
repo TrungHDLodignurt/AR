@@ -245,9 +245,27 @@ private fun buildEdgeUSegment(
 }
 
 /**
- * Box-only tap-3 preview: the parallelogram [phase.edgeU][ShapePhase.SizingEdgeV.edgeU] (already
- * fixed) plus a second freehand edge growing from the origin — independent of the first, not
- * forced perpendicular to it. See [ShapeBase.Rect].
+ * Box preview while the **third** tap is being aimed: the fixed
+ * [phase.edgeU][ShapePhase.SizingEdgeV.edgeU] and the live second edge, both drawn from the shared
+ * origin corner — and nothing else.
+ *
+ * It deliberately does **not** close the parallelogram yet. It used to, and that was wrong: after
+ * only two taps the user has picked one edge, so drawing all four sides claimed the base was
+ * already decided and left a whole quadrilateral flapping around the screen while they aimed. It
+ * also hid which corner the reticle actually controlled, since three of the four corners moved at
+ * once.
+ *
+ * Two taps is one edge; three taps is two edges, which is the first moment a parallelogram is
+ * genuinely determined. So the shape closes exactly then — in [buildSizingHeightEdges], the phase
+ * the third tap moves to — and never before.
+ *
+ * The three taps read as a **chain**, the same gesture as the distance-chain tool: corner, along
+ * one side, then turn at that corner and go along the next. So the second edge grows from the end
+ * of the first, not from the origin — a second edge sprouting back at tap 1 while the user is
+ * standing at tap 2 is not how anyone traces a box.
+ *
+ * Neither edge is forced perpendicular to the other. See [ShapeBase.Rect] for why the base is
+ * whatever parallelogram the two hand-drawn edges describe rather than a corrected right angle.
  */
 private fun buildEdgeVEdges(
     phase: ShapePhase.SizingEdgeV,
@@ -257,20 +275,17 @@ private fun buildEdgeVEdges(
     out: MutableList<Segment2D>,
 ) {
     val origin = phase.originAnchor.pose.toVec3()
-    val edgeV = projectedEdgeVector(origin, sample.position, phase.normal)
-    val corners = parallelogramCorners(origin, phase.edgeU, edgeV)
-    for (i in corners.indices) {
-        val a = project(corners[i]) ?: continue
-        val b = project(corners[(i + 1) % corners.size]) ?: continue
-        // Only the two edges touching the origin carry a length — the far two are the same
-        // lengths mirrored, and labelling all 4 would just repeat the same numbers.
-        val label = when (i) {
-            0 -> formatLength(phase.edgeU.length(), unit)
-            3 -> formatLength(edgeV.length(), unit)
-            else -> ""
-        }
-        out += Segment2D(a, b, (a + b) / 2f, label)
-    }
+    val turn = origin + phase.edgeU
+    val edgeV = projectedEdgeVector(turn, sample.position, phase.normal)
+
+    val a = project(origin) ?: return
+    val b = project(turn) ?: return
+    // Both edges carry their own length: unlike the closed parallelogram this replaced, neither
+    // number is a mirror of another edge on screen, so both are worth reading.
+    out += Segment2D(a, b, (a + b) / 2f, formatLength(phase.edgeU.length(), unit))
+
+    val c = project(turn + edgeV) ?: return
+    out += Segment2D(b, c, (b + c) / 2f, formatLength(edgeV.length(), unit))
 }
 
 /** Cylinder-only tap-2 preview: the base circle growing from the origin to the live reticle. */

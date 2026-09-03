@@ -82,6 +82,51 @@ class ShapeMathTest {
     }
 
     @Test
+    fun `three chained taps put the parallelogram through all three of them`() {
+        // The box's three base taps are a chain — corner, along one side, then TURN at that corner
+        // and go along the next — so the second edge is measured from tap 2, not from tap 1.
+        // Building it the other way made tap 3's start point jump back to tap 1.
+        val up = Vec3(0f, 1f, 0f)
+        val a = Vec3(0f, 0f, 0f)      // tap 1: the corner
+        val b = Vec3(2f, 0f, 0f)      // tap 2: along the first side
+        val c = Vec3(2.4f, 0f, 1.5f)  // tap 3: after turning at b
+
+        val edgeU = projectedEdgeVector(a, b, up)
+        val edgeV = projectedEdgeVector(b, c, up)   // from b, which is the fix
+        val corners = parallelogramCorners(a, edgeU, edgeV)
+
+        // All three tapped points are actual corners of the result, in tap order.
+        assertEquals(0f, measureDistanceMeters(a, corners[0]), eps)
+        assertEquals(0f, measureDistanceMeters(b, corners[1]), eps)
+        assertEquals(0f, measureDistanceMeters(c, corners[2]), eps)
+        // And the fourth closes the parallelogram: a + (c - b).
+        assertEquals(0f, measureDistanceMeters(a + (c - b), corners[3]), eps)
+    }
+
+    @Test
+    fun `the second reported dimension is the side drawn, not the span back to the origin`() {
+        // The regression this guards is subtler than a misplaced corner. Measuring edgeV from the
+        // origin still yields a parallelogram through all three taps — c just lands on the
+        // opposite corner instead of the adjacent one. What actually broke was the NUMBER: the
+        // second dimension came out as |a..c|, the span back to tap 1, rather than |b..c|, the
+        // side the user had just traced. A box reported 2.83 m wide when its side was 1.55 m.
+        val up = Vec3(0f, 1f, 0f)
+        val a = Vec3(0f, 0f, 0f)
+        val b = Vec3(2f, 0f, 0f)
+        val c = Vec3(2.4f, 0f, 1.5f)
+
+        val chained = projectedEdgeVector(b, c, up)
+        assertEquals(measureDistanceMeters(b, c), chained.length(), eps)
+
+        val fromOrigin = projectedEdgeVector(a, c, up)
+        assertEquals(measureDistanceMeters(a, c), fromOrigin.length(), eps)
+        assertTrue(
+            "the two derivations must not report the same side length, or this test proves nothing",
+            abs(chained.length() - fromOrigin.length()) > 0.1f,
+        )
+    }
+
+    @Test
     fun `circle from points reports distance as the radius`() {
         val basis = planeBasis(up)
         val center = Vec3(0f, 0f, 0f)

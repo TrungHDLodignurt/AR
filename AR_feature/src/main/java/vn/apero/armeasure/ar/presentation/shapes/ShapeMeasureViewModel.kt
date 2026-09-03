@@ -16,6 +16,7 @@ import vn.apero.armeasure.ar.domain.geometry.heightAlongAxis
 import vn.apero.armeasure.ar.domain.geometry.length
 import vn.apero.armeasure.ar.domain.geometry.normalized
 import vn.apero.armeasure.ar.domain.geometry.planeBasis
+import vn.apero.armeasure.ar.domain.geometry.plus
 import vn.apero.armeasure.ar.domain.geometry.projectedEdgeVector
 import vn.apero.armeasure.ar.presentation.camera.ArSessionFrameStream
 import vn.apero.armeasure.common.domain.LengthUnit
@@ -158,7 +159,16 @@ internal class ShapeMeasureViewModel(
             }
             is ShapePhase.SizingEdgeV -> {
                 val origin = current.originAnchor.pose.toVec3()
-                val edgeV = projectedEdgeVector(origin, sample.position, current.normal)
+                // Measured from the END of the first edge, not from the origin: the three taps are
+                // a chain — corner, along one side, then turn and go along the next — exactly like
+                // the distance-chain tool. Measuring the second edge from the origin instead made
+                // the third tap jump its start point back to tap 1, which is not how anyone traces
+                // a box.
+                //
+                // The parallelogram is unaffected: with edgeU = B - A and edgeV = C - B,
+                // parallelogramCorners(A, edgeU, edgeV) is [A, B, C, A + C - B] — the same
+                // parallelogram, now with B as the corner between the two drawn edges.
+                val edgeV = projectedEdgeVector(origin + current.edgeU, sample.position, current.normal)
                 ShapePhase.SizingHeight(
                     current.originAnchor,
                     current.normal,
