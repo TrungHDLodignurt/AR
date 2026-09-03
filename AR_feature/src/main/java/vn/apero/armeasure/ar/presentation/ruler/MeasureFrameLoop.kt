@@ -88,12 +88,24 @@ internal fun onMeasureFrame(
 
     // Snap before publishing the sample, so every consumer — the rubber band, the label, the
     // anchor created on tap — sees the snapped position rather than the raw one.
-    val snapped = resolveSnap(frames, chained, projector, viewSize, centre, density)
-    frames.noteSnap(snapped)
-    val sample = if (snapped != null) {
-        rawSample?.snappedTo(frames.worldPoints[snapped])
+    val snapped = if (frames.draggingIndex != null) {
+        // No snap while a placed point is being dragged: the reticle is not what is being aimed
+        // then, and snapping one placed point onto another is a different feature.
+        null
     } else {
-        rawSample
+        resolveSnap(points, chained, projector, viewSize, centre, density, frames.snappedIndex)
+    }
+    frames.noteSnap(snapped)
+    val sample = when {
+        snapped == null -> rawSample
+        // Normal snap: keep the reading's plane and rotation, move it onto the existing point.
+        rawSample != null -> rawSample.snappedTo(points[snapped].anchor.pose.toVec3())
+        // The aim ray resolved nothing, but the reticle is locked onto a point we already have an
+        // anchor for. Commit from the anchor instead of refusing: the surface hit exists only to
+        // *learn* a position, and here the position is already known — better than the raw hit,
+        // since the anchor has been refined ever since it was placed. Drawing the lock and then
+        // rejecting the tap, which is what this used to do, told the user the app was broken.
+        else -> SurfaceSample.atAnchor(points[snapped].anchor, points[snapped].source)
     }
 
     frames.noteLiveSample(
@@ -117,34 +129,34 @@ internal fun onMeasureFrame(
 /**
  * This frame's snap decision, or null when the reticle is free.
  *
- * Suppressed entirely while a point is being dragged: the reticle is not the thing being aimed
- * then, and snapping one placed point onto another is a different feature with its own questions
- * (which of the two anchors survives?).
- *
  * The unchained tool excludes the open segment's own start. Without that, the tool would helpfully
  * guide the user into measuring a point against itself and reporting 0 cm.
  */
 private fun resolveSnap(
-    frames: MeasureFrameStream,
+    points: List<MeasuredPoint>,
     chained: Boolean,
     projector: PoseProjector,
     viewSize: IntSize,
     centre: Offset,
     density: Float,
+    currentlySnapped: Int?,
 ): Int? {
-    if (frames.draggingIndex != null) return null
-    val world = frames.worldPoints
-    if (world.isEmpty()) return null
+    if (points.isEmpty()) return null
 
-    val positions = world.map { point ->
-        projector.project(point, viewSize.width, viewSize.height)?.let { it.x to it.y }
+    // Projected from the anchors themselves, not from MeasureFrameStream.worldPoints. Those two
+    // lists normally agree, but worldPoints is refreshed later in the frame and behind a 1 mm
+    // dead-band, so indexing one by an index resolved against the other is a hazard for no gain —
+    // and the caller needs `points[i].anchor` anyway.
+    val positions = points.map { point ->
+        projector.project(point.anchor.pose.toVec3(), viewSize.width, viewSize.height)
+            ?.let { it.x to it.y }
     }
-    val excluded = if (hasOpenSegment(world.size, chained)) setOf(world.lastIndex) else emptySet()
+    val excluded = if (hasOpenSegment(points.size, chained)) setOf(points.lastIndex) else emptySet()
 
     return snapTarget(
         positions = positions,
         reticle = centre.x to centre.y,
-        currentlySnapped = frames.snappedIndex,
+        currentlySnapped = currentlySnapped,
         enterPx = SnapEnterDp * density,
         releasePx = SnapReleaseDp * density,
         excluded = excluded,

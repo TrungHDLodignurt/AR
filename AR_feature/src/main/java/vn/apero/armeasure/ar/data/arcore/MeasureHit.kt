@@ -85,6 +85,34 @@ internal class SurfaceSample(
         pose = Pose(floatArrayOf(target.x, target.y, target.z), pose.rotationQuaternion),
         trackable = trackable,
     )
+
+    companion object {
+        /**
+         * A reading taken from an already-placed [anchor] rather than from the camera.
+         *
+         * Used when the reticle has snapped onto an existing point but the aim ray resolved
+         * nothing — the plane went out of view, tracking hiccuped, depth returned nothing. Every
+         * other reading in this app answers "where is the surface the camera is looking at"; this
+         * one answers "where is that point I already placed", and the camera has no say in it.
+         *
+         * That is why it is trustworthy without the surface: the whole reason a live reading needs
+         * a resolved surface is to *learn* a position. Here the position is already known, from an
+         * anchor ARCore has been refining since the user placed it. Refusing to commit here would
+         * be refusing on the strength of a question nobody needed to ask.
+         *
+         * [trackable] is null, so [commit] falls through to `session.createAnchor(pose)` — a
+         * world-space anchor at the same pose, not attached to a plane that may not be tracked
+         * right now. [planeNormal] is null for the same reason, which correctly leaves the dot
+         * field and the ellipse reticle off: there is no plane to draw.
+         */
+        fun atAnchor(anchor: Anchor, source: HitSource): SurfaceSample = SurfaceSample(
+            position = anchor.pose.toVec3(),
+            source = source,
+            hitResult = null,
+            pose = anchor.pose,
+            trackable = null,
+        )
+    }
 }
 
 /**
