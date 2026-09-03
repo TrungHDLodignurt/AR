@@ -66,6 +66,8 @@
     <string name="armeasure_mode_distance_chain">Цепочка</string>
     <string name="armeasure_mode_box">Коробка</string>
     <string name="armeasure_mode_cylinder">Цилиндр</string>
+    <string name="armeasure_mode_air_draw">Рисование в воздухе</string>
+    <string name="armeasure_hint_air_draw">Удерживайте клавишу громкости и двигайте телефон</string>
 
     <string name="armeasure_hub_title">Измерение</string>
     <string name="armeasure_hub_subtitle">Выберите способ измерения</string>

@@ -66,6 +66,8 @@
     <string name="armeasure_mode_distance_chain">Distância em cadeia</string>
     <string name="armeasure_mode_box">Caixa</string>
     <string name="armeasure_mode_cylinder">Cilindro</string>
+    <string name="armeasure_mode_air_draw">Desenhar no ar</string>
+    <string name="armeasure_hint_air_draw">Segure uma tecla de volume e mova o telefone</string>
 
     <string name="armeasure_hub_title">Medir</string>
     <string name="armeasure_hub_subtitle">Escolha como medir</string>

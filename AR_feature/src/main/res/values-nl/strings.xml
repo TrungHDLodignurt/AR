@@ -66,6 +66,8 @@
     <string name="armeasure_mode_distance_chain">Afstandsreeks</string>
     <string name="armeasure_mode_box">Doos</string>
     <string name="armeasure_mode_cylinder">Cilinder</string>
+    <string name="armeasure_mode_air_draw">In de lucht tekenen</string>
+    <string name="armeasure_hint_air_draw">Houd een volumetoets vast en beweeg de telefoon</string>
 
     <string name="armeasure_hub_title">Meten</string>
     <string name="armeasure_hub_subtitle">Kies een manier van meten</string>

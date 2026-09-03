@@ -54,7 +54,11 @@ import vn.apero.armeasure.ar.presentation.camera.components.ArCameraBottomBar
 import vn.apero.armeasure.ar.presentation.camera.components.ArCameraTopBar
 import vn.apero.armeasure.ar.presentation.camera.components.DistanceOverlay
 import vn.apero.armeasure.ar.presentation.camera.components.MeasureModeSheet
+import vn.apero.armeasure.ar.presentation.airdraw.AirDrawFrameStream
+import vn.apero.armeasure.ar.presentation.airdraw.components.AirDrawOverlay
+import vn.apero.armeasure.ar.presentation.airdraw.onAirDrawFrame
 import vn.apero.armeasure.ar.presentation.camera.components.ScanningIndicator
+import vn.apero.armeasure.ar.presentation.camera.components.ToolActions
 import vn.apero.armeasure.ar.presentation.camera.components.distanceActions
 import vn.apero.armeasure.ar.presentation.camera.components.result
 import vn.apero.armeasure.ar.presentation.camera.components.shapeActions
@@ -113,6 +117,8 @@ internal fun ArCameraScreen(
     modifier: Modifier = Modifier,
     onClose: (() -> Unit)? = null,
     onResult: (MeasurementResult) -> Unit = {},
+    /** Volume key held — the air-pen's trigger. See ArCameraActivity. */
+    drawHeld: Boolean = false,
 ) {
     val context = LocalContext.current
     // Snap radii are specified in dp; the frame loop is not a composable, so the conversion
@@ -157,6 +163,9 @@ internal fun ArCameraScreen(
     // KDoc — it is also why it is remembered here rather than owned by a ViewModel, since it
     // describes the session this composition owns.
     val sessionFrames = remember { ArSessionFrameStream() }
+    // Experiment. Not a ViewModel: like the other frame streams, everything in it is written from
+    // the ARCore callback rather than by a user action.
+    val airDraw = remember { AirDrawFrameStream() }
     // Scratch buffers only — the frame loop runs once per frame, from whichever tool is active,
     // so there is never any interleaving that would make sharing this unsafe (insight 9).
     val projector = remember { PoseProjector() }
@@ -239,6 +248,7 @@ internal fun ArCameraScreen(
             MeasureTool.DistanceChain -> distanceChain.onActivated()
             MeasureTool.Box -> box.onActivated()
             MeasureTool.Cylinder -> cylinder.onActivated()
+            MeasureTool.AirDraw -> Unit
         }
         camera.processIntent(ArCameraIntent.SelectTool(next))
     }
@@ -317,6 +327,8 @@ internal fun ArCameraScreen(
                             box.onFrame(sessionFrames, projector, unit, updatedSession, frame, viewSize)
                         MeasureTool.Cylinder ->
                             cylinder.onFrame(sessionFrames, projector, unit, updatedSession, frame, viewSize)
+                        MeasureTool.AirDraw ->
+                            onAirDrawFrame(airDraw, sessionFrames, projector, frame, viewSize, drawHeld)
                     }
                 },
                 onTrackingFailureChanged = { sessionFrames.trackingFailure = it },
@@ -358,6 +370,8 @@ internal fun ArCameraScreen(
                 ShapeOverlay(frameProvider = { box.frames.overlay }, modifier = Modifier.fillMaxSize())
             MeasureTool.Cylinder ->
                 ShapeOverlay(frameProvider = { cylinder.frames.overlay }, modifier = Modifier.fillMaxSize())
+            MeasureTool.AirDraw ->
+                AirDrawOverlay(frameProvider = { airDraw.overlay }, modifier = Modifier.fillMaxSize())
         }
 
         // One binding per active tool instead of a `when` at every callback below. The two tool
@@ -369,6 +383,18 @@ internal fun ArCameraScreen(
                 distanceActions(distanceChain, distanceChainState, sessionFrames, unit)
             MeasureTool.Box -> shapeActions(box, boxState, sessionFrames, unit)
             MeasureTool.Cylinder -> shapeActions(cylinder, cylinderState, sessionFrames, unit)
+            // The pen has no reticle, no steadiness gate and no measurement: its + button is dead
+            // and its trigger is a hardware key, so the shared chrome is bound by hand here.
+            MeasureTool.AirDraw -> ToolActions(
+                canUndo = airDraw.strokes.isNotEmpty(),
+                undo = airDraw::undo,
+                canRedo = false,
+                redo = {},
+                clear = airDraw::clear,
+                addEnabled = false,
+                add = {},
+                hint = stringResource(R.string.armeasure_hint_air_draw),
+            )
         }
 
         ArCameraTopBar(

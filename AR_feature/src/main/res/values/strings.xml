@@ -66,6 +66,8 @@
     <string name="armeasure_mode_distance_chain">Distance chain</string>
     <string name="armeasure_mode_box">Box</string>
     <string name="armeasure_mode_cylinder">Cylinder</string>
+    <string name="armeasure_mode_air_draw">Air draw</string>
+    <string name="armeasure_hint_air_draw">Hold a volume key and move the phone to draw</string>
 
     <string name="armeasure_hub_title">Measure</string>
     <string name="armeasure_hub_subtitle">Pick a way to measure</string>

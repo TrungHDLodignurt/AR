@@ -66,6 +66,8 @@
     <string name="armeasure_mode_distance_chain">連続距離</string>
     <string name="armeasure_mode_box">直方体</string>
     <string name="armeasure_mode_cylinder">円柱</string>
+    <string name="armeasure_mode_air_draw">空中描画</string>
+    <string name="armeasure_hint_air_draw">音量キーを長押しして端末を動かします</string>
 
     <string name="armeasure_hub_title">測定</string>
     <string name="armeasure_hub_subtitle">測り方を選んでください</string>

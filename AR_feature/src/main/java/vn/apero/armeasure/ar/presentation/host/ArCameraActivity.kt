@@ -7,6 +7,7 @@ import android.net.Uri
 import android.provider.Settings
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -49,6 +50,19 @@ internal class ArCameraActivity : ArNavBarHidingActivity() {
     private var arAvailability by mutableStateOf(ArAvailability.Checking)
     private var cameraGranted by mutableStateOf(false)
 
+    /**
+     * Whether a volume key is held — the air-pen's trigger, on the `experiment/air-draw` branch.
+     *
+     * A hardware key rather than an on-screen button on purpose: drawing means moving the whole
+     * phone, and a finger pinned to the glass both occupies the hand doing the moving and jolts the
+     * device at the exact instant a stroke begins.
+     *
+     * Both volume keys are swallowed while this Activity is up, so volume cannot be changed from
+     * the AR screen. Acceptable for an experiment; a shipping version would consume them only while
+     * the pen tool is selected, which needs the Activity to know the active tool.
+     */
+    private var drawHeld by mutableStateOf(false)
+
     private val requestCamera = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> cameraGranted = granted }
@@ -80,7 +94,7 @@ internal class ArCameraActivity : ArNavBarHidingActivity() {
                         // below. Same blank placeholder either way.
                         arAvailability != ArAvailability.Ready -> Box(Modifier.fillMaxSize())
                         !cameraGranted -> CameraDenied(onOpenSettings = ::openAppSettings)
-                        else -> ArCameraScreen(onClose = { finish() })
+                        else -> ArCameraScreen(onClose = { finish() }, drawHeld = drawHeld)
                     }
                 }
             }
@@ -107,6 +121,26 @@ internal class ArCameraActivity : ArNavBarHidingActivity() {
             lifecycleScope.launch { arAvailability = checkArAvailabilityOffMain(this@ArCameraActivity) }
         }
     }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (isDrawKey(keyCode)) {
+            // repeatCount filters the auto-repeat storm a held key produces; the stroke begins once.
+            if (event.repeatCount == 0) drawHeld = true
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (isDrawKey(keyCode)) {
+            drawHeld = false
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
+    }
+
+    private fun isDrawKey(keyCode: Int): Boolean =
+        keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP
 
     /** The app's own settings page — the only route to the permission once the prompt stops appearing. */
     private fun openAppSettings() {

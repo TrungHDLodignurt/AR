@@ -66,6 +66,8 @@
     <string name="armeasure_mode_distance_chain">दूरी शृंखला</string>
     <string name="armeasure_mode_box">बॉक्स</string>
     <string name="armeasure_mode_cylinder">सिलेंडर</string>
+    <string name="armeasure_mode_air_draw">हवा में ड्रा</string>
+    <string name="armeasure_hint_air_draw">वॉल्यूम कुंजी दबाए रखें और फ़ोन घुमाएँ</string>
 
     <string name="armeasure_hub_title">मापें</string>
     <string name="armeasure_hub_subtitle">मापने का तरीक़ा चुनें</string>

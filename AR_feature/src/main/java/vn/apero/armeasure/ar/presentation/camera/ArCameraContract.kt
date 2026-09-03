@@ -14,7 +14,7 @@ import vn.apero.armeasure.common.presentation.mvi.MviState
  * continues the polyline from every committed point. See
  * [vn.apero.armeasure.ar.domain.geometry.segmentIndexPairs].
  */
-internal enum class MeasureTool { Distance, DistanceChain, Box, Cylinder }
+internal enum class MeasureTool { Distance, DistanceChain, Box, Cylinder, AirDraw }
 
 /**
  * MVI state for the camera screen itself — the chrome around the four tools, as opposed to any one

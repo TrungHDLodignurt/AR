@@ -66,6 +66,8 @@
     <string name="armeasure_mode_distance_chain">连续距离</string>
     <string name="armeasure_mode_box">长方体</string>
     <string name="armeasure_mode_cylinder">圆柱体</string>
+    <string name="armeasure_mode_air_draw">空中绘制</string>
+    <string name="armeasure_hint_air_draw">按住音量键并移动手机进行绘制</string>
 
     <string name="armeasure_hub_title">测量</string>
     <string name="armeasure_hub_subtitle">选择测量方式</string>

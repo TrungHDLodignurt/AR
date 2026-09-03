@@ -66,6 +66,8 @@
     <string name="armeasure_mode_distance_chain">Streckenzug</string>
     <string name="armeasure_mode_box">Box</string>
     <string name="armeasure_mode_cylinder">Zylinder</string>
+    <string name="armeasure_mode_air_draw">In der Luft zeichnen</string>
+    <string name="armeasure_hint_air_draw">Lautstärketaste halten und Telefon bewegen</string>
 
     <string name="armeasure_hub_title">Messen</string>
     <string name="armeasure_hub_subtitle">Messart wählen</string>

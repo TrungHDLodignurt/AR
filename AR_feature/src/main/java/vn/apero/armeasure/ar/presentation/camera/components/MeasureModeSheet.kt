@@ -121,6 +121,7 @@ internal fun MeasureModeSheet(
             ) {
                 ModeCard(MeasureTool.Box, "□", selected, onSelect, Modifier.weight(1f))
                 ModeCard(MeasureTool.Cylinder, "○", selected, onSelect, Modifier.weight(1f))
+                ModeCard(MeasureTool.AirDraw, "✎", selected, onSelect, Modifier.weight(1f))
             }
         }
     }
@@ -176,4 +177,5 @@ private fun modeLabelRes(tool: MeasureTool): Int = when (tool) {
     MeasureTool.DistanceChain -> R.string.armeasure_mode_distance_chain
     MeasureTool.Box -> R.string.armeasure_mode_box
     MeasureTool.Cylinder -> R.string.armeasure_mode_cylinder
+    MeasureTool.AirDraw -> R.string.armeasure_mode_air_draw
 }

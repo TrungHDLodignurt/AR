@@ -66,6 +66,8 @@
     <string name="armeasure_mode_distance_chain">سلسلة مسافات</string>
     <string name="armeasure_mode_box">صندوق</string>
     <string name="armeasure_mode_cylinder">أسطوانة</string>
+    <string name="armeasure_mode_air_draw">الرسم في الهواء</string>
+    <string name="armeasure_hint_air_draw">اضغط مع الاستمرار على مفتاح الصوت وحرّك الهاتف للرسم</string>
 
     <string name="armeasure_hub_title">القياس</string>
     <string name="armeasure_hub_subtitle">اختر طريقة القياس</string>
