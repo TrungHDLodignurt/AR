@@ -16,7 +16,9 @@ same repo, same module, same invariants. This file covers only what is different
 
 1. Read this file (auto-loaded) **and** the parent branch's `CLAUDE.md` for the shared invariants
    — it is not on this branch, so read it from `../ar-tape-measure/CLAUDE.md`.
-2. `git log --oneline -3` and `git status --short` before assuming anything about state.
+2. `git log --oneline -3` and `git status --short` before assuming anything about state. Nothing
+   about commits or test counts is restated in this file on purpose — a written copy goes stale
+   and then gets trusted over the command.
 3. Update this file at the end of any work that changes the design, the verdict, or the open
    questions below. Keep it short: this is an experiment, and a long document about an experiment
    that may be deleted is wasted effort.
@@ -29,7 +31,7 @@ Hold either volume key, move the whole phone, and a stroke is laid down behind a
 30 cm ahead. Entertainment, explicitly — **not** a measuring tool. Branched so the measuring app's
 knowledge cannot be damaged by it.
 
-Commit `a00ee91`. Reached from the mode sheet as **✎ Air draw**, the fifth `MeasureTool`.
+Reached from the mode sheet as **✎ Air draw**, the fifth `MeasureTool`.
 
 | File | Role |
 |---|---|
