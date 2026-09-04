@@ -54,6 +54,24 @@ private const val SnapEnterDp = 28f
 /** Radius a held snap must leave before it is dropped. The hysteresis; see [snapTarget]. */
 private const val SnapReleaseDp = 45f
 
+/**
+ * How far, **in the world**, a snap target may sit from the surface the aim ray actually hit.
+ *
+ * The screen-space radii above decide what the user is *pointing at*; this decides whether that
+ * candidate is anywhere near what they are *looking at*. Without it the two are unrelated: an old
+ * point on a floor four metres away sweeps through the reticle while the user aims at a wall
+ * eighty centimetres away, lands inside 28 dp, and the snap silently relocates the reading by
+ * metres — with `commitReady` true, so the reticle shows its most confident state while doing it.
+ *
+ * That is the failure README calls the worst one ("a confidently wrong number, no crash, no
+ * warning"), and the snap path reached it by discarding a result `resolveAt` had already vetted
+ * with [MaxOffRayPx] and `isPoseInPolygon`.
+ *
+ * 15 cm is chosen to be larger than any plausible reach of the screen radius at normal measuring
+ * range, so it never fires on a snap the user meant, and far smaller than the errors above.
+ */
+private const val SnapMaxRangeMeters = 0.15f
+
 internal fun onMeasureFrame(
     frames: MeasureFrameStream,
     points: List<MeasuredPoint>,
@@ -93,7 +111,7 @@ internal fun onMeasureFrame(
         // then, and snapping one placed point onto another is a different feature.
         null
     } else {
-        resolveSnap(points, chained, projector, viewSize, centre, density, frames.snappedIndex)
+        resolveSnap(points, chained, projector, viewSize, centre, density, frames.snappedIndex, rawSample?.position)
     }
     frames.noteSnap(snapped)
     val sample = when {
@@ -140,6 +158,7 @@ private fun resolveSnap(
     centre: Offset,
     density: Float,
     currentlySnapped: Int?,
+    aimedPosition: Vec3?,
 ): Int? {
     if (points.isEmpty()) return null
 
@@ -153,15 +172,25 @@ private fun resolveSnap(
     }
     val excluded = if (hasOpenSegment(points.size, chained)) setOf(points.lastIndex) else emptySet()
 
-    return snapTarget(
+    val candidate = snapTarget(
         positions = positions,
         reticle = centre.x to centre.y,
         currentlySnapped = currentlySnapped,
         enterPx = SnapEnterDp * density,
         releasePx = SnapReleaseDp * density,
         excluded = excluded,
-    )
+    ) ?: return null
+
+    // The screen said yes; now ask the world. See SnapMaxRangeMeters.
+    //
+    // No aimed surface means there is nothing to compare against — and that is exactly the case
+    // this feature exists to serve (the ray resolved nothing but the reticle is over a point we
+    // already have an anchor for), so it passes rather than being refused here.
+    val aimed = aimedPosition ?: return candidate
+    val target = points[candidate].anchor.pose.toVec3()
+    return if (measureDistanceMeters(aimed, target) <= SnapMaxRangeMeters) candidate else null
 }
+
 
 /**
  * Resolves the surface at an arbitrary screen point, the same way the reticle is resolved.
