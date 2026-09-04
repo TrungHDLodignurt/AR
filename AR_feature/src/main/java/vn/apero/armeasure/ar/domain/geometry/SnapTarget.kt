@@ -48,14 +48,38 @@ internal fun snapTarget(
     if (currentlySnapped != null && currentlySnapped !in excluded) {
         val held = positions.getOrNull(currentlySnapped)
         if (held != null && withinPx(held, reticle, releasePx)) {
-            // The snap is held. Another point can still take it over, but only by earning it on
-            // the tight radius — otherwise the lock would slide between neighbours inside the
-            // loose radius and the "deliberate exit" this whole function exists for would be lost.
-            return nearestIndexWithin(candidates, reticle, enterPx) ?: currentlySnapped
+            // The snap is held. A rival may take it over, but only by being decisively nearer —
+            // not merely nearer.
+            //
+            // The two radii protect snap on/off. They gave which-point no protection at all: with
+            // two points ~10 dp apart and the reticle near their bisector, a bare nearest-wins
+            // returns 0,1,0,1… at frame rate under the same ±1.2 dp tremor. That fires a haptic
+            // tick every frame and recomposes the overlay every frame — the exact outcome this
+            // file exists to prevent, relocated from on/off to which-index.
+            val rival = nearestIndexWithin(candidates, reticle, enterPx)
+            if (rival == null || rival == currentlySnapped) return currentlySnapped
+            val rivalPos = positions.getOrNull(rival) ?: return currentlySnapped
+            return if (distanceSq(rivalPos, reticle) < distanceSq(held, reticle) * StealMargin) {
+                rival
+            } else {
+                currentlySnapped
+            }
         }
     }
 
     return nearestIndexWithin(candidates, reticle, enterPx)
+}
+
+/**
+ * How much nearer a rival must be to steal a held snap: squared, so 0.49 means 70 % of the
+ * distance. Anything less decisive is tremor, not intent.
+ */
+private const val StealMargin = 0.49f
+
+private fun distanceSq(a: Pair<Float, Float>, b: Pair<Float, Float>): Float {
+    val dx = a.first - b.first
+    val dy = a.second - b.second
+    return dx * dx + dy * dy
 }
 
 private fun withinPx(a: Pair<Float, Float>, b: Pair<Float, Float>, radiusPx: Float): Boolean {
