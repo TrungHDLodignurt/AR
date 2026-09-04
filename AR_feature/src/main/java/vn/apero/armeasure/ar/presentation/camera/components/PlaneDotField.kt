@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.IntSize
+import com.google.ar.core.Plane
 import vn.apero.armeasure.ar.data.arcore.PoseProjector
 import vn.apero.armeasure.ar.domain.geometry.PlaneBasis
 import vn.apero.armeasure.ar.domain.geometry.Vec3
@@ -11,6 +12,7 @@ import vn.apero.armeasure.ar.domain.geometry.circleRing
 import vn.apero.armeasure.ar.domain.geometry.measureDistanceMeters
 import vn.apero.armeasure.ar.domain.geometry.plus
 import vn.apero.armeasure.ar.domain.geometry.times
+import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
@@ -123,6 +125,7 @@ internal class PlaneDots(
 internal fun buildPlaneDots(
     hit: Vec3,
     basis: PlaneBasis,
+    plane: Plane?,
     cameraPosition: Vec3,
     projector: PoseProjector,
     viewSize: IntSize,
@@ -130,6 +133,20 @@ internal fun buildPlaneDots(
 ): PlaneDots {
     val width = viewSize.width
     val height = viewSize.height
+
+    // Plane-local frame, computed ONCE. A plane's normal describes an infinite surface, so a
+    // lattice built from it alone spills past the real edge — dots painted over thin air, exactly
+    // where the resolver refuses to place a point, along every boundary people actually measure.
+    //
+    // Transforming each of ~200 dots individually would allocate an array per dot per frame.
+    // Instead the hit and the two basis vectors are transformed once and each lattice point's
+    // plane-local coordinate falls out as a linear combination.
+    val inverse = plane?.centerPose?.inverse()
+    val originLocal = inverse?.transformPoint(floatArrayOf(hit.x, hit.y, hit.z))
+    val uLocal = inverse?.rotateVector(floatArrayOf(basis.u.x, basis.u.y, basis.u.z))
+    val vLocal = inverse?.rotateVector(floatArrayOf(basis.v.x, basis.v.y, basis.v.z))
+    val halfX = (plane?.extentX ?: 0f) / 2f
+    val halfZ = (plane?.extentZ ?: 0f) / 2f
     val packed = FloatArray(MaxDots * FloatsPerDot)
     var count = 0
 
@@ -138,6 +155,18 @@ internal fun buildPlaneDots(
             val ring = hypot(i.toFloat(), j.toFloat())
             // Circular mask: a square patch would show its corners and read as a tile.
             if (ring > LatticeHalfSpan) continue
+
+            // The plane's own bounding rectangle. Deliberately not isPoseInPolygon, which is a
+            // native call and would run ~200 times a frame: the rectangle is a slightly loose
+            // approximation that can overshoot at a corner, but it turns "painted across infinity"
+            // into "painted a little wide", which is the whole of the problem.
+            if (originLocal != null && uLocal != null && vLocal != null) {
+                val du = i * LatticeStepMeters
+                val dv = j * LatticeStepMeters
+                val localX = originLocal[0] + uLocal[0] * du + vLocal[0] * dv
+                val localZ = originLocal[2] + uLocal[2] * du + vLocal[2] * dv
+                if (abs(localX) > halfX || abs(localZ) > halfZ) continue
+            }
 
             val world = hit + basis.u * (i * LatticeStepMeters) + basis.v * (j * LatticeStepMeters)
             val screen = projector.project(world, width, height) ?: continue

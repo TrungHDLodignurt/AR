@@ -202,6 +202,7 @@ internal fun buildShapeOverlay(
         buildPlaneDots(
             hit = sample.position,
             basis = basis,
+            plane = sample.plane,
             cameraPosition = cameraPosition,
             projector = projector,
             viewSize = viewSize,

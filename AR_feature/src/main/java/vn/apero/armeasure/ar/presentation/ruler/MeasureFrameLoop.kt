@@ -298,6 +298,7 @@ internal fun buildOverlay(
         buildPlaneDots(
             hit = focus.position,
             basis = basis,
+            plane = focus.plane,
             cameraPosition = cameraPosition,
             projector = projector,
             viewSize = viewSize,

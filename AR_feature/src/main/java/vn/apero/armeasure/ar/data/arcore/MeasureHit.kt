@@ -53,6 +53,15 @@ internal class SurfaceSample(
     val planeNormal: Vec3? = (trackable as? Plane)?.analyticNormal()
 
     /**
+     * The plane this reading came from, or null when it did not come from one.
+     *
+     * Exposed for the dot field, which has to know where the plane *ends*: a normal describes an
+     * infinite surface, and painting dots onto that infinity is what put them out over thin air
+     * past a table's edge.
+     */
+    val plane: Plane? get() = trackable as? Plane
+
+    /**
      * Turns this reading into a tracked anchor. Call only when the user commits the point.
      *
      * [trackable] takes priority over [hitResult] because a plane reading's [position] may be
