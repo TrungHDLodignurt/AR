@@ -83,16 +83,25 @@ internal class SurfaceSample(
      * snapped point is therefore *identical* to the one it snapped to, which is the entire promise
      * of the feature — "start again from that corner" has to mean that corner, not 4 px away.
      *
-     * [hitResult] is dropped: it described where the aim ray met the world, which is no longer
-     * where the point goes, and letting [commit] fall back to it would silently undo the snap.
-     * [trackable] is kept, so the new anchor still rides the same plane as ARCore refines it.
+     * [hitResult] and [trackable] are both dropped, so [commit] falls through to
+     * `session.createAnchor(pose)` — pinned to the room, not to a surface.
+     *
+     * Keeping the trackable looked right and was not. An anchor attached to a plane rides that
+     * plane as ARCore refines it, which is exactly what you want for a point that lies **on** it.
+     * This point does not: [target] is some other point's position, and the trackable belongs to
+     * whatever the aim ray happened to be over. Attaching them couples the reading to a surface it
+     * is nowhere near, and the coupling is a lever — an anchor 3 m off its plane moves ~5 cm for a
+     * 1° refinement of that plane, with nobody touching anything.
+     *
+     * [Companion.atAnchor], the other snap path, already pinned to the room. This is the two of
+     * them agreeing.
      */
     fun snappedTo(target: Vec3): SurfaceSample = SurfaceSample(
         position = target,
         source = source,
         hitResult = null,
         pose = Pose(floatArrayOf(target.x, target.y, target.z), pose.rotationQuaternion),
-        trackable = trackable,
+        trackable = null,
     )
 
     companion object {
