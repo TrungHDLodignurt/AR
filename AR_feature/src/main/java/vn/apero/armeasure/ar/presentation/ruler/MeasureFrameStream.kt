@@ -165,6 +165,11 @@ internal class MeasureFrameStream {
     fun clearForUntrackedFrame() {
         live = null
         overlay = OverlayFrame()
+        // Everything that asserts something about the world has to go, not just the reading.
+        // snappedIndex survived and kept the hint saying "Snapped to point 2" into frames where no
+        // lock was drawn and + was dead — the same shape as the phantom-lock bug, one layer down.
+        snappedIndex = null
+        endDrag()
     }
 
     fun beginDrag(index: Int, at: Offset) {
