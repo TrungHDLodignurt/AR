@@ -247,8 +247,8 @@ private fun buildEdgeUSegment(
 
 /**
  * Box preview while the **third** tap is being aimed: the fixed
- * [phase.edgeU][ShapePhase.SizingEdgeV.edgeU] and the live second edge, both drawn from the shared
- * origin corner — and nothing else.
+ * [phase.edgeU][ShapePhase.SizingEdgeV.edgeU] and the live second edge, drawn as the polyline the
+ * taps describe — and nothing else.
  *
  * It deliberately does **not** close the parallelogram yet. It used to, and that was wrong: after
  * only two taps the user has picked one edge, so drawing all four sides claimed the base was

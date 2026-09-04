@@ -21,8 +21,13 @@ internal data class Segment2D(
 /**
  * Everything the overlay needs for one frame, in screen pixels.
  *
- * Recomputed each ARCore frame and read inside the Canvas draw lambda, so a new frame
- * invalidates only the draw phase — no recomposition, no relayout.
+ * Recomputed each ARCore frame and read inside the Canvas draw lambda, so a new frame invalidates
+ * only the **overlay's** draw phase.
+ *
+ * That is the whole of the claim. `ArCameraScreen` is a different story: `distanceActions` reads
+ * `addEnabled` and the hint functions read `live`/`liveStable`, all per-frame state read during
+ * composition, so the chrome does recompose every frame. Worth knowing before blaming a newer
+ * feature for frame drops.
  */
 internal data class OverlayFrame(
     val points: List<Offset> = emptyList(),

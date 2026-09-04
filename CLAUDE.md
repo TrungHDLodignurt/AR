@@ -10,7 +10,10 @@ point, so anything a new session must not get wrong belongs here or behind a lin
 **At the start of a session**
 
 1. Read this file (already done — it is auto-loaded).
-2. Read `README.md` for architecture. It is accurate and current; do not re-derive it.
+2. Read `README.md` for architecture. **Check what it claims against the code** — it has been
+   wrong about the test count, the size of the public API and two filenames in its own diagram,
+   and a previous version of this file told readers to trust it, which turned every one of those
+   into an error nobody checked.
 3. Check state before assuming: `git worktree list`, `git status --short`, `git log --oneline -5`.
    This repo runs **multiple worktrees on different branches at once** — see *Worktrees* below.
 4. Open `plans/reports/*.md` only for the area being worked on; they are long.
@@ -31,7 +34,8 @@ point, so anything a new session must not get wrong belongs here or behind a lin
 
 ## Worktrees — check before you edit
 
-Two directories, two branches, **same git repo**. Both open in Android Studio show the window
+Several directories on different branches, **same git repo** — run `git worktree list`, do not
+trust a count written here. Both open in Android Studio show the window
 title `ar-tape-measure`, distinguishable only by the path in brackets.
 
 | Directory | Branch | Contains |
@@ -92,8 +96,8 @@ camera image.** Widen the quad, thicken the strokes, darken the grid.
 - The per-frame streams (`MeasureFrameStream`, `ShapeFrameStream`, `ArSessionFrameStream`,
   `AirDrawFrameStream`) are deliberately **not** MVI `State`. At 30–60 Hz an intent round trip
   costs a coroutine dispatch and a whole-state allocation per frame. Do not "fix" this.
-- `MeasureFrameStream`'s KDoc claims a new frame "invalidates only the draw phase". That is true
-  for `MeasureOverlay`, and **false for `ArCameraScreen`**: `distanceActions` reads
+- The "invalidates only the draw phase" claim is true for `MeasureOverlay` and **false for
+  `ArCameraScreen`**: `distanceActions` reads
   `frames.addEnabled` and `distanceHint` reads `frames.live`/`liveStable`, all per-frame Compose
   state read during composition. The chrome already recomposes every frame. Know this before
   blaming the dot field for jank.
@@ -150,7 +154,9 @@ git -C <936> log --grep="Syncs AR_feature" --format='%h %s%n%b' -1
 
 Keep writing that line in future sync commits and this file never needs touching for it.
 
-The overlay work so far touches **no public API** (`ArMeasureKit`, `ArMeasureConfig`), so the host
+The module's public surface is four symbols: `ArMeasureConfig`, `ArMeasureHub`,
+`MeasurementImageSaver`, `ArMeasureContextWrapper`. (`ArMeasureKit` is `internal` and is **not**
+part of it.) The overlay work so far touches none of them, so the host
 needs no rewiring. A sync that does change them is a host-side task.
 
 **Protocol — verify before overwriting, every time.**

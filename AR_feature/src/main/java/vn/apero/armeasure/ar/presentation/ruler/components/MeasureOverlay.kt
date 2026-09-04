@@ -22,9 +22,14 @@ import vn.apero.armeasure.ar.presentation.ruler.Segment2D
 
 private val LineColor = Color.White
 private val DragAccent = Color(0xFF0A84FF)
-/** 2dp halo beyond the solid endpoint dot's own radius — keeps a white point visible even over a
- * bright/white real-world surface, where a bare white dot alone would disappear. */
-private val EndpointHaloColor = Color(0x59FFFFFF)
+/**
+ * 2dp halo beyond the solid endpoint dot's own radius, so a white point survives a white surface.
+ *
+ * Dark, not translucent white. It read `0x59FFFFFF` — white under white — which cannot deliver the
+ * contrast the comment has always promised. `PlaneDotField` uses the same dark-halo idea and got it
+ * right; this is the two agreeing.
+ */
+private val EndpointHaloColor = Color(0x52000000)
 
 /** How far the lifted drag preview sits above the actual point, in dp. */
 private val DragLiftHeight = 56.dp
