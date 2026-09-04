@@ -123,6 +123,12 @@ internal class MeasureViewModel(
     private fun commitLivePoint(unit: LengthUnit) {
         val activeSession = session ?: return
         val sample = frames.live ?: return
+        // The same gate the button is greyed out by — enforced here too, where the commit actually
+        // happens. commitStep (box/cylinder) has always checked; this path relied entirely on the
+        // button's disabled state, which makes the gate a property of the chrome rather than of
+        // the operation. commitReady rather than liveStable, so a snap still passes: that
+        // exception is deliberate and lives in one place.
+        if (!frames.commitReady) return
         // A new point is a new committed action — any pending redo is now stale.
         undoRedo.dropRedo()
         points.add(MeasuredPoint(sample.commit(activeSession), sample.source))
