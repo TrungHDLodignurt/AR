@@ -13,6 +13,7 @@
     <string name="armeasure_hint_segment_awaiting_end">%1$s से शुरू — अंत तय करने को + टैप करें</string>
     <string name="armeasure_hint_segment_done">%1$s पर अंत — नया सेगमेंट शुरू करने को + टैप करें</string>
     <string name="armeasure_hint_shape_awaiting_origin">%1$s का %2$s रखने के लिए + टैप करें</string>
+    <string name="armeasure_hint_shape_assumed_level">%1$s का %2$s रखने के लिए + दबाएँ — समतल सतह मानी गई</string>
     <string name="armeasure_hint_shape_sizing_edge_u">पहला किनारा खींचें, फिर + टैप करके तय करें</string>
     <string name="armeasure_hint_shape_sizing_edge_v">दूसरा किनारा खींचें, फिर + टैप करके तय करें</string>
     <string name="armeasure_hint_shape_sizing_circle">बेस का आकार बनाएँ, फिर + टैप करके तय करें</string>

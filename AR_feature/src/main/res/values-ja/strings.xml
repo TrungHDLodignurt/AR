@@ -13,6 +13,7 @@
     <string name="armeasure_hint_segment_awaiting_end">%1$s から開始 — + をタップして終点を設定</string>
     <string name="armeasure_hint_segment_done">%1$s で終了 — + をタップして次の線分を開始</string>
     <string name="armeasure_hint_shape_awaiting_origin">+ をタップして%1$sの%2$sを配置</string>
+    <string name="armeasure_hint_shape_assumed_level">+ をタップして%1$sの%2$sを配置 — 水平面と仮定</string>
     <string name="armeasure_hint_shape_sizing_edge_u">動かして1本目の辺を描き、+ をタップして確定</string>
     <string name="armeasure_hint_shape_sizing_edge_v">動かして2本目の辺を描き、+ をタップして確定</string>
     <string name="armeasure_hint_shape_sizing_circle">動かして底面の大きさを決め、+ をタップして確定</string>

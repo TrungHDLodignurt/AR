@@ -13,6 +13,7 @@
     <string name="armeasure_hint_segment_awaiting_end">البداية على %1$s — اضغط + لتحديد النهاية</string>
     <string name="armeasure_hint_segment_done">النهاية على %1$s — اضغط + لبدء قطعة جديدة</string>
     <string name="armeasure_hint_shape_awaiting_origin">اضغط + لتحديد %2$s الخاص بـ %1$s</string>
+    <string name="armeasure_hint_shape_assumed_level">اضغط + لوضع %2$s الخاص بـ %1$s — بافتراض سطح مستوٍ</string>
     <string name="armeasure_hint_shape_sizing_edge_u">حرّك لرسم الحافة الأولى، ثم اضغط + لتثبيتها</string>
     <string name="armeasure_hint_shape_sizing_edge_v">حرّك لرسم الحافة الثانية، ثم اضغط + لتثبيتها</string>
     <string name="armeasure_hint_shape_sizing_circle">حرّك لتحديد حجم القاعدة، ثم اضغط + لتثبيتها</string>

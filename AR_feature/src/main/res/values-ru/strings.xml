@@ -13,6 +13,7 @@
     <string name="armeasure_hint_segment_awaiting_end">Начало: %1$s — нажмите +, чтобы задать конец</string>
     <string name="armeasure_hint_segment_done">Конец: %1$s — нажмите + для нового отрезка</string>
     <string name="armeasure_hint_shape_awaiting_origin">Нажмите +: %1$s — %2$s</string>
+    <string name="armeasure_hint_shape_assumed_level">Нажмите +, чтобы задать %2$s для %1$s — предполагается ровная поверхность</string>
     <string name="armeasure_hint_shape_sizing_edge_u">Проведите первую грань, нажмите +</string>
     <string name="armeasure_hint_shape_sizing_edge_v">Проведите вторую грань, нажмите +</string>
     <string name="armeasure_hint_shape_sizing_circle">Задайте размер основания, нажмите +</string>

@@ -13,6 +13,7 @@
     <string name="armeasure_hint_segment_awaiting_end">Start op %1$s — tik + voor het eindpunt</string>
     <string name="armeasure_hint_segment_done">Einde op %1$s — tik + voor een nieuw segment</string>
     <string name="armeasure_hint_shape_awaiting_origin">Tik + om de %2$s van de %1$s te plaatsen</string>
+    <string name="armeasure_hint_shape_assumed_level">Tik op + voor de %2$s van de %1$s — vlak oppervlak aangenomen</string>
     <string name="armeasure_hint_shape_sizing_edge_u">Beweeg om de eerste zijde te tekenen, tik + om vast te zetten</string>
     <string name="armeasure_hint_shape_sizing_edge_v">Beweeg om de tweede zijde te tekenen, tik + om vast te zetten</string>
     <string name="armeasure_hint_shape_sizing_circle">Beweeg om de basis te schalen, tik + om vast te zetten</string>

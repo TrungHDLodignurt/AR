@@ -13,6 +13,7 @@
     <string name="armeasure_hint_segment_awaiting_end">起点在%1$s，点按 + 设置终点</string>
     <string name="armeasure_hint_segment_done">终点在%1$s，点按 + 开始新线段</string>
     <string name="armeasure_hint_shape_awaiting_origin">点按 + 放置%1$s的%2$s</string>
+    <string name="armeasure_hint_shape_assumed_level">点按 + 放置%1$s的%2$s — 假定为水平面</string>
     <string name="armeasure_hint_shape_sizing_edge_u">移动以绘制第一条边，点按 + 确定</string>
     <string name="armeasure_hint_shape_sizing_edge_v">移动以绘制第二条边，点按 + 确定</string>
     <string name="armeasure_hint_shape_sizing_circle">移动以调整底面大小，点按 + 确定</string>

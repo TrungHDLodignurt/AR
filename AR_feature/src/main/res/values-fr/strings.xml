@@ -13,6 +13,7 @@
     <string name="armeasure_hint_segment_awaiting_end">Début sur %1$s — appuyer sur + pour la fin</string>
     <string name="armeasure_hint_segment_done">Fin sur %1$s — appuyer sur + pour un nouveau segment</string>
     <string name="armeasure_hint_shape_awaiting_origin">Appuyer sur + pour placer %2$s de %1$s</string>
+    <string name="armeasure_hint_shape_assumed_level">Touchez + pour placer le %2$s du %1$s — surface plane supposée</string>
     <string name="armeasure_hint_shape_sizing_edge_u">Déplacer pour tracer le premier bord, + pour valider</string>
     <string name="armeasure_hint_shape_sizing_edge_v">Déplacer pour tracer le second bord, + pour valider</string>
     <string name="armeasure_hint_shape_sizing_circle">Déplacer pour régler la base, + pour valider</string>

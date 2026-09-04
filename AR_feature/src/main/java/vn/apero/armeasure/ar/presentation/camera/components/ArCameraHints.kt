@@ -114,7 +114,14 @@ internal fun shapeHint(
     )
     return when (state.phase) {
         is ShapePhase.AwaitingOrigin ->
-            stringResource(R.string.armeasure_hint_shape_awaiting_origin, shapeName, originNoun)
+            // With no plane under the reticle the tool assumes world-up for the shape's normal.
+            // That assumption is reasonable and deliberate, but it was silent — the user ends up
+            // with a box built on a guess and no way to know one was made.
+            if (frames.live?.planeNormal == null) {
+                stringResource(R.string.armeasure_hint_shape_assumed_level, shapeName, originNoun)
+            } else {
+                stringResource(R.string.armeasure_hint_shape_awaiting_origin, shapeName, originNoun)
+            }
         is ShapePhase.SizingEdgeU -> stringResource(R.string.armeasure_hint_shape_sizing_edge_u)
         is ShapePhase.SizingEdgeV -> stringResource(R.string.armeasure_hint_shape_sizing_edge_v)
         is ShapePhase.SizingCircle -> stringResource(R.string.armeasure_hint_shape_sizing_circle)

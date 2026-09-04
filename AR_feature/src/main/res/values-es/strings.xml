@@ -13,6 +13,7 @@
     <string name="armeasure_hint_segment_awaiting_end">Inicio en %1$s: toca + para el final</string>
     <string name="armeasure_hint_segment_done">Fin en %1$s: toca + para un nuevo segmento</string>
     <string name="armeasure_hint_shape_awaiting_origin">Toca + para colocar %2$s de %1$s</string>
+    <string name="armeasure_hint_shape_assumed_level">Toca + para colocar el %2$s del %1$s: se asume superficie nivelada</string>
     <string name="armeasure_hint_shape_sizing_edge_u">Mueve para trazar el primer borde, toca + para fijarlo</string>
     <string name="armeasure_hint_shape_sizing_edge_v">Mueve para trazar el segundo borde, toca + para fijarlo</string>
     <string name="armeasure_hint_shape_sizing_circle">Mueve para ajustar la base, toca + para fijarla</string>

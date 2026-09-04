@@ -13,6 +13,7 @@
     <string name="armeasure_hint_segment_awaiting_end">Start auf %1$s – + tippen für das Ende</string>
     <string name="armeasure_hint_segment_done">Ende auf %1$s – + tippen für neue Strecke</string>
     <string name="armeasure_hint_shape_awaiting_origin">+ tippen, um %2$s für %1$s zu setzen</string>
+    <string name="armeasure_hint_shape_assumed_level">Tippe +, um %2$s des %1$s zu setzen — ebene Fläche angenommen</string>
     <string name="armeasure_hint_shape_sizing_edge_u">Bewegen für erste Kante, + tippen zum Fixieren</string>
     <string name="armeasure_hint_shape_sizing_edge_v">Bewegen für zweite Kante, + tippen zum Fixieren</string>
     <string name="armeasure_hint_shape_sizing_circle">Bewegen für Grundfläche, + tippen zum Fixieren</string>
