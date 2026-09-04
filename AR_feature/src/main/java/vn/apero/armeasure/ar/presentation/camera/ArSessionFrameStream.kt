@@ -28,6 +28,8 @@ import com.google.ar.core.TrackingFailureReason
  * the same thread as the watchdog's polling coroutine in `ArCameraScreen`, and because the chrome
  * reads these values inside composition.
  */
+private const val StallGraceMs = 2_000L
+
 internal class ArSessionFrameStream {
 
     /** Wall-clock time of the last ARCore frame that actually arrived — the watchdog's clock. */
@@ -38,6 +40,16 @@ internal class ArSessionFrameStream {
     var anyPlaneTracked by mutableStateOf(false)
     var depthSupported by mutableStateOf(false)
     var trackingFailure by mutableStateOf<TrackingFailureReason?>(null)
+
+    /**
+     * Whether frames have stopped arriving long enough for the picture to be stale.
+     *
+     * Sits well before the watchdog's 10 s remount on purpose. Between a stall starting and the
+     * remount firing, the reticle stayed solid, + stayed enabled and the hint went on saying "tap +
+     * to add a point" over a frozen image — and no tracking-failure hint appeared, because
+     * sceneview maps NONE to null. Ten seconds of the app vouching for a reading it no longer has.
+     */
+    val isStalled: Boolean get() = System.currentTimeMillis() - lastFrameAtMillis > StallGraceMs
 
     /** Marks a frame as having arrived: flips [cameraReady] and refreshes the watchdog's clock. */
     fun noteFrame() {

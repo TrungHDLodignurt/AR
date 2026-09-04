@@ -2,6 +2,7 @@
 <resources>
     <string name="armeasure_hint_warming_up">カメラを準備しています…</string>
     <string name="armeasure_hint_scanning">平面を探しています…</string>
+    <string name="armeasure_hint_reconnecting">再接続しています…</string>
     <string name="armeasure_hint_move_to_find_surface">スマホを動かして面を探してください</string>
     <string name="armeasure_hint_aim_at_surface">面に向けてください</string>
     <string name="armeasure_hint_tap_to_start">+ をタップしてポイントを追加</string>

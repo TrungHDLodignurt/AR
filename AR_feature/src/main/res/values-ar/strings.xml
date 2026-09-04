@@ -2,6 +2,7 @@
 <resources>
     <string name="armeasure_hint_warming_up">جارٍ تجهيز الكاميرا…</string>
     <string name="armeasure_hint_scanning">جارٍ البحث عن سطح…</string>
+    <string name="armeasure_hint_reconnecting">جارٍ إعادة الاتصال…</string>
     <string name="armeasure_hint_move_to_find_surface">حرّك هاتفك للعثور على سطح</string>
     <string name="armeasure_hint_aim_at_surface">وجّه الكاميرا نحو سطح</string>
     <string name="armeasure_hint_tap_to_start">اضغط + لإضافة نقطة</string>

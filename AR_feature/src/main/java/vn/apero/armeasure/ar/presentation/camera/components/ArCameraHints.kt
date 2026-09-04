@@ -50,6 +50,8 @@ internal fun distanceHint(
     // safe only because that callback happens to run on the main thread.
     val snapped = frames.snappedIndex
     return when {
+        // Ahead of everything: with no frames arriving, nothing else on screen is current.
+        sessionFrames.isStalled -> stringResource(R.string.armeasure_hint_reconnecting)
         // Direct manipulation is already happening — nothing about surface-hunting is relevant
         // while the user's finger is on a point they placed a moment ago.
         frames.draggingIndex != null -> stringResource(R.string.armeasure_hint_dragging_point)
@@ -95,6 +97,7 @@ internal fun shapeHint(
     frames: ShapeFrameStream,
     kind: ShapeKind,
 ): String? {
+    if (sessionFrames.isStalled) return stringResource(R.string.armeasure_hint_reconnecting)
     if (frames.live != null && !frames.liveStable) {
         return stringResource(R.string.armeasure_hint_reading_unsteady)
     }

@@ -2,6 +2,7 @@
 <resources>
     <string name="armeasure_hint_warming_up">Готовим камеру…</string>
     <string name="armeasure_hint_scanning">Поиск поверхности…</string>
+    <string name="armeasure_hint_reconnecting">Переподключение…</string>
     <string name="armeasure_hint_move_to_find_surface">Двигайте телефон, чтобы найти поверхность</string>
     <string name="armeasure_hint_aim_at_surface">Наведите на поверхность</string>
     <string name="armeasure_hint_tap_to_start">Нажмите +, чтобы поставить точку</string>

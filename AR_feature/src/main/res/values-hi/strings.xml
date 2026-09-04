@@ -2,6 +2,7 @@
 <resources>
     <string name="armeasure_hint_warming_up">कैमरा तैयार हो रहा है…</string>
     <string name="armeasure_hint_scanning">सतह खोज रहे हैं…</string>
+    <string name="armeasure_hint_reconnecting">फिर से कनेक्ट हो रहा है…</string>
     <string name="armeasure_hint_move_to_find_surface">सतह ढूँढने के लिए फ़ोन घुमाएँ</string>
     <string name="armeasure_hint_aim_at_surface">कैमरा किसी सतह पर रखें</string>
     <string name="armeasure_hint_tap_to_start">पॉइंट जोड़ने के लिए + टैप करें</string>

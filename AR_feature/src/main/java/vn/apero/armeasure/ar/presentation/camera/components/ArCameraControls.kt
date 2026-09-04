@@ -126,7 +126,8 @@ internal fun distanceActions(
     canRedo = state.canRedo,
     redo = { viewModel.processIntent(MeasureIntent.Redo) },
     clear = { viewModel.processIntent(MeasureIntent.Clear) },
-    addEnabled = viewModel.frames.addEnabled,
+    // A stalled session means the reading behind this button is stale, whatever the tool thinks.
+    addEnabled = viewModel.frames.addEnabled && !sessionFrames.isStalled,
     hasLiveReading = viewModel.frames.live != null,
     add = { viewModel.processIntent(MeasureIntent.CommitLivePoint(unit)) },
     hint = trackingFailureHint(sessionFrames)
@@ -146,7 +147,8 @@ internal fun shapeActions(
     canRedo = state.canRedo,
     redo = { viewModel.processIntent(ShapeIntent.Redo) },
     clear = { viewModel.processIntent(ShapeIntent.Clear) },
-    addEnabled = viewModel.frames.addEnabled,
+    // A stalled session means the reading behind this button is stale, whatever the tool thinks.
+    addEnabled = viewModel.frames.addEnabled && !sessionFrames.isStalled,
     hasLiveReading = viewModel.frames.live != null,
     add = { viewModel.processIntent(ShapeIntent.CommitStep(unit)) },
     hint = trackingFailureHint(sessionFrames)

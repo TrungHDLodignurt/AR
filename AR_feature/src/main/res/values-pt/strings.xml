@@ -2,6 +2,7 @@
 <resources>
     <string name="armeasure_hint_warming_up">Preparando a câmera…</string>
     <string name="armeasure_hint_scanning">Procurando uma superfície…</string>
+    <string name="armeasure_hint_reconnecting">Reconectando…</string>
     <string name="armeasure_hint_move_to_find_surface">Mova o celular para achar uma superfície</string>
     <string name="armeasure_hint_aim_at_surface">Aponte para uma superfície</string>
     <string name="armeasure_hint_tap_to_start">Toque + para adicionar um ponto</string>

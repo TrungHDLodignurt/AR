@@ -2,6 +2,7 @@
 <resources>
     <string name="armeasure_hint_warming_up">Kamera wird vorbereitet…</string>
     <string name="armeasure_hint_scanning">Suche nach einer Fläche…</string>
+    <string name="armeasure_hint_reconnecting">Verbindung wird wiederhergestellt…</string>
     <string name="armeasure_hint_move_to_find_surface">Handy bewegen, um eine Fläche zu finden</string>
     <string name="armeasure_hint_aim_at_surface">Auf eine Fläche zielen</string>
     <string name="armeasure_hint_tap_to_start">Auf + tippen, um einen Punkt zu setzen</string>

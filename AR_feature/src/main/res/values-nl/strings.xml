@@ -2,6 +2,7 @@
 <resources>
     <string name="armeasure_hint_warming_up">Camera wordt gereedgemaakt…</string>
     <string name="armeasure_hint_scanning">Op zoek naar een oppervlak…</string>
+    <string name="armeasure_hint_reconnecting">Opnieuw verbinden…</string>
     <string name="armeasure_hint_move_to_find_surface">Beweeg de telefoon om een oppervlak te vinden</string>
     <string name="armeasure_hint_aim_at_surface">Richt op een oppervlak</string>
     <string name="armeasure_hint_tap_to_start">Tik op + om een punt te zetten</string>
