@@ -57,5 +57,9 @@ internal class ShapeFrameStream {
     fun onActivated() {
         steadinessGate.reset()
         live = null
+        // The incoming tool must not inherit the outgoing one's picture. Without this the previous
+        // tool's geometry is still on screen for the frame between the swap and the next ARCore
+        // callback.
+        overlay = ShapeOverlayFrame()
     }
 }

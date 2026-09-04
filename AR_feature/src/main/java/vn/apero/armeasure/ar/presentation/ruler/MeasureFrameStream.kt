@@ -212,7 +212,12 @@ internal class MeasureFrameStream {
     fun onActivated() {
         steadinessGate.reset()
         live = null
+        // The incoming tool must not inherit the outgoing one's picture. Without this the previous
+        // tool's geometry is still on screen for the frame between the swap and the next ARCore
+        // callback.
+        overlay = OverlayFrame()
         // Otherwise the incoming tool inherits a lock resolved against the outgoing tool's points.
         snappedIndex = null
+        endDrag()
     }
 }
