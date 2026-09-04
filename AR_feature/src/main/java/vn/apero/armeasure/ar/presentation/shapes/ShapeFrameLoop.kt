@@ -279,8 +279,12 @@ private fun buildEdgeVEdges(
     val turn = origin + phase.edgeU
     val edgeV = projectedEdgeVector(turn, sample.position, phase.normal)
 
-    val a = project(origin) ?: return
-    val b = project(turn) ?: return
+    // Skip an edge that cannot be projected; do not abandon the whole preview. Returning early on
+    // the origin corner meant stepping back far enough to put it behind the camera erased every
+    // line at once, mid-draw. The distance tools' buildOverlay already drops edges individually.
+    val a = project(origin)
+    val b = project(turn)
+    if (a == null || b == null) return
     // Both edges carry their own length: unlike the closed parallelogram this replaced, neither
     // number is a mirror of another edge on screen, so both are worth reading.
     out += Segment2D(a, b, (a + b) / 2f, formatLength(phase.edgeU.length(), unit))
