@@ -38,6 +38,7 @@
     <string name="armeasure_action_close_sheet">Закрыть</string>
     <string name="armeasure_action_cancel">Отмена</string>
     <string name="armeasure_toast_point_added">Точка добавлена</string>
+    <string name="armeasure_toast_session_lost">Отслеживание потеряно — измерение сброшено</string>
 
     <string name="armeasure_reference_title">Выберите эталон</string>
     <string name="armeasure_reference_subtitle">Выберите эталон, который поместится на фото рядом с измеряемым объектом.</string>

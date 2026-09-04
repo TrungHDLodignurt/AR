@@ -38,6 +38,7 @@
     <string name="armeasure_action_close_sheet">Fechar</string>
     <string name="armeasure_action_cancel">Cancelar</string>
     <string name="armeasure_toast_point_added">Ponto adicionado</string>
+    <string name="armeasure_toast_session_lost">Rastreamento perdido — a medição foi apagada</string>
 
     <string name="armeasure_reference_title">Escolha um objeto de referência</string>
     <string name="armeasure_reference_subtitle">Escolha um objeto de referência que dê para fotografar junto com o que você quer medir.</string>

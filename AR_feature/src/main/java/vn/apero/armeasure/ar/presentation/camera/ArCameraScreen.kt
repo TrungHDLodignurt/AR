@@ -195,6 +195,7 @@ internal fun ArCameraScreen(
     // toast rather than a save flow — cleared automatically after CommitToastDurationMs.
     var commitToast by remember { mutableStateOf<String?>(null) }
     val commitConfirmation = stringResource(R.string.armeasure_toast_point_added)
+    val sessionLostMessage = stringResource(R.string.armeasure_toast_session_lost)
     LaunchedEffect(commitToast) {
         if (commitToast != null) {
             delay(CommitToastDurationMs)
@@ -262,6 +263,26 @@ internal fun ArCameraScreen(
                     config.instantPlacementMode = Config.InstantPlacementMode.DISABLED
                 },
                 onSessionCreated = { created ->
+                    // A replacement session, not the first one: the watchdog fired.
+                    //
+                    // Anchors belong to the Session that created them. The previous session is
+                    // gone, and with it the world origin every committed point was expressed
+                    // against, so those points now describe positions in a coordinate system that
+                    // no longer exists. Left alone they are still drawn, still counted by
+                    // pointCount, still undoable, still vouched for by the hint — a measurement
+                    // the app keeps standing behind after the only thing that gave it meaning has
+                    // been destroyed.
+                    //
+                    // Discarding the user's work is a real cost and not one taken lightly. The
+                    // alternative is worse: silently keeping a number that is now arbitrary. Say
+                    // so out loud instead.
+                    if (instanceKey > 0) {
+                        distance.releaseAll()
+                        distanceChain.releaseAll()
+                        box.releaseAll()
+                        cylinder.releaseAll()
+                        commitToast = sessionLostMessage
+                    }
                     // Pushed into the ViewModels rather than held in composition: the session is a
                     // handle, not state, and keeping it there is what lets every intent stay free
                     // of ARCore types.
