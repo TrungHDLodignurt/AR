@@ -39,6 +39,7 @@
     <string name="armeasure_action_close_sheet">閉じる</string>
     <string name="armeasure_action_cancel">キャンセル</string>
     <string name="armeasure_toast_point_added">ポイントを追加しました</string>
+    <string name="armeasure_toast_shape_measured">計測しました</string>
     <string name="armeasure_toast_session_lost">トラッキングが失われ、計測をリセットしました</string>
 
     <string name="armeasure_reference_title">基準物を選択</string>

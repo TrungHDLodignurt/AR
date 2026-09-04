@@ -39,6 +39,7 @@
     <string name="armeasure_action_close_sheet">Fermer</string>
     <string name="armeasure_action_cancel">Annuler</string>
     <string name="armeasure_toast_point_added">Point ajouté</string>
+    <string name="armeasure_toast_shape_measured">Mesuré</string>
     <string name="armeasure_toast_session_lost">Suivi perdu — la mesure a été effacée</string>
 
     <string name="armeasure_reference_title">Choisir un objet de référence</string>

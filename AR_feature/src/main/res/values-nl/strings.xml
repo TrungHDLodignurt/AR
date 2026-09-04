@@ -39,6 +39,7 @@
     <string name="armeasure_action_close_sheet">Sluiten</string>
     <string name="armeasure_action_cancel">Annuleren</string>
     <string name="armeasure_toast_point_added">Punt toegevoegd</string>
+    <string name="armeasure_toast_shape_measured">Gemeten</string>
     <string name="armeasure_toast_session_lost">Tracking verloren — meting gewist</string>
 
     <string name="armeasure_reference_title">Referentieobject kiezen</string>

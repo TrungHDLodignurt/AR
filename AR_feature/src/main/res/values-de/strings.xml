@@ -39,6 +39,7 @@
     <string name="armeasure_action_close_sheet">Schließen</string>
     <string name="armeasure_action_cancel">Abbrechen</string>
     <string name="armeasure_toast_point_added">Punkt gesetzt</string>
+    <string name="armeasure_toast_shape_measured">Gemessen</string>
     <string name="armeasure_toast_session_lost">Tracking verloren — Messung wurde gelöscht</string>
 
     <string name="armeasure_reference_title">Referenzobjekt wählen</string>

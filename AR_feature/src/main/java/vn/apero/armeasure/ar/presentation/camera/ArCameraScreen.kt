@@ -194,7 +194,8 @@ internal fun ArCameraScreen(
     // Insight 8: the AR branch has no terminal state, so a commit is confirmed by a transient
     // toast rather than a save flow — cleared automatically after CommitToastDurationMs.
     var commitToast by remember { mutableStateOf<String?>(null) }
-    val commitConfirmation = stringResource(R.string.armeasure_toast_point_added)
+    val pointAddedMessage = stringResource(R.string.armeasure_toast_point_added)
+    val shapeMeasuredMessage = stringResource(R.string.armeasure_toast_shape_measured)
     val sessionLostMessage = stringResource(R.string.armeasure_toast_session_lost)
     LaunchedEffect(commitToast) {
         if (commitToast != null) {
@@ -213,7 +214,12 @@ internal fun ArCameraScreen(
             box.effect.map { it.result() },
             cylinder.effect.map { it.result() },
         ).collect { result ->
-            commitToast = commitConfirmation
+            // A finished box has three dimensions; calling that "Point added" described the
+            // mechanism instead of what the user just accomplished.
+            commitToast = when (result) {
+                is MeasurementResult.Distance -> pointAddedMessage
+                else -> shapeMeasuredMessage
+            }
             latestOnResult(result)
         }
     }

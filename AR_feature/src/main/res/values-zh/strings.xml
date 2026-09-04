@@ -39,6 +39,7 @@
     <string name="armeasure_action_close_sheet">关闭</string>
     <string name="armeasure_action_cancel">取消</string>
     <string name="armeasure_toast_point_added">已添加点</string>
+    <string name="armeasure_toast_shape_measured">已测量</string>
     <string name="armeasure_toast_session_lost">追踪丢失 — 已清除测量</string>
 
     <string name="armeasure_reference_title">选择参照物</string>
