@@ -376,7 +376,13 @@ internal fun ArCameraScreen(
         // Centre stage while ARCore is still looking for a plane. The bottom hint stays up
         // alongside it and is not redundant: this says the app is working, the hint says what the
         // user can do about it.
-        if (sessionFrames.cameraReady && !sessionFrames.anyPlaneTracked && !cameraState.showModeSheet) {
+        // Also gated on there being nothing to measure: a depth reading with no plane is a
+        // perfectly good reading, and a 162 dp "looking for a surface" over a live reticle told
+        // the user the opposite of what the rest of the screen was saying.
+        if (
+            sessionFrames.cameraReady && !sessionFrames.anyPlaneTracked &&
+            !actions.hasLiveReading && !cameraState.showModeSheet
+        ) {
             ScanningIndicator(
                 label = stringResource(R.string.armeasure_hint_scanning),
                 modifier = Modifier.align(Alignment.Center),

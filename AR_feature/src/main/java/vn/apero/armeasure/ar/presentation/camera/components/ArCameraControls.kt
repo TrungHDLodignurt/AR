@@ -92,6 +92,8 @@ internal data class ToolActions(
     val redo: () -> Unit,
     val clear: () -> Unit,
     val addEnabled: Boolean,
+    /** Whether the active tool currently resolves a surface — gates the scanning indicator. */
+    val hasLiveReading: Boolean,
     val add: () -> Unit,
     val hint: String?,
 )
@@ -125,6 +127,7 @@ internal fun distanceActions(
     redo = { viewModel.processIntent(MeasureIntent.Redo) },
     clear = { viewModel.processIntent(MeasureIntent.Clear) },
     addEnabled = viewModel.frames.addEnabled,
+    hasLiveReading = viewModel.frames.live != null,
     add = { viewModel.processIntent(MeasureIntent.CommitLivePoint(unit)) },
     hint = trackingFailureHint(sessionFrames)
         ?: distanceHint(sessionFrames, state, viewModel.frames, viewModel.chained),
@@ -144,6 +147,7 @@ internal fun shapeActions(
     redo = { viewModel.processIntent(ShapeIntent.Redo) },
     clear = { viewModel.processIntent(ShapeIntent.Clear) },
     addEnabled = viewModel.frames.addEnabled,
+    hasLiveReading = viewModel.frames.live != null,
     add = { viewModel.processIntent(ShapeIntent.CommitStep(unit)) },
     hint = trackingFailureHint(sessionFrames)
         ?: shapeHint(sessionFrames, state, viewModel.frames, viewModel.kind),
