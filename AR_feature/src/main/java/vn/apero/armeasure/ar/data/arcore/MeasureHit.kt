@@ -96,9 +96,13 @@ internal class SurfaceSample(
      * [Companion.atAnchor], the other snap path, already pinned to the room. This is the two of
      * them agreeing.
      */
-    fun snappedTo(target: Vec3): SurfaceSample = SurfaceSample(
+    fun snappedTo(target: Vec3, targetSource: HitSource): SurfaceSample = SurfaceSample(
         position = target,
-        source = source,
+        // The target's source, not this reading's. Position and attribution have to describe the
+        // same thing: the value comes from the existing point, so the label must too. Keeping the
+        // raw hit's source made "Point N on plane" flip to "on depth map" purely on whether the
+        // aim ray resolved that frame, while the committed position was identical either way.
+        source = targetSource,
         hitResult = null,
         pose = Pose(floatArrayOf(target.x, target.y, target.z), pose.rotationQuaternion),
         trackable = null,

@@ -117,7 +117,7 @@ internal fun onMeasureFrame(
     val sample = when {
         snapped == null -> rawSample
         // Normal snap: keep the reading's plane and rotation, move it onto the existing point.
-        rawSample != null -> rawSample.snappedTo(points[snapped].anchor.pose.toVec3())
+        rawSample != null -> rawSample.snappedTo(points[snapped].anchor.pose.toVec3(), points[snapped].source)
         // The aim ray resolved nothing, but the reticle is locked onto a point we already have an
         // anchor for. Commit from the anchor instead of refusing: the surface hit exists only to
         // *learn* a position, and here the position is already known — better than the raw hit,
