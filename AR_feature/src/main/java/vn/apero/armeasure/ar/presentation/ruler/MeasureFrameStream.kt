@@ -151,9 +151,11 @@ internal class MeasureFrameStream {
     }
 
     /** Feeds one frame's reading into [live] and the steadiness gate behind [liveStable]. */
-    fun noteLiveSample(sample: SurfaceSample?, distanceMeters: Float?) {
+    fun noteLiveSample(sample: SurfaceSample?, distanceMeters: Float?, feedSteadinessGate: Boolean = true) {
         live = sample
-        steadinessGate.note(sample, distanceMeters)
+        // A snap sets commitReady on its own; letting its synthetic position also satisfy the gate
+        // would leave the gate open for the raw reading that arrives after the snap releases.
+        if (feedSteadinessGate) steadinessGate.note(sample, distanceMeters) else steadinessGate.reset()
     }
 
     /**

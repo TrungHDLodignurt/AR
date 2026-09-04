@@ -129,6 +129,14 @@ internal fun onMeasureFrame(
     frames.noteLiveSample(
         sample = sample,
         distanceMeters = sample?.let { measureDistanceMeters(it.position, cameraPosition) },
+        // A snapped reading must not reach the steadiness gate at all.
+        //
+        // Feeding it one pins the gate: an anchor-sourced sample never moves, and a Plane-sourced
+        // one takes the gate's fast path straight to stable. Either way the gate stays open across
+        // frames that would previously have reset it, and the first raw depth sample after the
+        // snap releases inherits that state — committable on its first frame, with none of the
+        // five-frame vetting the gate exists for.
+        feedSteadinessGate = snapped == null,
     )
 
     // Same resolution the reticle gets, but at the finger's position while an existing point
