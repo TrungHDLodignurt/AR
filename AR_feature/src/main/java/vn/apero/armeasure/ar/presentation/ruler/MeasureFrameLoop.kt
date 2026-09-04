@@ -170,7 +170,7 @@ private fun resolveSnap(
         projector.project(point.anchor.pose.toVec3(), viewSize.width, viewSize.height)
             ?.let { it.x to it.y }
     }
-    val excluded = if (hasOpenSegment(points.size, chained)) setOf(points.lastIndex) else emptySet()
+    val excluded = openSegmentExclusions(points, chained)
 
     val candidate = snapTarget(
         positions = positions,
@@ -191,6 +191,26 @@ private fun resolveSnap(
     return if (measureDistanceMeters(aimed, target) <= SnapMaxRangeMeters) candidate else null
 }
 
+/**
+ * Indices the snap may never take: the open segment's own start, **and everything sitting in the
+ * same place as it**.
+ *
+ * Excluding by index alone does not achieve the stated goal. Committing onto a snap deliberately
+ * creates a second point at the first one's exact position; the new one becomes the open segment's
+ * start and is excluded, but its twin is a different index at zero screen distance, so the reticle
+ * re-locks onto it immediately. The label then reads 0.00 with `+` still live, and the tap after
+ * that reports a zero-length segment to the host.
+ */
+private fun openSegmentExclusions(points: List<MeasuredPoint>, chained: Boolean): Set<Int> {
+    if (!hasOpenSegment(points.size, chained)) return emptySet()
+    val openStart = points.last().anchor.pose.toVec3()
+    return points.indices
+        .filter { measureDistanceMeters(points[it].anchor.pose.toVec3(), openStart) < CoincidentMeters }
+        .toSet()
+}
+
+/** Two points closer than this are the same point as far as the snap is concerned. */
+private const val CoincidentMeters = 0.01f
 
 /**
  * Resolves the surface at an arbitrary screen point, the same way the reticle is resolved.

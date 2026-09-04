@@ -137,6 +137,9 @@ internal class MeasureViewModel(
      * opens a new segment would have reported the gap between the previous segment's end and this
      * new start — a length that is never drawn and that the user never asked to measure.
      */
+    /** Below this a "measurement" is two points on top of each other, not a length. */
+    private val MinReportableMeters = 0.001f
+
     private fun emitClosedSegment(unit: LengthUnit) {
         val world = frames.worldPoints
         val closed = segmentIndexPairs(world.size, chained)
@@ -144,6 +147,12 @@ internal class MeasureViewModel(
             ?.takeIf { (_, end) -> end == world.lastIndex }
             ?: return
         val meters = measureDistanceMeters(world[closed.first], world[closed.second])
+        // Second line of defence, and deliberately not the only one: bug 1's positional exclusion
+        // stops zero-length segments being reachable in the first place. This exists because what
+        // escapes here leaves the module entirely — onResult hands it to the host app, which has
+        // no way to tell a real zero from a bug. A guard on the way out is cheap insurance against
+        // whatever hole the first guard turns out to still have.
+        if (meters < MinReportableMeters) return
         sendEffect(MeasureEffect.Measured(MeasurementResult.Distance(meters, unit)))
     }
 
