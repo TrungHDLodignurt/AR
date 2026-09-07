@@ -241,7 +241,8 @@ internal fun ArCameraScreen(
         when (tool) {
             MeasureTool.Distance -> distance.onDeactivated()
             MeasureTool.DistanceChain -> distanceChain.onDeactivated()
-            MeasureTool.Box, MeasureTool.Cylinder -> Unit
+            // The pen has no drag gesture to strand.
+            MeasureTool.Box, MeasureTool.Cylinder, MeasureTool.AirDraw -> Unit
         }
         when (next) {
             MeasureTool.Distance -> distance.onActivated()
@@ -393,6 +394,9 @@ internal fun ArCameraScreen(
                 clear = airDraw::clear,
                 addEnabled = false,
                 add = {},
+                // The pen has no reticle and resolves no surface, so the scanning indicator must
+                // never treat it as "still looking".
+                hasLiveReading = true,
                 hint = stringResource(R.string.armeasure_hint_air_draw),
             )
         }
