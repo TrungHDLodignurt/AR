@@ -13,7 +13,7 @@
     <string name="armeasure_hint_segment_awaiting_end">Start on %1$s — tap + to set the end</string>
     <string name="armeasure_hint_segment_done">End on %1$s — tap + to start a new segment</string>
     <string name="armeasure_hint_shape_awaiting_origin">Tap + to place the %1$s\'s %2$s</string>
-    <string name="armeasure_hint_shape_assumed_level">Tap + to place the %1$s's %2$s — assuming a level surface</string>
+    <string name="armeasure_hint_shape_assumed_level">Tap + to place the %1$s\'s %2$s — assuming a level surface</string>
     <string name="armeasure_hint_shape_sizing_edge_u">Move to draw the first edge, tap + to fix it</string>
     <string name="armeasure_hint_shape_sizing_edge_v">Move to draw the second edge, tap + to fix it</string>
     <string name="armeasure_hint_shape_sizing_circle">Move to size the base, tap + to fix it</string>
