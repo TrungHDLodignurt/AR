@@ -227,6 +227,13 @@ internal fun ArCameraScreen(
     /** Resets the newly active tool's steadiness gate before it becomes visible (insight 6). */
     fun selectTool(next: MeasureTool) {
         if (next == tool) return
+        // The outgoing tool first: its overlay is about to leave composition, which cancels the
+        // drag gesture's coroutine without ever calling onDragCancel.
+        when (tool) {
+            MeasureTool.Distance -> distance.onDeactivated()
+            MeasureTool.DistanceChain -> distanceChain.onDeactivated()
+            MeasureTool.Box, MeasureTool.Cylinder -> Unit
+        }
         when (next) {
             MeasureTool.Distance -> distance.onActivated()
             MeasureTool.DistanceChain -> distanceChain.onActivated()

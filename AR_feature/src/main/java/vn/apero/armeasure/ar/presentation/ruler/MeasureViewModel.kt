@@ -91,6 +91,18 @@ internal class MeasureViewModel(
         }
     }
 
+    /**
+     * Called on the tool being swapped **away from**.
+     *
+     * `DistanceOverlay` leaving composition cancels the `detectDragGestures` coroutine without
+     * invoking `onDragCancel`, so a swap made while a finger is down (two-touch: one on a point,
+     * one on the mode sheet) strands `draggingIndex` — and `addEnabled` requires it to be null, so
+     * `+` is dead for that tool until the app restarts.
+     */
+    fun onDeactivated() {
+        frames.endDrag()
+    }
+
     fun onSessionChanged(session: Session?) {
         this.session = session
     }
