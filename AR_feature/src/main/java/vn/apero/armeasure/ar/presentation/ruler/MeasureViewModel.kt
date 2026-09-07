@@ -168,6 +168,9 @@ internal class MeasureViewModel(
     private fun undo() {
         // A stale draggingIndex pointing past the shrunk list is a crash waiting to happen.
         frames.endDrag()
+        // And a stale snap keeps commitReady true off a reading whose point has just been removed,
+        // so for the ~16 ms until the next frame + stays live and places a phantom.
+        frames.noteSnap(null)
         val last = points.removeLastOrNull() ?: return
         undoRedo.pushRedo(last)
         frames.publishWorldPoints(points.map { it.anchor.pose.toVec3() })
@@ -185,6 +188,7 @@ internal class MeasureViewModel(
 
     private fun clear() {
         frames.endDrag()
+        frames.noteSnap(null)
         // Detaching matters: an undetached anchor keeps costing ARCore tracking work every
         // frame, so a session of measure-and-clear slowly starves the frame budget.
         points.forEach { it.anchor.detach() }
