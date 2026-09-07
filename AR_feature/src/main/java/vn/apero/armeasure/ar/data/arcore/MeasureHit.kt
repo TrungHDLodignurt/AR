@@ -39,6 +39,12 @@ internal class SurfaceSample(
     private val pose: Pose,
     /** Set only for a [HitSource.Plane] reading resolved analytically — see [resolveSurface]. */
     private val trackable: Trackable? = null,
+    /**
+     * The anchor this reading was taken from, when it was taken from one rather than from the
+     * camera — see [Companion.atAnchor]. Held rather than snapshotted so [commit] can re-read its
+     * pose at tap time.
+     */
+    private val poseSource: Anchor? = null,
 ) {
     /**
      * The plane's analytic normal (see [analyticNormal]), or null when this reading did not
@@ -70,8 +76,21 @@ internal class SurfaceSample(
      * where the user was shown it, while still tracking that plane as ARCore refines it, same
      * as anchoring through the hit result would.
      */
-    fun commit(session: Session): Anchor =
-        trackable?.createAnchor(pose) ?: hitResult?.createAnchor() ?: session.createAnchor(pose)
+    /**
+     * The pose to anchor at, read as late as possible.
+     *
+     * `Pose`'s own documentation is explicit: the numerical coordinates of anchors and the camera
+     * "should never be used outside the rendering frame during which they were retrieved". A tap
+     * arrives after the frame that produced this sample, so a snapshotted pose is already one
+     * frame old, and a re-localisation in between places the anchor at coordinates that no longer
+     * mean what they meant. Where the reading came from an anchor there is a live source to ask
+     * instead of a stale copy to trust.
+     */
+    private val commitPose: Pose get() = poseSource?.pose ?: pose
+
+    fun commit(session: Session): Anchor = commitPose.let { p ->
+        trackable?.createAnchor(p) ?: hitResult?.createAnchor() ?: session.createAnchor(p)
+    }
 
     /**
      * [commit], but null instead of an exception.
@@ -147,6 +166,7 @@ internal class SurfaceSample(
             hitResult = null,
             pose = anchor.pose,
             trackable = null,
+            poseSource = anchor,
         )
     }
 }
