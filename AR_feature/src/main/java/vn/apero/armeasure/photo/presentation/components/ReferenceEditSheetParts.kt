@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -23,9 +25,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -84,7 +88,35 @@ internal fun DimensionField(label: String, value: String, onValueChange: (String
     }
 }
 
-/** Custom-drawn to hit the design's exact 48dp/`BgSecondary`/r10 field, rather than Material's `OutlinedTextField` box model. */
+/**
+ * The one text style both the placeholder and the editor draw with.
+ *
+ * Sharing it is load-bearing, not tidiness. The placeholder used to be a plain `Text` (which merges
+ * `LocalTextStyle`, so it inherited the theme's line height) while the editor got a freshly
+ * constructed `TextStyle` (which inherits nothing, so it fell back to the font's own, much tighter
+ * line height). Two different line heights for the same 15sp meant the two states measured
+ * differently, and since the field sized itself to its content the box changed height the moment
+ * the user typed the first character.
+ *
+ * `includeFontPadding = false` on top of that: the legacy font padding is asymmetric, so it shifts
+ * the glyphs off the box's true centre by a pixel or two even once the heights match.
+ */
+private val SheetFieldTextStyle = TextStyle(
+    fontSize = 15.sp,
+    lineHeight = 20.sp,
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+)
+
+/**
+ * Custom-drawn to hit the design's exact 48dp/`BgSecondary`/r10 field, rather than Material's
+ * `OutlinedTextField` box model.
+ *
+ * The height is **fixed**, not a minimum: nothing inside may influence it, or the field resizes
+ * between its empty and filled states. The design's field is 48 tall in both, and [UnitChip]
+ * beside it is a hard 48 too, so the row only lines up if this one cannot drift. Vertical padding
+ * is deliberately absent for the same reason — `CenterStart` does the centring inside the fixed
+ * height, which cannot depend on the text.
+ */
 @Composable
 internal fun SheetTextField(
     value: String,
@@ -95,22 +127,22 @@ internal fun SheetTextField(
 ) {
     Box(
         modifier = modifier
-            .heightIn(min = 48.dp)
+            .height(48.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(ArMeasureTokens.BgSecondary)
             .border(1.dp, ArMeasureTokens.BorderSubtle, RoundedCornerShape(10.dp))
-            .padding(horizontal = 14.dp, vertical = 13.dp),
+            .padding(horizontal = 14.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
         if (value.isEmpty()) {
-            Text(text = placeholder, color = ArMeasureTokens.TextSecondary, fontSize = 15.sp)
+            Text(text = placeholder, style = SheetFieldTextStyle, color = ArMeasureTokens.TextSecondary)
         }
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
             keyboardOptions = keyboardOptions,
-            textStyle = TextStyle(color = ArMeasureTokens.TextPrimary, fontSize = 15.sp),
+            textStyle = SheetFieldTextStyle.copy(color = ArMeasureTokens.TextPrimary),
             cursorBrush = SolidColor(ArMeasureTokens.TextPrimary),
             modifier = Modifier.fillMaxWidth(),
         )
@@ -137,9 +169,17 @@ internal fun UnitChip(
                 .semantics { contentDescription = label },
             contentAlignment = Alignment.Center,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(text = unit.symbol, color = ArMeasureTokens.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Text(text = "⌄", color = ArMeasureTokens.TextPrimary, fontSize = 14.sp)
+                // Was a `⌄` character: it hangs off the text baseline and draws a fraction of the
+                // ink a real chevron does, so it read as a stray mark rather than a dropdown cue.
+                // Mock `vqJsh/LtVHn` is a 16dp lucide chevron-down in the secondary text colour.
+                Icon(
+                    painter = painterResource(R.drawable.armeasure_ic_chevron_down),
+                    contentDescription = null,
+                    tint = ArMeasureTokens.TextSecondary,
+                    modifier = Modifier.size(16.dp),
+                )
             }
         }
         if (showMenu) {
@@ -156,7 +196,14 @@ internal fun DeleteRow(onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(text = "🗑", color = ArMeasureTokens.Error, fontSize = 16.sp)
+        // The `🗑` character renders as a full-colour emoji on most system fonts, not a monochrome
+        // icon matching the label beside it. Mock `N2BCY/cmF3o` is an 18dp trash icon in Error.
+        Icon(
+            painter = painterResource(R.drawable.armeasure_ic_trash),
+            contentDescription = null,
+            tint = ArMeasureTokens.Error,
+            modifier = Modifier.size(18.dp),
+        )
         Text(
             text = stringResource(R.string.armeasure_reference_delete),
             color = ArMeasureTokens.Error,

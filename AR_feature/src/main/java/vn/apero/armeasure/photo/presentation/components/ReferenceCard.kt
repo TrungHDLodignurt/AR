@@ -1,22 +1,26 @@
 package vn.apero.armeasure.photo.presentation.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -36,9 +40,34 @@ import vn.apero.armeasure.photo.domain.imaging.displayLabel
 @Composable
 internal fun PresetCard(reference: ReferenceObject, unit: LengthUnit, onClick: () -> Unit) {
     CardShell(onClick = onClick) {
-        Text(text = "▭", color = ArMeasureTokens.Signature, fontSize = 30.sp)
+        // Mock `qh7ly`/`vR8Tb` centre a 54dp icon in an area that takes the card's spare height;
+        // this drew a `▭` character top-aligned instead, which read as an empty placeholder box.
+        Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(reference.presetIcon()),
+                contentDescription = null,
+                tint = ArMeasureTokens.Signature,
+                modifier = Modifier.size(54.dp),
+            )
+        }
         ReferenceTexts(reference = reference, unit = unit)
     }
+}
+
+/**
+ * The artwork for a built-in reference object, keyed on the stable [ReferenceObject.id] rather
+ * than the label — the label is localised, so matching on it would silently fall back to the
+ * generic icon in every language but English.
+ *
+ * Only the two ISO built-ins have dedicated artwork; the `else` branch exists because
+ * [ReferenceObject.isBuiltIn] and this mapping are independent, so a third built-in added later
+ * renders a sane icon instead of failing to compile or crashing.
+ */
+@DrawableRes
+private fun ReferenceObject.presetIcon(): Int = when (id) {
+    "builtin:a4" -> R.drawable.armeasure_ic_a4
+    "builtin:card" -> R.drawable.armeasure_ic_card_payment
+    else -> R.drawable.armeasure_ic_a4
 }
 
 /** Custom card: an avatar of the first two letters plus name/dimensions, with a 48dp edit target laid on top so tapping it never falls through to the card's own select click. */
@@ -104,7 +133,11 @@ internal fun AddReferenceCard(onClick: () -> Unit) {
 }
 
 @Composable
-private fun CardShell(onClick: () -> Unit, contentPadding: Dp = 16.dp, content: @Composable () -> Unit) {
+private fun CardShell(
+    onClick: () -> Unit,
+    contentPadding: Dp = 16.dp,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()

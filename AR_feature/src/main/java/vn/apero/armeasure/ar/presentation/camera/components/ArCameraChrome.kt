@@ -1,5 +1,6 @@
 package vn.apero.armeasure.ar.presentation.camera.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,16 +19,19 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import vn.apero.armeasure.R
@@ -84,7 +88,7 @@ internal fun ArCameraTopBar(
                 onClick = onClose,
                 contentDescription = stringResource(R.string.armeasure_action_back),
             ) {
-                Text("‹", color = ArMeasureTokens.TextPrimary, fontSize = 22.sp)
+                ChromeIcon(R.drawable.armeasure_ic_chevron_left, 22.dp, ArMeasureTokens.TextPrimary)
             }
         } else {
             Box(modifier = Modifier.size(48.dp))
@@ -103,6 +107,24 @@ internal fun ArCameraTopBar(
     }
 }
 
+/**
+ * One glyph inside a [ChromeLightButton].
+ *
+ * These were text characters (`‹`, `↩`, `↪`, `▦`) at 20-22sp. The button circles were already the
+ * design's 40/44dp, but a chevron *character* puts only a fraction of its em box worth of ink on
+ * screen, so the controls read as far smaller than the mock's 22dp `chevron-left` icon — the
+ * "too small" report was about the ink, not the circle. Sizes here are the mock's icon sizes.
+ */
+@Composable
+private fun ChromeIcon(@DrawableRes icon: Int, size: Dp, tint: Color) {
+    Icon(
+        painter = painterResource(icon),
+        contentDescription = null,
+        tint = tint,
+        modifier = Modifier.size(size),
+    )
+}
+
 @Composable
 private fun UndoForwardGroup(
     canUndo: Boolean,
@@ -117,10 +139,10 @@ private fun UndoForwardGroup(
             enabled = canUndo,
             contentDescription = stringResource(R.string.armeasure_action_undo),
         ) {
-            Text(
-                "↩",
-                color = if (canUndo) ArMeasureTokens.TextPrimary else ArMeasureTokens.TextDisabled,
-                fontSize = 20.sp,
+            ChromeIcon(
+                R.drawable.armeasure_ic_undo,
+                20.dp,
+                if (canUndo) ArMeasureTokens.TextPrimary else ArMeasureTokens.TextDisabled,
             )
         }
         ChromeLightButton(
@@ -129,10 +151,10 @@ private fun UndoForwardGroup(
             enabled = canRedo,
             contentDescription = stringResource(R.string.armeasure_action_redo),
         ) {
-            Text(
-                "↪",
-                color = if (canRedo) ArMeasureTokens.TextPrimary else ArMeasureTokens.TextDisabled,
-                fontSize = 20.sp,
+            ChromeIcon(
+                R.drawable.armeasure_ic_redo,
+                20.dp,
+                if (canRedo) ArMeasureTokens.TextPrimary else ArMeasureTokens.TextDisabled,
             )
         }
     }
@@ -161,7 +183,7 @@ private fun ModeUnitStack(
             onClick = onModeClick,
             contentDescription = stringResource(R.string.armeasure_action_open_mode_sheet),
         ) {
-            Text("▦", color = ArMeasureTokens.TextPrimary, fontSize = 20.sp)
+            ChromeIcon(R.drawable.armeasure_ic_grid, 20.dp, ArMeasureTokens.TextPrimary)
         }
         Box {
             UnitBtn(unit = unit, onClick = onUnitClick)

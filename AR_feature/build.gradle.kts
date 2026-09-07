@@ -48,6 +48,11 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     // @Preview annotations only; the renderer itself is the IDE's, so no ui-tooling at runtime.
     implementation(libs.androidx.ui.tooling.preview)
+    // Debug-only, and only so Android Studio can actually render this module's own @Preview
+    // functions (ArMeasureHubPreview, ArCameraChromePreview, ReferencePreview). The annotation
+    // above is compile-time; the preview host needs this one. Never promote it to
+    // `implementation` — it would ship the tooling inspector in the release APK.
+    debugImplementation(libs.androidx.ui.tooling)
     // Primary auto-fit detector. Unbundled: the model arrives via Play Services, so this costs no
     // APK size, but it also means a device without Play Services gets the Canny+Hough fallback.
     implementation(libs.mlkit.subject.segmentation)

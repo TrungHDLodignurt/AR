@@ -1,0 +1,33 @@
+<!--
+  Delete a custom reference object. Converted from the supplied `ic_trashcan.svg`, replacing the
+  bare `🗑` glyph, which most system fonts render as a full-colour emoji rather than a monochrome
+  icon matching the rest of the sheet.
+
+  Stroke-only, drawn black and tinted at the call site.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M18,2.05C19.37,2.14 20.22,2.38 20.79,3.04C21.69,4.08 21.45,5.69 20.97,8.89L19.77,16.89C19.4,19.33 19.22,20.55 18.37,21.27C17.53,22 16.3,22 13.83,22H10.17C7.7,22 6.47,22 5.63,21.27C4.78,20.55 4.6,19.33 4.23,16.89L3.03,8.89C2.55,5.69 2.31,4.08 3.21,3.04C4.11,2 5.73,2 8.97,2H14"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M21,6H3"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M19,19H5"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M8,6L3.5,11L11,19M14,6L4,16M20,6L7,19M13,19L20.5,11L16,6M10,6L20,16M4,6L17,19"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.5"
+        android:strokeLineJoin="round" />
+</vector>
