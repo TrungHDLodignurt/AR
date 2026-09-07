@@ -93,7 +93,7 @@ private const val ReticleRingSegments = 32
  * wooden floor, a beige carpet or warm concrete, and a mark this small has no room to spend on
  * contrast. The module already settled this question once for committed endpoints
  * (`EndpointHaloColor`); this is the same answer for the same reason. Brand colour belongs on
- * chrome, not on two hundred sub-pixel marks whose only job is to be legible.
+ * chrome, not on the sub-pixel marks whose only job is to be legible.
  */
 private val DotColor = Color.White
 
@@ -116,7 +116,7 @@ internal class PlaneDots(
 /**
  * Builds the dot patch centred on [hit], lying in the plane spanned by [basis].
  *
- * Packed into one `FloatArray` rather than a `List<Offset>` on purpose: at ~200 dots a frame the
+ * Packed into one `FloatArray` rather than a `List<Offset>` on purpose: at up to 177 dots a frame the
  * list would allocate two hundred boxed values every frame, on top of what `buildOverlay` already
  * churns. One array is one allocation.
  *
@@ -138,7 +138,7 @@ internal fun buildPlaneDots(
     // lattice built from it alone spills past the real edge — dots painted over thin air, exactly
     // where the resolver refuses to place a point, along every boundary people actually measure.
     //
-    // Transforming each of ~200 dots individually would allocate an array per dot per frame.
+    // Transforming each of every dot individually would allocate an array per dot per frame.
     // Instead the hit and the two basis vectors are transformed once and each lattice point's
     // plane-local coordinate falls out as a linear combination.
     val inverse = plane?.centerPose?.inverse()
@@ -157,7 +157,7 @@ internal fun buildPlaneDots(
             if (ring > LatticeHalfSpan) continue
 
             // The plane's own bounding rectangle. Deliberately not isPoseInPolygon, which is a
-            // native call and would run ~200 times a frame: the rectangle is a slightly loose
+            // native call and would run up to 177 times a frame: the rectangle is a slightly loose
             // approximation that can overshoot at a corner, but it turns "painted across infinity"
             // into "painted a little wide", which is the whole of the problem.
             if (originLocal != null && uLocal != null && vLocal != null) {

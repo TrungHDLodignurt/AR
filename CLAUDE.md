@@ -194,7 +194,7 @@ being asked.**
    (`MeasureHit.kt`, the depth-fallback branch sets `trackable = null`) — accepting it would make
    both features work without a plane, at the cost of a normal derived from a smoothed and
    partly-invented depth map.
-2. Whether ~200 dots × 2 `drawCircle` per frame holds 60 fps on the low-end target. First lever
+2. Whether up to 177 dots × 2 `drawCircle` per frame holds 60 fps on the low-end target. First lever
    if not: dot count. Second: a non-nullable `projectInto` to stop `Offset?` boxing.
 3. Whether 28 / 45 dp feel right with a real hand.
 4. Whether the 40 × 40 cm patch and 2.5 cm spacing read well at real measuring distances.

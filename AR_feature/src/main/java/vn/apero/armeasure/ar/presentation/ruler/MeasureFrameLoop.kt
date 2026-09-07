@@ -155,7 +155,7 @@ internal fun onMeasureFrame(
 /**
  * This frame's snap decision, or null when the reticle is free.
  *
- * The unchained tool excludes the open segment's own start. Without that, the tool would helpfully
+ * Both distance tools exclude the open segment's own start — `hasOpenSegment` is true for any non-empty chain, and for an odd count when unchained. Without that, the tool would helpfully
  * guide the user into measuring a point against itself and reporting 0 cm.
  */
 private fun resolveSnap(
