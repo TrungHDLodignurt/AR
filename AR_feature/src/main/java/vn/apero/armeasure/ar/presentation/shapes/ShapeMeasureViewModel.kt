@@ -146,7 +146,9 @@ internal class ShapeMeasureViewModel(
                 // since box/cylinder measuring is done standing on an approximately horizontal
                 // surface far more often than not.
                 val normal = (sample.planeNormal ?: Vec3(0f, 1f, 0f)).normalized()
-                val anchor = sample.commit(activeSession)
+                // Anchoring can refuse — see commitOrNull. Staying in AwaitingOrigin is the
+                // correct outcome: no shape has begun, so there is nothing half-built to undo.
+                val anchor = sample.commitOrNull(activeSession) ?: return
                 when (kind) {
                     ShapeKind.Box -> ShapePhase.SizingEdgeU(anchor, normal)
                     ShapeKind.Cylinder -> ShapePhase.SizingCircle(anchor, normal, planeBasis(normal))

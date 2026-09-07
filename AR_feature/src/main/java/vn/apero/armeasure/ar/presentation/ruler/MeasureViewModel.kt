@@ -130,8 +130,11 @@ internal class MeasureViewModel(
         // exception is deliberate and lives in one place.
         if (!frames.commitReady) return
         // A new point is a new committed action — any pending redo is now stale.
+        // Anchoring can refuse — see commitOrNull. Bail before touching the redo stack so a
+        // refused tap leaves no trace at all rather than half-applying.
+        val anchor = sample.commitOrNull(activeSession) ?: return
         undoRedo.dropRedo()
-        points.add(MeasuredPoint(sample.commit(activeSession), sample.source))
+        points.add(MeasuredPoint(anchor, sample.source))
         frames.publishWorldPoints(points.map { it.anchor.pose.toVec3() })
         updateState { copy(pointCount = points.size, canRedo = undoRedo.canRedo, lastSource = sample.source) }
         emitClosedSegment(unit)
@@ -212,9 +215,16 @@ internal class MeasureViewModel(
         if (index != null && sample != null && activeSession != null) {
             // A drag is a new committed action too — any pending redo refers to points that no
             // longer describe the current picture once one of them has moved.
+            // Anchor first, and only detach the old one once the new one exists: detaching before
+            // a refused commit would destroy the point the user was merely dragging.
+            val moved = sample.commitOrNull(activeSession)
+            if (moved == null) {
+                frames.endDrag()
+                return
+            }
             undoRedo.dropRedo()
             points[index].anchor.detach()
-            points[index] = MeasuredPoint(sample.commit(activeSession), sample.source)
+            points[index] = MeasuredPoint(moved, sample.source)
             frames.publishWorldPoints(points.map { it.anchor.pose.toVec3() })
             updateState { copy(canRedo = undoRedo.canRedo, lastSource = sample.source) }
         }

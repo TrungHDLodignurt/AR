@@ -74,6 +74,20 @@ internal class SurfaceSample(
         trackable?.createAnchor(pose) ?: hitResult?.createAnchor() ?: session.createAnchor(pose)
 
     /**
+     * [commit], but null instead of an exception.
+     *
+     * Every anchor-creating call ARCore offers is documented to throw: `NotTrackingException`,
+     * `ResourceExhaustedException`, `SessionPausedException`, and `IllegalStateException` from the
+     * `Trackable` overload. None of the three call sites runs inside sceneview's `catch` around the
+     * frame callback, so a throw was an app kill — the user taps `+` at the wrong instant and the
+     * app is gone.
+     *
+     * The right response to "ARCore cannot anchor this right now" is to not place the point. The
+     * next frame either can or says why; either way the app is still running to show it.
+     */
+    fun commitOrNull(session: Session): Anchor? = runCatching { commit(session) }.getOrNull()
+
+    /**
      * This reading relocated onto [target] — the exact world position of an existing point the
      * reticle has snapped to.
      *
