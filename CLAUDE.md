@@ -122,8 +122,14 @@ camera image.** Widen the quad, thicken the strokes, darken the grid.
 
 ## Verification
 
+**`compileDebugKotlin` does not validate resources.** It passed thirty times over a
+`strings.xml` carrying an unescaped apostrophe; only `:app:mergeDebugResources` caught it, at
+install time. Any change that touches `res/` has to be verified with a task that merges resources
+— `:app:installDebug` or `:app:assembleDebug`, not the Kotlin gate alone. In string values an
+apostrophe must be written `\'`.
+
 ```bash
-./gradlew :AR_feature:compileDebugKotlin        # the gate for UI-only changes
+./gradlew :AR_feature:compileDebugKotlin        # Kotlin only — blind to res/
 ./gradlew :AR_feature:testDebugUnitTest         # the only honest source of the count
 ANDROID_SERIAL=<serial> ./gradlew :app:installDebug
 ```
