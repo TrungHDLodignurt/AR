@@ -1,5 +1,6 @@
 package vn.apero.armeasure.photo.presentation.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
@@ -23,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -72,12 +75,12 @@ internal fun PhotoTopNav(
         )
 
         if (showUndoRedoAndSave) {
-            // Design's UndoForwardGroup gap (40dp between 24dp icons) shrinks a little now the
-            // icons are floored to 30dp — 9dp touch-box inset each side instead of 12dp — but the
-            // 48dp touch boxes themselves are untouched, so nothing clips.
+            // Design's UndoForwardGroup gap (40dp between 24dp icons) shrinks a little at the
+            // [UndoRedoIconSize] used here — 11dp touch-box inset each side instead of 12dp — but
+            // the 48dp touch boxes themselves are untouched, so nothing clips.
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                UndoRedoButton("↩", canUndo, onUndo, stringResource(R.string.armeasure_action_undo))
-                UndoRedoButton("↪", canRedo, onRedo, stringResource(R.string.armeasure_action_redo))
+                UndoRedoButton(R.drawable.armeasure_ic_undo, canUndo, onUndo, stringResource(R.string.armeasure_action_undo))
+                UndoRedoButton(R.drawable.armeasure_ic_redo, canRedo, onRedo, stringResource(R.string.armeasure_action_redo))
             }
         } else {
             Box(modifier = Modifier.size(48.dp))
@@ -132,16 +135,36 @@ private fun BareIconButton(
     }
 }
 
+/** Undo/redo are the two icons this flow shares with the AR camera chrome, which draws them at
+ * 20dp inside a 40dp pill. There is no pill here, so the drawn size carries the whole visual
+ * weight and matches [MinIconSp]'s intent rather than that 20dp: a 30sp "↩" glyph inked at
+ * roughly this height, so swapping it for a vector at 20dp would have made the control smaller,
+ * not just cleaner. */
+private val UndoRedoIconSize = 26.dp
+
+/** Was a bare "↩"/"↪" pair. `armeasure_ic_undo`/`_redo` already existed for the AR camera chrome
+ * and went unused on this path, leaving the two screens visibly inconsistent. */
 @Composable
-private fun UndoRedoButton(glyph: String, enabled: Boolean, onClick: () -> Unit, contentDescription: String) {
-    BareIconButton(
-        glyph = glyph,
-        onClick = onClick,
-        contentDescription = contentDescription,
-        fontSize = MinIconSp,
-        enabled = enabled,
-        color = if (enabled) ArMeasureTokens.TextPrimary else ArMeasureTokens.TextDisabled,
-    )
+private fun UndoRedoButton(
+    @DrawableRes icon: Int,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    contentDescription: String,
+) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = if (enabled) ArMeasureTokens.TextPrimary else ArMeasureTokens.TextDisabled,
+            modifier = Modifier.size(UndoRedoIconSize),
+        )
+    }
 }
 
 /**

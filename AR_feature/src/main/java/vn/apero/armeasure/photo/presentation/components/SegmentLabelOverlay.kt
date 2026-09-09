@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,6 +17,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -117,7 +119,15 @@ private fun SegmentLabelPill(label: String, color: Color, onDelete: () -> Unit) 
                 .semantics { contentDescription = deleteDescription },
             contentAlignment = Alignment.Center,
         ) {
-            Text("🗑", fontSize = 13.sp)
+            // Was a bare "🗑", which most system fonts render as a full-colour emoji — the one
+            // place in the module where the chrome broke its own monochrome look, and it ignored
+            // [labelTextColorFor]'s contrast choice entirely.
+            Icon(
+                painter = painterResource(R.drawable.armeasure_ic_trash),
+                contentDescription = null,
+                tint = textColor,
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }
