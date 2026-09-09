@@ -560,9 +560,7 @@ final verification pass):
 
 Stated plainly, not buried:
 
-- **Cosmetic debt**: bare Unicode glyph icons stand in for real iconography (`▬`, `▨`, `🗑` —
-  the trash glyph renders as a full-colour emoji on most keyboards/fonts, not a monochrome icon);
-  photo dimension labels repeat the unit on both sides (`"21 cm × 30 cm"` rather than `"21 × 30
+- **Cosmetic debt**: photo dimension labels repeat the unit on both sides (`"21 cm × 30 cm"` rather than `"21 × 30
   cm"`); `QuadEditorCanvas.kt` still draws two hardcoded Vietnamese labels ("cạnh dài" / "cạnh
   ngắn" — "long edge"/"short edge") directly into the `Canvas`, shown to every user regardless of
   locale — a real gap in decision 14 (resource-driven strings), not yet fixed. It is now the **only**
@@ -573,10 +571,12 @@ Stated plainly, not buried:
   used everywhere else (`ColorDot`, `CmUnitBadge`, etc.). A magnifier loupe may be intended to
   compensate; that tradeoff is not written down anywhere in the code, so treat it as open, not
   intentional.
-- **The `camera-capture/` cache directory is swept before each capture and the file is deleted once decoded.** Every "take a photo" round trip
-  (custom reference object registration, or the main photo picker) writes a new file there and
-  nothing ever deletes it — low risk (cache dir, OS can reclaim under pressure), but unbounded
-  growth for the life of the install.
+- ~~The `camera-capture/` cache directory is never cleaned up~~ — **fixed.** It used to grow
+  unbounded for the life of the install, one full-resolution JPEG (~6 MB) per "take a photo" round
+  trip. `CameraCapture.createCameraCaptureUri` now sweeps the directory before adding to it, and
+  `discardCameraCapture` deletes the temp JPEG once it has been decoded (authority-checked, so a
+  gallery Uri is never touched). Kept here rather than deleted because a host integrated before
+  this change still has the growing version.
 - **AR has no terminal state and produces no saved artifact.** Only the Picture Measure path ends
   in a file (§9); a Distance/Distance chain/Box/Cylinder result exists only on screen as a toast/label and is
   gone once the Activity closes. Frame capture to the gallery and any saved-measurement list are
