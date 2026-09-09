@@ -38,10 +38,14 @@ Several directories on different branches, **same git repo** — run `git worktr
 trust a count written here. Both open in Android Studio show the window
 title `ar-tape-measure`, distinguishable only by the path in brackets.
 
-| Directory | Branch | Contains |
-|---|---|---|
-| `ar-tape-measure/` | `refactor/mvi-alignment` | the measuring app |
-| `ar-tape-measure-air-draw/` | `experiment/air-draw` | + the air-pen experiment |
+| Directory | Contains |
+|---|---|
+| `ar-tape-measure/` | the measuring app — the branch the module ships from |
+| `ar-tape-measure-air-draw/` | + the air-pen experiment |
+
+**No branch names in this table on purpose.** It used to name one, that branch was deleted in the
+2026-09-07 consolidation, and the name sat here pointing at nothing. `git worktree list` prints the
+current pair; that is the only correct source.
 
 Consequences already hit:
 
@@ -174,6 +178,13 @@ git diff --name-only $BASE..HEAD -- AR_feature | sed 's|^AR_feature/||' > /tmp/c
 # then diff /tmp/base/AR_feature/<f> against 936's <f> for each entry:
 # OK = safe to overwrite · DRIFT = 936 was edited locally, STOP · NEW = new file
 ```
+
+**A reverse sync must copy files, not the host's build configuration.** `79ea131` brought 936's
+drawables back here — correctly — and brought 936's whole `libs.versions.toml` with them: ~40 aliases
+neither module resolves, and this repo's own version-pin comments overwritten by ones about a
+submodule that does not exist here. When porting host-side drift back, copy only the files that
+drifted. This repo's catalog holds exactly what `:app` and `:AR_feature` reference and nothing else;
+`grep -oE 'libs\.[a-zA-Z0-9.]+' */build.gradle.kts | sort -u` is the whole allowed list.
 
 Two traps, both already hit:
 
