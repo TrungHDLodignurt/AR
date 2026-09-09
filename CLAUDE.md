@@ -6,7 +6,8 @@ This is the air-pen experiment. Everything in the measuring app's own `CLAUDE.md
 same repo, same module, same invariants. This file covers only what is different here.
 
 > **You are in `ar-tape-measure-air-draw/`, on `experiment/air-draw`.**
-> The measuring app lives in `ar-tape-measure/` on `refactor/mvi-alignment`. Both windows open in
+> The measuring app lives in `ar-tape-measure/`, on whatever branch `git worktree list` reports —
+> this line used to name it, and that branch was deleted in the 2026-09-07 consolidation. Both windows open in
 > Android Studio titled `ar-tape-measure`; tell them apart by the path in brackets. A file edited
 > in the wrong directory lands on the wrong branch.
 
