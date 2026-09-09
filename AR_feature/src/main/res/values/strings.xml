@@ -90,7 +90,6 @@
     <string name="armeasure_photo_instruction_adjust">Hold and drag the corners to match the %1$s</string>
     <string name="armeasure_photo_confirm_cd">Confirm reference object</string>
     <string name="armeasure_photo_detecting_edges">Detecting edges…</string>
-    <string name="armeasure_photo_close_cd">Close</string>
 
     <string name="armeasure_photo_pick_sheet_title">Choose photo</string>
     <string name="armeasure_photo_pick_camera">Take photo</string>

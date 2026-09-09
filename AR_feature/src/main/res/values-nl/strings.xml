@@ -90,7 +90,6 @@
     <string name="armeasure_photo_instruction_adjust">Houd vast en sleep de hoeken naar de %1$s</string>
     <string name="armeasure_photo_confirm_cd">Referentieobject bevestigen</string>
     <string name="armeasure_photo_detecting_edges">Randen zoeken…</string>
-    <string name="armeasure_photo_close_cd">Sluiten</string>
 
     <string name="armeasure_photo_pick_sheet_title">Foto kiezen</string>
     <string name="armeasure_photo_pick_camera">Foto maken</string>

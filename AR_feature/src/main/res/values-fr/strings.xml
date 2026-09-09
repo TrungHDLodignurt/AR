@@ -90,7 +90,6 @@
     <string name="armeasure_photo_instruction_adjust">Faire glisser les coins pour épouser %1$s</string>
     <string name="armeasure_photo_confirm_cd">Confirmer l\'objet de référence</string>
     <string name="armeasure_photo_detecting_edges">Détection des bords…</string>
-    <string name="armeasure_photo_close_cd">Fermer</string>
 
     <string name="armeasure_photo_pick_sheet_title">Choisir une photo</string>
     <string name="armeasure_photo_pick_camera">Prendre une photo</string>

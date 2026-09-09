@@ -90,7 +90,6 @@
     <string name="armeasure_photo_instruction_adjust">按住并拖动角点，对齐%1$s</string>
     <string name="armeasure_photo_confirm_cd">确认参照物</string>
     <string name="armeasure_photo_detecting_edges">正在检测边缘…</string>
-    <string name="armeasure_photo_close_cd">关闭</string>
 
     <string name="armeasure_photo_pick_sheet_title">选择照片</string>
     <string name="armeasure_photo_pick_camera">拍照</string>

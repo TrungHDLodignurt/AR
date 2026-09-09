@@ -90,7 +90,6 @@
     <string name="armeasure_photo_instruction_adjust">Перетащите углы по контуру объекта (%1$s)</string>
     <string name="armeasure_photo_confirm_cd">Подтвердить эталон</string>
     <string name="armeasure_photo_detecting_edges">Ищем границы…</string>
-    <string name="armeasure_photo_close_cd">Закрыть</string>
 
     <string name="armeasure_photo_pick_sheet_title">Выберите фото</string>
     <string name="armeasure_photo_pick_camera">Сделать фото</string>

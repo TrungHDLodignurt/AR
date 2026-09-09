@@ -90,7 +90,6 @@
     <string name="armeasure_photo_instruction_adjust">اسحب الزوايا لتطابق %1$s</string>
     <string name="armeasure_photo_confirm_cd">تأكيد العنصر المرجعي</string>
     <string name="armeasure_photo_detecting_edges">جارٍ اكتشاف الحواف…</string>
-    <string name="armeasure_photo_close_cd">إغلاق</string>
 
     <string name="armeasure_photo_pick_sheet_title">اختر صورة</string>
     <string name="armeasure_photo_pick_camera">التقاط صورة</string>

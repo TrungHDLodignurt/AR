@@ -90,7 +90,6 @@
     <string name="armeasure_photo_instruction_adjust">Mantén y arrastra las esquinas hasta %1$s</string>
     <string name="armeasure_photo_confirm_cd">Confirmar objeto de referencia</string>
     <string name="armeasure_photo_detecting_edges">Detectando bordes…</string>
-    <string name="armeasure_photo_close_cd">Cerrar</string>
 
     <string name="armeasure_photo_pick_sheet_title">Elegir foto</string>
     <string name="armeasure_photo_pick_camera">Hacer foto</string>

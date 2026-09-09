@@ -90,7 +90,6 @@
     <string name="armeasure_photo_instruction_adjust">角を長押しでドラッグして%1$sに合わせてください</string>
     <string name="armeasure_photo_confirm_cd">基準物を確定</string>
     <string name="armeasure_photo_detecting_edges">輪郭を検出中…</string>
-    <string name="armeasure_photo_close_cd">閉じる</string>
 
     <string name="armeasure_photo_pick_sheet_title">写真を選択</string>
     <string name="armeasure_photo_pick_camera">写真を撮る</string>

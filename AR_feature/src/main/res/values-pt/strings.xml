@@ -90,7 +90,6 @@
     <string name="armeasure_photo_instruction_adjust">Segure e arraste os cantos para encaixar em %1$s</string>
     <string name="armeasure_photo_confirm_cd">Confirmar objeto de referência</string>
     <string name="armeasure_photo_detecting_edges">Detectando bordas…</string>
-    <string name="armeasure_photo_close_cd">Fechar</string>
 
     <string name="armeasure_photo_pick_sheet_title">Escolher foto</string>
     <string name="armeasure_photo_pick_camera">Tirar foto</string>

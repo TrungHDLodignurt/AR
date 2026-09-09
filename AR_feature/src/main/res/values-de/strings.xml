@@ -90,7 +90,6 @@
     <string name="armeasure_photo_instruction_adjust">Ecken halten und ziehen, bis sie zu %1$s passen</string>
     <string name="armeasure_photo_confirm_cd">Referenzobjekt bestätigen</string>
     <string name="armeasure_photo_detecting_edges">Kanten werden erkannt…</string>
-    <string name="armeasure_photo_close_cd">Schließen</string>
 
     <string name="armeasure_photo_pick_sheet_title">Foto wählen</string>
     <string name="armeasure_photo_pick_camera">Foto aufnehmen</string>
